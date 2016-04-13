@@ -6,9 +6,13 @@ Byron Kilbourne (University of Washington)
 
 #import universal modules
 import numpy as np
-import os
 import seawater as sw
 import xray
+import PWP_subfunc as sbf
+from IPython.core.debugger import Tracer
+reload(sbf)
+
+debug_here = Tracer()
 
 #start of main  script
 def main():
@@ -18,19 +22,19 @@ def main():
     ##############################################
     
     dt = 3600.0*3 #time-step increment (seconds)
-    secsInDay = 86400
+    secsInDay = 86400.
     dt_d = dt/secsInDay
-    dz = 1  #depth increment (meters)
-    max_depth = 100 #the depth to run (max depth grid)
-    dt_save = 1 #time-step increment for saving to file (multiples of dt)
-    lat = 74 #latitude (degrees)
+    dz = 1.  #depth increment (meters)
+    max_depth = 100. #the depth to run (max depth grid)
+    dt_save = 1. #time-step increment for saving to file (multiples of dt)
+    lat = 74. #latitude (degrees)
     g = 9.8 #gravity (9.8 m/s^2)
     cpw	= 4183.3 #specific heat of water (4183.3 J/kgC)
     rb = 0.65 #critical bulk richardson number (0.65)
     rg = 0.25 #critical gradient richardson number (0.25)
-    rkz	= 0 #background vertical diffusion (0) m^2/s
+    rkz	= 0. #background vertical diffusion (0) m^2/s
     beta1 = 0.6 #longwave extinction coefficient (0.6 m)
-    beta2 = 20  #shortwave extinction coefficient (20 m)
+    beta2 = 20.  #shortwave extinction coefficient (20 m)
     f = sw.f(lat) #coriolis term (rad/s)
     ucon = (.1*np.abs(f)); #coefficient of inertial-internal wave dissipation (0) s^-1
     
@@ -70,7 +74,7 @@ def main():
     zlen = len(z)
     
     #check depth resolution of profile data
-    prof_incr = np.diff(prof_dset['z'])
+    prof_incr = np.diff(prof_dset['z']).mean()
     if dz < prof_incr/5.:
         inpt = input('Depth increment, dz, is much smaller than profile resolution. Is this okay? (y/n)')
         if inpt is 'n':
@@ -91,14 +95,43 @@ def main():
     evap = (0.03456/(86400*1000))*met_dset_intp['qlat'] #(meters?)
     emp = evap-precip
     
+    #compute absorption and courant number
+    absrb = sbf.absorb(beta1, beta2, zlen, dz) #absorption of icncoming radiation (units unclear)
+    dstab = dt*rkz/dz**2 #courant number  
+    if dstab > 0.5:
+        print 'WARNING: !unstable CFL condition for diffusion!'
+    
     ##############################################
     #Prepare variables for output 
     ##############################################
-    u = np.zeros(zlen, tlen) #east velocity m/s
-    v = np.zeros(zlen, tlen) #north velocity m/s
-    mld = np.zeros(tlen,)
+    u = np.zeros((zlen, tlen)) #east velocity m/s
+    v = np.zeros((zlen, tlen)) #north velocity m/s
+    mld = np.zeros((tlen,))
     
+    #preallocate output dict
+    pwp_output = {}
+    pwp_output['dt'] = dt
+    pwp_output['dz'] = dz
+    pwp_output['lat'] = lat
+    pwp_output['z'] = z
+    pwp_output['time'] = np.zeros((zlen, np.floor(tlen/dt_save)))
+    pwp_output['temp'] = np.zeros((zlen, np.floor(tlen/dt_save)))
+    pwp_output['sal'] = np.zeros((zlen, np.floor(tlen/dt_save)))
+    pwp_output['dens'] = np.zeros((zlen, np.floor(tlen/dt_save)))
+    pwp_output['uvel'] = np.zeros((zlen, np.floor(tlen/dt_save)))
+    pwp_output['vvel'] = np.zeros((zlen, np.floor(tlen/dt_save)))
+    pwp_output['mld'] = np.zeros((zlen, np.floor(tlen/dt_save)))
     
+    ##############################################
+    #MODEL LOOP START 
+    ##############################################
+    
+    for n in xrange(1,tlen):
+        print 'Loop iter. %s' %n
+        
+if __name__ == "__main__":
+    
+    main()    
     
     
     
