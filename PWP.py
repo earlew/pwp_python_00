@@ -20,7 +20,6 @@ def main():
     ##############################################
     #define model parameters
     ##############################################
-    
     dt = 3600.0*3 #time-step increment (seconds)
     secsInDay = 86400.
     dt_d = dt/secsInDay
@@ -59,8 +58,8 @@ def main():
     #unpack interpolated forcing variables
     q_in = met_dset_intp['sw'] #heat flux into ocean
     q_out = met_dset_intp['lw'] + met_dset_intp['qlat'] + met_dset_intp['qsens'] #heat flux out of ocean
-    tau_x = met_dset_intp['tx'] #x-component of wind stress
-    tau_y = met_dset_intp['ty'] #y-component of wind stress
+    taux = met_dset_intp['tx'] #x-component of wind stress
+    tauy = met_dset_intp['ty'] #y-component of wind stress
     precip = met_dset_intp['precip'] #precip 
     
     #define depth coordinate, but first check to see if profile max depth
@@ -87,9 +86,10 @@ def main():
         p_intp = interp1d(prof_dset['z'], prof_dset[vname], axis=0, kind='nearest', bounds_error=False)
         prof_dset_intp[vname] = p_intp(z)
         
-    prof_temp = prof_dset_intp['t'] #profile temperature
-    prof_sal = prof_dset_intp['s'] #profile salinity
-    prof_dens = sw.dens0(prof_sal, prof_temp)
+    #get profile variables
+    temp = prof_dset_intp['t'] #profile temperature
+    sal = prof_dset_intp['s'] #profile salinity
+    dens = sw.dens0(sal, temp)
      
     #interpolate E-P to dt resolution
     evap = (0.03456/(86400*1000))*met_dset_intp['qlat'] #(meters?)
@@ -104,8 +104,8 @@ def main():
     ##############################################
     #Prepare variables for output 
     ##############################################
-    u = np.zeros((zlen, tlen)) #east velocity m/s
-    v = np.zeros((zlen, tlen)) #north velocity m/s
+    uvel = np.zeros((zlen, tlen)) #east velocity m/s
+    vvel = np.zeros((zlen, tlen)) #north velocity m/s
     mld = np.zeros((tlen,))
     
     #preallocate output dict
@@ -126,8 +126,84 @@ def main():
     #MODEL LOOP START 
     ##############################################
     
+    #pre-allocate loop vbles
+    sal_n = np.zeros((zlen, tlen))
+    temp_n = np.zeros((zlen, tlen))
+    vvel_n = np.zeros((zlen, tlen))
+    uvel_n = np.zeros((zlen, tlen))
+    mld_n = np.zeros((tlen,))
+    
     for n in xrange(1,tlen):
         print 'Loop iter. %s' %n
+        
+        #package input variables (TODO: find a better way to do this. Maybe use classes?)
+        nm1 = n-1
+        forc = {}
+        forc['q_in'] = q_in[nm1]
+        forc['q_out'] = q_out[nm1]
+        forc['emp'] = emp[nm1]
+        forc['taux'] = taux[nm1]
+        forc['tauy'] = tauy[nm1]
+        forc['absrb'] = absrb
+        
+        coords['z'] = z
+        coords['dz'] = dz
+        coords['dt'] = dt
+        coords['zlen'] = zlen
+        
+        params['rb'] = rb
+        params['rg'] = rg
+        params['f'] = f
+        params['cpw'] = cpw
+        params['g'] = g
+        params['ucon'] = ucon
+        
+        sal_n[:,n], temp_n[:,n], uvel_n[:,n], vvel_n[:,n], mld_n[n] = sbf.pwpgo(forc, params, coords, temp, sal, uvel, vvel, dens, n)
+
+        #apply vertical diffusion
+        if rkz > 0:
+            #diffusion
+            #this code block is incomplete in the source script
+            
+        #Diagnostic plots
+        if diagnostics == 1:
+            
+            #plot depth int. KE and momentum
+            plt.figure(num=1)
+            
+            plt.subplot(211)
+            plt.plot(time[n]-time[0], np.trapz(z, 0.5*d*(uvel[:,n]**2+vvel[:,n]**2)), 'b.')
+            plt.grid(True)
+            if n==1:
+                plt.title('Depth integrated KE')
+            
+            plt.subplot(212)
+            plt.plot(time[n]-time[0], np.trapz(z, d*np.sqrt(uvel[:,n]**2+vvel[:,n]**2)), 'b.')
+            plt.grid(True)
+            if n==1:
+                plt.title('Depth integrated Mom.')
+                #plt.get_current_fig_manager().window.wm_geometry("400x600+20+40")
+                
+            #plot T,S and U,V
+            ax1 = plt.subplot2grid((4,1), (0, 0), colspan=2)
+            ax1.plot(uvel[:,n], z, 'b', label='uvel')
+            ax1.plot(vvel[:,n], z, 'r', label='vvel')
+            ax1.grid(True)
+            ax1.legend()
+            
+            ax2 = plt.subplot2grid((4,1), (0, 2), colspan=1)
+            ax2.plot(temp[:,n], z, 'b')
+            ax2.grid(True)
+            ax2.set_xlabel('Temp.')
+            
+            ax3 = plt.subplot2grid((4,1), (0, 3), colspan=1)
+            ax2.plot(sal[:,n], z, 'b')
+            ax3.grid(True)
+            ax3.set_xlabel('Salinity.')
+            
+            
+            
+            
         
 if __name__ == "__main__":
     
