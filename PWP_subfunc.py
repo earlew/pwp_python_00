@@ -215,10 +215,10 @@ def grad_mix(t, s, d, u, v, dz, g, rg, zlen):
     		dd = (d[j+1]-d[j])/d[j]
     		dv = (u[j+1]-u[j])**2+(v[j+1]-v[j])**2
     		if dv == 0:
-    			r(j) = np.inf
+    			r[j] = np.inf
     		else:
                 #compute grad. rich. number
-    			r(j) = g*dz*dd/dv
+    			r[j] = g*dz*dd/dv
                 
                 
         #find the smallest value of r in the profile
