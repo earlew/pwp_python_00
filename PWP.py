@@ -109,6 +109,7 @@ def main():
     evap_intp = interp1d(met_dset['time'], met_dset['qlat'], axis=0, kind='nearest', bounds_error=False)
     evap = (0.03456/(86400*1000))*evap_intp(np.floor(time_vec)) #(meters?)
     emp = evap-precip
+    emp[np.isnan(emp)] = 0.
     
     #debug_here()
     
@@ -196,15 +197,16 @@ def main():
             plt.figure(num=1)
             
             plt.subplot(211)
-            plt.plot(time_vec[n]-time_vec[0], np.trapz(0.5*dens*(uvel[:,n]**2+vvel[:,n]**2)), z, 'b.')
+            plt.plot(time_vec[n]-time_vec[0], np.trapz(0.5*dens*(uvel[:,n]**2+vvel[:,n]**2)), 'b.')
             plt.grid(True)
             if n==1:
                 plt.title('Depth integrated KE')
             
             plt.subplot(212)
-            plt.plot(time_vec[n]-time_vec[0], np.trapz(dens*np.sqrt(uvel[:,n]**2+vvel[:,n]**2)), z, 'b.')
+            plt.plot(time_vec[n]-time_vec[0], np.trapz(dens*np.sqrt(uvel[:,n]**2+vvel[:,n]**2)), 'b.')
             plt.grid(True)
             plt.pause(0.05)
+            plt.subplots_adjust(hspace=0.35)
             
             #debug_here()
             if n==1:
@@ -212,30 +214,38 @@ def main():
                 #plt.get_current_fig_manager().window.wm_geometry("400x600+20+40")
                 
             #plot T,S and U,V
-            plt.figure(num=2)
+            plt.figure(num=2, figsize=(12,6))
             ax1 = plt.subplot2grid((1,4), (0, 0), colspan=2)
             ax1.plot(uvel[:,n], z, 'b', label='uvel')
             ax1.plot(vvel[:,n], z, 'r', label='vvel')
             ax1.invert_yaxis()
             ax1.grid(True)
-            ax1.legend(loc=3)
+            ax1.legend(loc=3)    
             
             ax2 = plt.subplot2grid((1,4), (0, 2), colspan=1)
             ax2.plot(temp[:,n], z, 'b')
             ax2.grid(True)
             ax2.set_xlabel('Temp.')
             ax2.invert_yaxis()
+            xlims = ax2.get_xlim()
+            xticks = np.round(np.linspace(xlims[0], xlims[1], 4), 1)
+            ax2.set_xticks(xticks)
             
             ax3 = plt.subplot2grid((1,4), (0, 3), colspan=1)
             ax3.plot(sal[:,n], z, 'b')
+            ax3.set_xlabel('Salinity')
             ax3.grid(True)
             ax3.invert_yaxis()
-            ax3.set_xlabel('Salinity')
+            xlims = ax3.get_xlim()
+            xticks = np.round(np.linspace(xlims[0], xlims[1], 4), 1)
+            ax3.set_xticks(xticks)
             
             plt.pause(0.05)
             
             plt.show()
             
+            
+    debug_here()
             
             
             

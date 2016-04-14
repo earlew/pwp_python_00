@@ -74,7 +74,7 @@ def pwpgo(forc, params, coords, temp, sal, uvel, vvel, dens):
     temp[1:] = temp[1:] + q_in*absrb[1:]*dt/(dz*dens[1:]*cpw)
     
     #compute new density
-    dens_new = sw.dens0(sal, temp)
+    dens = sw.dens0(sal, temp)
     
     #relieve static instability
     temp, sal, dens, uvel, vvel = remove_si(temp, sal, dens, uvel, vvel)
@@ -127,7 +127,7 @@ def remove_si(temp, sal, dens, uvel, vvel):
     # ml_index is the index of the depth of the surface mixed layer after adjustment,
     
     stat_unstable = True
-    
+      
     while stat_unstable:
         
         dens_diff = np.diff(dens)
@@ -139,11 +139,16 @@ def remove_si(temp, sal, dens, uvel, vvel):
             
             #plot density
             plt.figure(num=86)
-            plt.clf()
-            plt.plot(initial_dens, 'b-')
-            plt.plot(dens, 'r-')
+            plt.clf() #probably redundant
+            plt.plot(initial_dens-1000, range(len(initial_dens)), 'b-')
+            plt.plot(dens-1000, range(len(initial_dens)), 'r-')
+            plt.gca().invert_yaxis()
+            plt.xlabel('Density-1000 (kg/m3)')
+            plt.grid(True)
             plt.pause(0.05)
             plt.show()
+            
+            #debug_here()
             
         else:
             stat_unstable = False
