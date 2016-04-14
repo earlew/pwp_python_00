@@ -98,6 +98,8 @@ def pwpgo(forc, params, coords, temp, sal, uvel, vvel, dens):
     uvel[:ml_idx] = uvel[:ml_idx]+du
     vvel[:ml_idx] = vvel[:ml_idx]+dv
     
+    #debug_here()
+    
     #apply drag to current 
     #Original comment: this is a horrible parameterization of inertial-internal wave dispersion
     if ucon > 1e-10:
@@ -121,7 +123,7 @@ def pwpgo(forc, params, coords, temp, sal, uvel, vvel, dens):
 def remove_si(temp, sal, dens, uvel, vvel):
     
     # Find and relieve static instability that may occur in the
-    # density array d. This simulates free convection.
+    # density array 'dens'. This simulates free convection.
     # ml_index is the index of the depth of the surface mixed layer after adjustment,
     
     stat_unstable = True
@@ -141,6 +143,7 @@ def remove_si(temp, sal, dens, uvel, vvel):
             plt.plot(initial_dens, 'b-')
             plt.plot(dens, 'r-')
             plt.pause(0.05)
+            plt.show()
             
         else:
             stat_unstable = False
@@ -171,15 +174,16 @@ def rot(u, v, ang):
     return u, v   
     
 
-def bulk_mix(t, s, d, u, v, dz, g, rb, zlen, z, ml_idx):
+def bulk_mix(t, s, d, u, v, dz, g, rb, nz, z, ml_idx):
     #sub-routine to do bulk richardson mixing
     
     rvc = rb #critical rich number??
     
-    for j in xrange(ml_idx, zlen):
+    for j in xrange(ml_idx, nz):
     	h 	= z[j]
-    	dd 	= (d[j]-d[1])/d[1]
-    	dv 	= (u[j]-u[1])**2+(v[j]-v[1])**2
+        #it looks like density and velocity are mixed from the surface down to the ML depth
+    	dd 	= (d[j]-d[0])/d[0]
+    	dv 	= (u[j]-u[0])**2+(v[j]-v[0])**2
     	if dv == 0:
     		rv = np.inf
     	else:
@@ -192,7 +196,7 @@ def bulk_mix(t, s, d, u, v, dz, g, rb, zlen, z, ml_idx):
             
     return t, s, d, u, v
 
-def grad_mix(t, s, d, u, v, dz, g, rg, zlen):
+def grad_mix(t, s, d, u, v, dz, g, rg, nz):
     
     #copied from source script:
     # %  This function performs the gradeint Richardson Number relaxation
@@ -206,7 +210,7 @@ def grad_mix(t, s, d, u, v, dz, g, rg, zlen):
     
     rc = rg #critical rich. number
     j1 = 0
-    j2 = zlen-1
+    j2 = nz-1
     j_range = np.arange(j1,j2)
     i = 0 #loop count
     #debug_here()
@@ -237,17 +241,17 @@ def grad_mix(t, s, d, u, v, dz, g, rg, zlen):
         if r_min > rc:
             break
             
-        #Mix the cells js and js+1 that had the smallest Richardson Number
+        #Mix the cells j_min_idx and j_min_idx+1 that had the smallest Richardson Number
         t, s, d, u, v = stir(t, s, d, u, v, rc, r_min, j_min_idx)
         
         #recompute the rich number over the part of the profile that has changed
     	j1 = j_min_idx-2
     	if j1 < 1:
-    		 j1 = 1
+    		 j1 = 0
     	
     	j2 = j_min_idx+2
-    	if j2 > zlen-1:
-    		 j2 = zlen-1
+    	if j2 > nz-1:
+    		 j2 = nz-1
              
         i+=1
         
@@ -276,14 +280,20 @@ def stir(t, s, d, u, v, rc, r, j):
     rnew = rc+rcon/5.
     f = 1-r/rnew
     
+    #mix temp
     dt = (t[j+1]-t[j])*f/2.
     t[j+1] = t[j+1]-dt
     t[j] = t[j]+dt
     
+    #mix sal
     ds = (s[j+1]-s[j])*f/2.
     s[j+1] = s[j+1]-ds
     s[j] = s[j]+ds
-    d[j:j+1] = sw.dens0(s[j:j+1], t[j:j+1])
+    
+    #recompute density 
+    #d[j:j+1] = sw.dens0(s[j:j+1], t[j:j+1]) 
+    #have to be careful here. x[j:j+1] in python is not the same as x[[j,j+1]]. We want the latter
+    d[[j,j+1]] = sw.dens0(s[[j,j+1]], t[[j,j+1]])
     
     du = (u[j+1]-u[j])*f/2
     u[j+1] = u[j+1]-du

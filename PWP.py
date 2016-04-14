@@ -204,6 +204,7 @@ def main():
             plt.subplot(212)
             plt.plot(time_vec[n]-time_vec[0], np.trapz(dens*np.sqrt(uvel[:,n]**2+vvel[:,n]**2)), z, 'b.')
             plt.grid(True)
+            plt.pause(0.05)
             
             #debug_here()
             if n==1:
@@ -217,7 +218,7 @@ def main():
             ax1.plot(vvel[:,n], z, 'r', label='vvel')
             ax1.invert_yaxis()
             ax1.grid(True)
-            ax1.legend()
+            ax1.legend(loc=3)
             
             ax2 = plt.subplot2grid((1,4), (0, 2), colspan=1)
             ax2.plot(temp[:,n], z, 'b')
@@ -229,9 +230,11 @@ def main():
             ax3.plot(sal[:,n], z, 'b')
             ax3.grid(True)
             ax3.invert_yaxis()
-            ax3.set_xlabel('Salinity.')
+            ax3.set_xlabel('Salinity')
             
             plt.pause(0.05)
+            
+            plt.show()
             
             
             
