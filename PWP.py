@@ -10,9 +10,14 @@ import seawater as sw
 import xray
 import PWP_subfunc as sbf
 from IPython.core.debugger import Tracer
+import matplotlib.pyplot as plt
+
 reload(sbf)
 
 debug_here = Tracer()
+plt.close('all')
+
+
 
 #start of main  script
 def main():
@@ -20,6 +25,7 @@ def main():
     ##############################################
     #define model parameters
     ##############################################
+    diagnostics = 1
     dt = 3600.0*3 #time-step increment (seconds)
     secsInDay = 86400.
     dt_d = dt/secsInDay
@@ -81,19 +87,30 @@ def main():
             return
             
     #interpolate profile data to new z-coordinate
+    from scipy.interpolate import InterpolatedUnivariateSpline
     prof_dset_intp = {} 
     for vname in prof_dset:
-        p_intp = interp1d(prof_dset['z'], prof_dset[vname], axis=0, kind='nearest', bounds_error=False)
+        #first strip nans
+        not_nan = np.logical_not(np.isnan(prof_dset[vname]))
+        indices = np.arange(len(prof_dset[vname]))
+        #p_intp = interp1d(prof_dset['z'][not_nan], prof_dset[vname][not_nan])
+        #p_intp = interp1d(prof_dset['z'], prof_dset[vname], axis=0, kind='linear', bounds_error=False)
+        #interp1d doesn't work here because it doesn't extrapolate. Can't have Nans in initial profile
+        p_intp = InterpolatedUnivariateSpline(prof_dset['z'][not_nan], prof_dset[vname][not_nan], k=1)
         prof_dset_intp[vname] = p_intp(z)
         
     #get profile variables
-    temp = prof_dset_intp['t'] #profile temperature
-    sal = prof_dset_intp['s'] #profile salinity
-    dens = sw.dens0(sal, temp)
+    temp0 = prof_dset_intp['t'] #initial profile temperature
+    sal0 = prof_dset_intp['s'] #intial profile salinity
+    dens = sw.dens0(sal0, temp0)
+    
      
     #interpolate E-P to dt resolution
-    evap = (0.03456/(86400*1000))*met_dset_intp['qlat'] #(meters?)
+    evap_intp = interp1d(met_dset['time'], met_dset['qlat'], axis=0, kind='nearest', bounds_error=False)
+    evap = (0.03456/(86400*1000))*evap_intp(np.floor(time_vec)) #(meters?)
     emp = evap-precip
+    
+    #debug_here()
     
     #compute absorption and courant number
     absrb = sbf.absorb(beta1, beta2, zlen, dz) #absorption of icncoming radiation (units unclear)
@@ -104,9 +121,9 @@ def main():
     ##############################################
     #Prepare variables for output 
     ##############################################
-    uvel = np.zeros((zlen, tlen)) #east velocity m/s
-    vvel = np.zeros((zlen, tlen)) #north velocity m/s
-    mld = np.zeros((tlen,))
+    # uvel = np.zeros((zlen, tlen)) #east velocity m/s
+    # vvel = np.zeros((zlen, tlen)) #north velocity m/s
+    # mld = np.zeros((tlen,))
     
     #preallocate output dict
     pwp_output = {}
@@ -114,24 +131,29 @@ def main():
     pwp_output['dz'] = dz
     pwp_output['lat'] = lat
     pwp_output['z'] = z
-    pwp_output['time'] = np.zeros((zlen, np.floor(tlen/dt_save)))
-    pwp_output['temp'] = np.zeros((zlen, np.floor(tlen/dt_save)))
-    pwp_output['sal'] = np.zeros((zlen, np.floor(tlen/dt_save)))
-    pwp_output['dens'] = np.zeros((zlen, np.floor(tlen/dt_save)))
-    pwp_output['uvel'] = np.zeros((zlen, np.floor(tlen/dt_save)))
-    pwp_output['vvel'] = np.zeros((zlen, np.floor(tlen/dt_save)))
-    pwp_output['mld'] = np.zeros((zlen, np.floor(tlen/dt_save)))
+    arr_sz = (zlen, int(np.floor(tlen/dt_save)))
+    pwp_output['time'] = np.zeros(arr_sz)
+    pwp_output['temp'] = np.zeros(arr_sz)
+    pwp_output['sal'] = np.zeros(arr_sz)
+    pwp_output['dens'] = np.zeros(arr_sz)
+    pwp_output['uvel'] = np.zeros(arr_sz)
+    pwp_output['vvel'] = np.zeros(arr_sz)
+    pwp_output['mld'] = np.zeros(arr_sz)
     
     ##############################################
     #MODEL LOOP START 
     ##############################################
     
     #pre-allocate loop vbles
-    sal_n = np.zeros((zlen, tlen))
-    temp_n = np.zeros((zlen, tlen))
-    vvel_n = np.zeros((zlen, tlen))
-    uvel_n = np.zeros((zlen, tlen))
-    mld_n = np.zeros((tlen,))
+    sal = np.zeros((zlen, tlen))
+    temp = np.zeros((zlen, tlen))
+    vvel = np.zeros((zlen, tlen))
+    uvel = np.zeros((zlen, tlen))
+    mld = np.zeros((tlen,))
+    
+    #intialize sal and temp profiles
+    sal[:,0] = sal0
+    temp[:,0] = temp0
     
     for n in xrange(1,tlen):
         print 'Loop iter. %s' %n
@@ -146,11 +168,13 @@ def main():
         forc['tauy'] = tauy[nm1]
         forc['absrb'] = absrb
         
+        coords = {}
         coords['z'] = z
         coords['dz'] = dz
         coords['dt'] = dt
         coords['zlen'] = zlen
         
+        params = {}
         params['rb'] = rb
         params['rg'] = rg
         params['f'] = f
@@ -158,10 +182,10 @@ def main():
         params['g'] = g
         params['ucon'] = ucon
         
-        sal_n[:,n], temp_n[:,n], uvel_n[:,n], vvel_n[:,n], mld_n[n] = sbf.pwpgo(forc, params, coords, temp, sal, uvel, vvel, dens, n)
+        sal[:,n], temp[:,n], uvel[:,n], vvel[:,n], mld[n] = sbf.pwpgo(forc, params, coords, temp[:,nm1], sal[:,nm1], uvel[:,nm1], vvel[:,nm1], dens)
 
         #apply vertical diffusion
-        if rkz > 0:
+        #if rkz > 0:
             #diffusion
             #this code block is incomplete in the source script
             
@@ -172,34 +196,42 @@ def main():
             plt.figure(num=1)
             
             plt.subplot(211)
-            plt.plot(time[n]-time[0], np.trapz(z, 0.5*d*(uvel[:,n]**2+vvel[:,n]**2)), 'b.')
+            plt.plot(time_vec[n]-time_vec[0], np.trapz(0.5*dens*(uvel[:,n]**2+vvel[:,n]**2)), z, 'b.')
             plt.grid(True)
             if n==1:
                 plt.title('Depth integrated KE')
             
             plt.subplot(212)
-            plt.plot(time[n]-time[0], np.trapz(z, d*np.sqrt(uvel[:,n]**2+vvel[:,n]**2)), 'b.')
+            plt.plot(time_vec[n]-time_vec[0], np.trapz(dens*np.sqrt(uvel[:,n]**2+vvel[:,n]**2)), z, 'b.')
             plt.grid(True)
+            
+            #debug_here()
             if n==1:
                 plt.title('Depth integrated Mom.')
                 #plt.get_current_fig_manager().window.wm_geometry("400x600+20+40")
                 
             #plot T,S and U,V
-            ax1 = plt.subplot2grid((4,1), (0, 0), colspan=2)
+            plt.figure(num=2)
+            ax1 = plt.subplot2grid((1,4), (0, 0), colspan=2)
             ax1.plot(uvel[:,n], z, 'b', label='uvel')
             ax1.plot(vvel[:,n], z, 'r', label='vvel')
+            ax1.invert_yaxis()
             ax1.grid(True)
             ax1.legend()
             
-            ax2 = plt.subplot2grid((4,1), (0, 2), colspan=1)
+            ax2 = plt.subplot2grid((1,4), (0, 2), colspan=1)
             ax2.plot(temp[:,n], z, 'b')
             ax2.grid(True)
             ax2.set_xlabel('Temp.')
+            ax2.invert_yaxis()
             
-            ax3 = plt.subplot2grid((4,1), (0, 3), colspan=1)
-            ax2.plot(sal[:,n], z, 'b')
+            ax3 = plt.subplot2grid((1,4), (0, 3), colspan=1)
+            ax3.plot(sal[:,n], z, 'b')
             ax3.grid(True)
+            ax3.invert_yaxis()
             ax3.set_xlabel('Salinity.')
+            
+            plt.pause(0.05)
             
             
             

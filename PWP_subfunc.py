@@ -36,8 +36,8 @@ def pwpgo(forc, params, coords, temp, sal, uvel, vvel, dens):
     """
     
     #unpack arguments (TODO:not very elegant. Will fix in future)
-    qi = forc['qi']
-    q0 = forc['qo']
+    q_in = forc['q_in']
+    q_out = forc['q_out']
     emp = forc['emp']
     taux = forc['taux']
     tauy = forc['tauy']
@@ -62,7 +62,7 @@ def pwpgo(forc, params, coords, temp, sal, uvel, vvel, dens):
     sal_old = sal[0]
     
     #update layer 1 temp and sal
-    temp[0] = temp[0] + (qi*absrb[0]-qo)*dt/(dz*dens[0]*cpw)
+    temp[0] = temp[0] + (q_in*absrb[0]-q_out)*dt/(dz*dens[0]*cpw)
     sal[0] = sal[0]/(1-emp*dt/dz)
     
     #check if temp is less than freezing point
@@ -71,7 +71,7 @@ def pwpgo(forc, params, coords, temp, sal, uvel, vvel, dens):
         temp[0] = T_fz
         
     ###Absorb rad. at depth
-    temp[1:] = temp[1:] + qi*absrb[1:]*dt/(dz*dens[1:]*cpw)
+    temp[1:] = temp[1:] + q_in*absrb[1:]*dt/(dz*dens[1:]*cpw)
     
     #compute new density
     dens_new = sw.dens0(sal, temp)
@@ -108,10 +108,13 @@ def pwpgo(forc, params, coords, temp, sal, uvel, vvel, dens):
     
     #Apply Bulk Richardson number instability form of mixing (as in PWP)
     if rb > 1e-5:
-        temp, sal, dens, uvel, vvel = bulk_mix(t, s, d, u, v, dz, g, rg, zlen, ml_idx)
+        temp, sal, dens, uvel, vvel = bulk_mix(temp, sal, dens, uvel, vvel, dz, g, rb, zlen, z, ml_idx)
     
-    if rc > 0:
+    #Do the gradient Richardson number instability form of mixing.
+    if rg > 0:
         temp, sal, dens, uvel, vvel = grad_mix(temp, sal, dens, uvel, vvel, dz, g, rg, zlen)
+        
+    return sal, temp, uvel, vvel, mld
     
     
     
@@ -120,6 +123,8 @@ def remove_si(temp, sal, dens, uvel, vvel):
     # Find and relieve static instability that may occur in the
     # density array d. This simulates free convection.
     # ml_index is the index of the depth of the surface mixed layer after adjustment,
+    
+    stat_unstable = True
     
     while stat_unstable:
         
@@ -135,7 +140,7 @@ def remove_si(temp, sal, dens, uvel, vvel):
             plt.clf()
             plt.plot(initial_dens, 'b-')
             plt.plot(dens, 'r-')
-            plt.show()
+            plt.pause(0.05)
             
         else:
             stat_unstable = False
@@ -166,15 +171,15 @@ def rot(u, v, ang):
     return u, v   
     
 
-def bulk_mix(t, s, d, u, v, dz, g, rg, zlen, ml_idx):
+def bulk_mix(t, s, d, u, v, dz, g, rb, zlen, z, ml_idx):
     #sub-routine to do bulk richardson mixing
     
     rvc = rb #critical rich number??
     
-    for j in xrange(ml_ix, zlen+1):
+    for j in xrange(ml_idx, zlen):
     	h 	= z[j]
-    	dd 	= (d[j]-d[1])/d[1];
-    	dv 	= (u[j]-u[1])**2+(v[j]-v[1])**2;
+    	dd 	= (d[j]-d[1])/d[1]
+    	dv 	= (u[j]-u[1])**2+(v[j]-v[1])**2
     	if dv == 0:
     		rv = np.inf
     	else:
@@ -197,11 +202,14 @@ def grad_mix(t, s, d, u, v, dz, g, rg, zlen):
     # %  zero in the mixed layer.  The numerical values of the minimum allowable
     # %  density and velocity differences are entirely arbitrary, and should not
     # %  effect the calculations (except that on some occasions they evidently have!)
+    #print "entered grad mix"
     
     rc = rg #critical rich. number
     j1 = 0
     j2 = zlen-1
-    j_range = np.arange(ji,j2)
+    j_range = np.arange(j1,j2)
+    i = 0 #loop count
+    #debug_here()
     
     while 1:
         #TODO: find a better way to do implement this loop
@@ -227,10 +235,10 @@ def grad_mix(t, s, d, u, v, dz, g, rg, zlen):
         
         #Check to see whether the smallest r is critical or not.
         if r_min > rc:
-            return t, s, d, u, v
+            break
             
         #Mix the cells js and js+1 that had the smallest Richardson Number
-        t, s, d, u, v = stir(t, s, d, u, v, rc, j_min_idx)
+        t, s, d, u, v = stir(t, s, d, u, v, rc, r_min, j_min_idx)
         
         #recompute the rich number over the part of the profile that has changed
     	j1 = j_min_idx-2
@@ -241,10 +249,13 @@ def grad_mix(t, s, d, u, v, dz, g, rg, zlen):
     	if j2 > zlen-1:
     		 j2 = zlen-1
              
+        i+=1
+        
+             
     return t, s, d, u, v
         
         
-def stir(t, s, d, u, v, rc, j):
+def stir(t, s, d, u, v, rc, r, j):
     
     #copied from source script:
     
