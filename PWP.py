@@ -23,7 +23,21 @@ debug_here = Tracer()
 def run(met_data='met.nc', prof_data='profile.nc', overwrite=True, diagnostics=True, param_kwds=None):
     
     """
-    This is the main controller function for the model. 
+    This is the main controller function for the model. The flow of the algorithm
+    is as follows:
+    
+        1) Set model parameters (see PWP_helper.set_params.py). 
+        2) Read in forcing and initial profile data.
+        3) Prepare forcing and profile data for model run (see PWP_helper.prep_data.py).
+            3.1) Interpolate forcing data to prescribed time increments.
+            3.2) Interpolate profile data to prescribed depth increments.
+            3.3) Initialize model output variables.
+        4) Iterate the PWP model specified time interval:
+            4.1) apply heat and salt fluxes
+            4.2) rotate, adjust to wind, rotate
+            4.3) apply bulk Richardson number mixing
+            4.4) apply gradient Richardson number mixing       
+        5) Save results to output file
     
     Input: 
     met_data -  path to netCDF file containing forcing/meterological data. 
@@ -90,11 +104,9 @@ def run(met_data='met.nc', prof_data='profile.nc', overwrite=True, diagnostics=T
     
     #check timer
     tnow = timeit.default_timer()
-    t_elapsed  = (tnow - t0)
-    
+    t_elapsed  = (tnow - t0)  
     print "Time elapsed: %i minutes and %i seconds" %(np.floor(t_elapsed/60), t_elapsed%60)
-    
-     
+         
     ## write output to disk
     if overwrite:
         time_stamp = ''
