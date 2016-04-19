@@ -3,8 +3,12 @@ Python implementation of the Price Weller Pinkel (PWP) mixed layer model.
 This is based on the MATLAB implementation of the PWP model written by
 Byron Kilbourne (University of Washington).
 
-The run() function provides an outline of how to run the model. 
+The run() function provides an outline of how the code works. 
 
+Earle Wilson
+School of Oceanography
+University of Washington
+April 18, 2016
 """
 
 import numpy as np
