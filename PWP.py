@@ -40,7 +40,8 @@ def run(met_data='met.nc', prof_data='profile.nc', overwrite=True, diagnostics=T
             4.1) apply heat and salt fluxes
             4.2) rotate, adjust to wind, rotate
             4.3) apply bulk Richardson number mixing
-            4.4) apply gradient Richardson number mixing       
+            4.4) apply gradient Richardson number mixing
+            4.5) apply diapycnal diffusion       
         5) Save results to output file
     
     Input: 
