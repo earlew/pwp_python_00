@@ -255,10 +255,10 @@ def livePlots(pwp_out, n):
 
     plt.show()
 
-def makeSomePlots(forcing, pwp_out):
+def makeSomePlots(forcing, pwp_out, save_plot=False):
     
     """
-    Function to make plots once the model iteration is complete.
+    Function to make plots of the results once the model iterations are complete.
     
     """
 
@@ -302,6 +302,9 @@ def makeSomePlots(forcing, pwp_out):
     axes[2].grid(True)
     axes[2].legend(loc=0, fontsize='medium')
     axes[2].set_xlabel('Time')
+    
+    if save_plot:     
+        plt.savefig('surface_forcing.pdf', bbox_inches='tight')
     
     
     fig, axes = plt.subplots(2,1, sharex=True)
@@ -351,6 +354,10 @@ def makeSomePlots(forcing, pwp_out):
     par1.axis["top"].label.set_color(p2.get_color())
     par1.axis["top"].major_ticklabels.set_color(p2.get_color())
     par1.axis["top"].major_ticks.set_color(p2.get_color())
+    
+    if save_plot:     
+        plt.savefig('initial_final_TS_profiles.pdf', bbox_inches='tight')
+        
     
     
     plt.show()
