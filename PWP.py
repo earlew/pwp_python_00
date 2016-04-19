@@ -254,6 +254,15 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         if rg > 0:
             temp, sal, dens, uvel, vvel = grad_mix(temp, sal, dens, uvel, vvel, dz, g, rg, zlen)
             
+        
+        ### Apply diffusion ###
+        if rkz > 0:
+            temp = diffus(dstab, zlen, temp) 
+            sal = diffus(dstab, zlen, temp) 
+            dens = sw.dens0(sal, temp)
+            uvel = diffus(dstab, zlen, uvel)
+            vvel = diffus(dstab, zlen, vvel)
+        
         ### update output profile data ###
         pwp_out['temp'][:, n] = temp 
         pwp_out['sal'][:, n] = sal 
@@ -265,7 +274,6 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         #do diagnostics
         if diagnostics==1:
             phf.livePlots(pwp_out, n)
-        
         
     return pwp_out
     
@@ -460,7 +468,11 @@ def stir(t, s, d, u, v, rc, r, j):
     
     return t, s, d, u, v
     
+def diffus(dstab,nz,a):
+ 
+    a[1:nz-1] = a[1:nz-1] + dstab*(a[1:nz-2] - 2*a[1:nz-1] + a[2:nz])
     
+    return a    
 
 if __name__ == "__main__":
     
