@@ -304,7 +304,7 @@ def makeSomePlots(forcing, pwp_out, save_plot=False):
     axes[2].set_xlabel('Time')
     
     if save_plot:     
-        plt.savefig('surface_forcing.pdf', bbox_inches='tight')
+        plt.savefig('surface_forcing.png', bbox_inches='tight')
     
     
     fig, axes = plt.subplots(2,1, sharex=True)
@@ -356,7 +356,7 @@ def makeSomePlots(forcing, pwp_out, save_plot=False):
     par1.axis["top"].major_ticks.set_color(p2.get_color())
     
     if save_plot:     
-        plt.savefig('initial_final_TS_profiles.pdf', bbox_inches='tight')
+        plt.savefig('initial_final_TS_profiles.png', bbox_inches='tight')
         
     
     
