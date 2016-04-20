@@ -44,14 +44,14 @@ pip install seawater
 
 ### Example output
 
-![Sample Forcing](surface_forcing.png)
+![Sample Forcing](plots/surface_forcing.png)
 
 The plots above show the sample surface forcing data stored in the *met.nc*. These data represent summertime surface conditions over the Beaufort Sea.
 
-![Sample Forcing](initial_final_TS_profiles.png)
+![Sample Forcing](plots/initial_final_TS_profiles.png)
 
 The plot above compares initial (dashed lines) and final (solid) salinity and temperature profiles. This is with diffusion turned off (i.e. `rkz=0`).
 
-![Sample Forcing](initial_final_TS_profiles_diff.png)
+![Sample Forcing](plots/initial_final_TS_profiles_diff.png)
 
 Same as above but with the vertical diffusion co-efficient (`rkz`) set to 1x10<sup>-5</sup> m<sup>2</sup>/s.
