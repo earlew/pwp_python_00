@@ -8,6 +8,7 @@ import seawater as sw
 import matplotlib.pyplot as plt
 from IPython.core.debugger import Tracer
 import PWP_model as pwp
+from datetime import datetime
 
 debug_here = Tracer()
 
@@ -188,7 +189,7 @@ def prep_data(met_dset, prof_dset, params):
     pwp_out['temp'][:,0] = temp0
     pwp_out['dens'][:,0] = dens0
     
-    return forcing, pwp_out
+    return forcing, pwp_out, params
 
 
 
@@ -260,7 +261,7 @@ def livePlots(pwp_out, n):
 
     plt.show()
 
-def makeSomePlots(forcing, pwp_out, save_plot=False):
+def makeSomePlots(forcing, pwp_out, save_plot=False, overwrite=True, suffix=''):
     
     """
     Function to make plots of the results once the model iterations are complete.
@@ -312,9 +313,8 @@ def makeSomePlots(forcing, pwp_out, save_plot=False):
         plt.savefig('surface_forcing.png', bbox_inches='tight')
     
     
-    fig, axes = plt.subplots(2,1, sharex=True)
-    
     ##plot temp and sal change over time
+    fig, axes = plt.subplots(2,1, sharex=True)
     vble = ['temp', 'sal']
     units = ['$^{\circ}$C', 'PSU']
     sf = 0.8

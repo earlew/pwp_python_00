@@ -18,13 +18,14 @@ from IPython.core.debugger import Tracer
 import xray
 import pickle
 import timeit
+from datetime import datetime
 import PWP_helper as phf
 
 
 reload(phf)
 debug_here = Tracer()
 
-def run(met_data='met.nc', prof_data='profile.nc', overwrite=True, diagnostics=True, param_kwds=None):
+def run(met_data='met.nc', prof_data='profile.nc', overwrite=True, diagnostics=True, suffix='', param_kwds=None):
     
     """
     This is the main controller function for the model. The flow of the algorithm
@@ -53,10 +54,13 @@ def run(met_data='met.nc', prof_data='profile.nc', overwrite=True, diagnostics=T
     
     overwrite - controls the naming of output file. If True, the same filename is used for 
                 every model run. If False, a unique time_stamp is generated and appended
-                to the file name. Default is True
+                to the file name. Default is True.
                 
     diagnostics - if True, the code will generate live plots of mixed layer properties at 
                 each time step.
+    
+    suffix - string to add to the end of filenames. e.g. suffix = 'nodiff' leads to 'pwp_out_nodiff.nc.
+            default is an empty string ''.
                 
     param_kwds - dict containing keyword arguments for set_params function. See PWP_helper.set_params()
                 for more details. If None, default parameters are used. Default is None.
@@ -92,17 +96,18 @@ def run(met_data='met.nc', prof_data='profile.nc', overwrite=True, diagnostics=T
     
     ## get model parameters and constants (read docs for set_params function)
     if param_kwds is None:
-        params = phf.set_params(dt=3., dz=1., max_depth=100., mld_thresh=1e-4, lat=74., dt_save=1.) 
+        params = phf.set_params() 
     else:
         params = phf.set_params(**param_kwds)
     
     ## Get surface forcing and profile data 
-    # These are x-ray datasets, but you can treat them as dicts. Do met_dset.keys() to explore the data fields
+    # These are x-ray datasets, but you can treat them as dicts. 
+    # Do met_dset.keys() to explore the data fields
     met_dset = xray.open_dataset(met_data)
     prof_dset = xray.open_dataset(prof_data)
     
     ## prep forcing and initial profile data for model run (see prep_data function for more details)
-    forcing, pwp_out = phf.prep_data(met_dset, prof_dset, params)
+    forcing, pwp_out, params = phf.prep_data(met_dset, prof_dset, params)
     
     ## run the model
     pwp_out = pwpgo(forcing, params, pwp_out, diagnostics)
@@ -118,6 +123,8 @@ def run(met_data='met.nc', prof_data='profile.nc', overwrite=True, diagnostics=T
     else:
         #use unique time stamp
         time_stamp = datetime.now().strftime("_%Y%m%d_%H%M")
+    
+    suffix = '_%s' %suffix
         
     # save output as netCDF file
     pwp_out_ds = xray.Dataset({'temp': (['z', 'time'], pwp_out['temp']), 'sal': (['z', 'time'], pwp_out['sal']), 
@@ -129,10 +136,10 @@ def run(met_data='met.nc', prof_data='profile.nc', overwrite=True, diagnostics=T
 
     # also output and forcing as pickle file
     pickle.dump(forcing, open( "forcing%s.p" %time_stamp, "wb" ))
-    pickle.dump(pwp_out, open( "pwp_out%s.p" %time_stamp, "wb" ))
+    pickle.dump(pwp_out, open( "pwp_out%s%s.p" %time_stamp, "wb" ))
     
     ## do analysis of the results
-    phf.makeSomePlots(forcing, pwp_out)
+    phf.makeSomePlots(forcing, pwp_out, suffix=suffix)
 
 def absorb(beta1, beta2, zlen, dz):
     
