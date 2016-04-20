@@ -256,13 +256,14 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
             
         
         ### Apply diffusion ###
-        if rkz > 0:
-            temp = diffus(dstab, zlen, temp) 
-            sal = diffus(dstab, zlen, temp) 
+        if params['rkz'] > 0:
+            temp = diffus(params['dstab'], zlen, temp) 
+            sal = diffus(params['dstab'], zlen, sal) 
             dens = sw.dens0(sal, temp)
-            uvel = diffus(dstab, zlen, uvel)
-            vvel = diffus(dstab, zlen, vvel)
+            uvel = diffus(params['dstab'], zlen, uvel)
+            vvel = diffus(params['dstab'], zlen, vvel)
         
+        debug_here()
         ### update output profile data ###
         pwp_out['temp'][:, n] = temp 
         pwp_out['sal'][:, n] = sal 
@@ -469,8 +470,10 @@ def stir(t, s, d, u, v, rc, r, j):
     return t, s, d, u, v
     
 def diffus(dstab,nz,a):
+    
+    "finite difference implementation of diffusion equation"
  
-    a[1:nz-1] = a[1:nz-1] + dstab*(a[1:nz-2] - 2*a[1:nz-1] + a[2:nz])
+    a[1:nz-1] = a[1:nz-1] + dstab*(a[0:nz-2] - 2*a[1:nz-1] + a[2:nz+1])
     
     return a    
 

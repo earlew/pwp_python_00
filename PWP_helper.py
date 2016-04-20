@@ -28,6 +28,7 @@ def set_params(dt=3., dz=1., max_depth=100., mld_thresh=1e-4, lat=74., dt_save=1
     lat: latitude of profile (degrees). [74.0]
     rb: critical bulk richardson number. [0.65]
     rg: critical gradient richardson number. [0.25]
+    rkz: background vertical diffusion (m**2/s). [0.]
     beta1: longwave extinction coefficient (meters). [0.6] 
     beta2: shortwave extinction coefficient (meters). [20] 
     
@@ -131,17 +132,21 @@ def prep_data(met_dset, prof_dset, params):
     absrb = pwp.absorb(params['beta1'], params['beta2'], zlen, params['dz']) #(units unclear)
     dstab = params['dt']*params['rkz']/params['dz']**2 #courant number  
     if dstab > 0.5:
-        print 'WARNING: !unstable CFL condition for diffusion!'
+        print "WARNING: unstable CFL condition for diffusion! dt*rkz/dz**2 > 0.5."
+        print "To fix this, try to reduce the time step or increase the depth increment."
+        inpt = input("Proceed with simulation? Enter 'y'or 'n'. ")
+        if inpt is 'n':
+            raise ValueError("Please restart PWP.m with a larger dz and/or smaller dt. Exiting...")
         
     forcing['absrb'] = absrb
-    forcing['dstab'] = dstab
+    params['dstab'] = dstab
     
     #check depth resolution of profile data
     prof_incr = np.diff(prof_dset['z']).mean()
     if params['dz'] < prof_incr/5.:
-        inpt = input('Depth increment, dz, is much smaller than profile resolution. Is this okay? (y/n)')
+        inpt = input("Depth increment, dz, is much smaller than profile resolution. Is this okay? (Enter 'y'or 'n')")
         if inpt is 'n':
-            raise ValueError('"Please restart PWP.m with a new dz >= %s" Exiting...' %prof_incr/5.)
+            raise ValueError("Please restart PWP.m with a new dz >= %s Exiting..." %prof_incr/5.)
     
     #debug_here()
     #interpolate profile data to new z-coordinate
