@@ -261,7 +261,7 @@ def livePlots(pwp_out, n):
 
     plt.show()
 
-def makeSomePlots(forcing, pwp_out, save_plot=False, overwrite=True, suffix=''):
+def makeSomePlots(forcing, pwp_out, save_plots=False, overwrite=True, suffix=''):
     
     """
     Function to make plots of the results once the model iterations are complete.
@@ -309,8 +309,8 @@ def makeSomePlots(forcing, pwp_out, save_plot=False, overwrite=True, suffix=''):
     axes[2].legend(loc=0, fontsize='medium')
     axes[2].set_xlabel('Time')
     
-    if save_plot:     
-        plt.savefig('surface_forcing.png', bbox_inches='tight')
+    if save_plots:     
+        plt.savefig('surface_forcing%s.png' %suffix, bbox_inches='tight')
     
     
     ##plot temp and sal change over time
@@ -360,8 +360,8 @@ def makeSomePlots(forcing, pwp_out, save_plot=False, overwrite=True, suffix=''):
     par1.axis["top"].major_ticklabels.set_color(p2.get_color())
     par1.axis["top"].major_ticks.set_color(p2.get_color())
     
-    if save_plot:     
-        plt.savefig('initial_final_TS_profiles.png', bbox_inches='tight')
+    if save_plots:     
+        plt.savefig('initial_final_TS_profiles%s.png' %suffix, bbox_inches='tight')
         
     
     

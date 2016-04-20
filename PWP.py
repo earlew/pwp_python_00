@@ -25,7 +25,7 @@ import PWP_helper as phf
 reload(phf)
 debug_here = Tracer()
 
-def run(met_data='met.nc', prof_data='profile.nc', overwrite=True, diagnostics=True, suffix='', param_kwds=None):
+def run(met_data='met.nc', prof_data='profile.nc', param_kwds=None, overwrite=True, diagnostics=True, suffix='', save_plots=False):
     
     """
     This is the main controller function for the model. The flow of the algorithm
@@ -132,14 +132,14 @@ def run(met_data='met.nc', prof_data='profile.nc', overwrite=True, diagnostics=T
                 'dens': (['z', 'time'],  pwp_out['dens']), 'mld': (['time'],  pwp_out['mld'])}, 
                 coords={'z': pwp_out['z'], 'time': pwp_out['time']})
 
-    pwp_out_ds.to_netcdf('pwp_output%s.nc' %time_stamp)
+    pwp_out_ds.to_netcdf('pwp_output%s%s.nc' %(suffix, time_stamp))
 
     # also output and forcing as pickle file
     pickle.dump(forcing, open( "forcing%s.p" %time_stamp, "wb" ))
-    pickle.dump(pwp_out, open( "pwp_out%s%s.p" %time_stamp, "wb" ))
+    pickle.dump(pwp_out, open( "pwp_out%s%s.p" %(suffix, time_stamp), "wb" ))
     
     ## do analysis of the results
-    phf.makeSomePlots(forcing, pwp_out, suffix=suffix)
+    phf.makeSomePlots(forcing, pwp_out, suffix=suffix, save_plots=save_plots)
 
 def absorb(beta1, beta2, zlen, dz):
     
@@ -270,7 +270,6 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
             uvel = diffus(params['dstab'], zlen, uvel)
             vvel = diffus(params['dstab'], zlen, vvel)
         
-        debug_here()
         ### update output profile data ###
         pwp_out['temp'][:, n] = temp 
         pwp_out['sal'][:, n] = sal 
