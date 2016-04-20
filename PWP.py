@@ -18,6 +18,7 @@ from IPython.core.debugger import Tracer
 import xray
 import pickle
 import timeit
+import os
 from datetime import datetime
 import PWP_helper as phf
 
@@ -47,10 +48,10 @@ def run(met_data='met.nc', prof_data='profile.nc', param_kwds=None, overwrite=Tr
     
     Input: 
     met_data -  path to netCDF file containing forcing/meterological data. 
-                Default is 'met.nc'.
+                Default is 'met.nc'. This must be in input_data/ directory.
                   
     prof_data - path to netCDF file containing initial profile data.
-                Default is 'profile.nc'.
+                Default is 'profile.nc'. This must be in input_data/ directory.
     
     overwrite - controls the naming of output file. If True, the same filename is used for 
                 every model run. If False, a unique time_stamp is generated and appended
@@ -75,7 +76,7 @@ def run(met_data='met.nc', prof_data='profile.nc', param_kwds=None, overwrite=Tr
     There are two ways to run the model:
     1.  You can run the model by typing "python PWP.py" from the bash command line. This
         will initiate this function with the set defaults. Typing "%run PWP" from the ipython 
-        command line will do the same thing.
+        command line will do the same thing. 
         
     2.  You can also import the module then call the run() function specifically. For example,
         >> import PWP 
@@ -103,8 +104,8 @@ def run(met_data='met.nc', prof_data='profile.nc', param_kwds=None, overwrite=Tr
     ## Get surface forcing and profile data 
     # These are x-ray datasets, but you can treat them as dicts. 
     # Do met_dset.keys() to explore the data fields
-    met_dset = xray.open_dataset(met_data)
-    prof_dset = xray.open_dataset(prof_data)
+    met_dset = xray.open_dataset('input_data/%s' %met_data)
+    prof_dset = xray.open_dataset('input_data/%s' %prof_data)
     
     ## prep forcing and initial profile data for model run (see prep_data function for more details)
     forcing, pwp_out, params = phf.prep_data(met_dset, prof_dset, params)
@@ -132,11 +133,11 @@ def run(met_data='met.nc', prof_data='profile.nc', param_kwds=None, overwrite=Tr
                 'dens': (['z', 'time'],  pwp_out['dens']), 'mld': (['time'],  pwp_out['mld'])}, 
                 coords={'z': pwp_out['z'], 'time': pwp_out['time']})
 
-    pwp_out_ds.to_netcdf('pwp_output%s%s.nc' %(suffix, time_stamp))
+    pwp_out_ds.to_netcdf("output/pwp_output%s%s.nc" %(suffix, time_stamp))
 
     # also output and forcing as pickle file
-    pickle.dump(forcing, open( "forcing%s.p" %time_stamp, "wb" ))
-    pickle.dump(pwp_out, open( "pwp_out%s%s.p" %(suffix, time_stamp), "wb" ))
+    pickle.dump(forcing, open( "output/forcing%s.p" %time_stamp, "wb" ))
+    pickle.dump(pwp_out, open( "output/pwp_out%s%s.p" %(suffix, time_stamp), "wb" ))
     
     ## do analysis of the results
     phf.makeSomePlots(forcing, pwp_out, suffix=suffix, save_plots=save_plots)
@@ -302,19 +303,18 @@ def remove_si(t, s, d, u, v):
             d0 = d
             (t, s, d, u, c) = mix5(t, s, d, u, v, first_inst_idx+1)
             
-            #plot density
-            plt.figure(num=86)
-            plt.clf() #probably redundant
-            plt.plot(d0-1000, range(len(d0)), 'b-', label='pre-mix')
-            plt.plot(d-1000, range(len(d0)), 'r-', label='post-mix')
-            plt.gca().invert_yaxis()
-            plt.xlabel('Density-1000 (kg/m3)')
-            plt.grid(True)
-            plt.pause(0.05)
-            plt.show()
+            #plot density 
+            # plt.figure(num=86)
+            # plt.clf() #probably redundant
+            # plt.plot(d0-1000, range(len(d0)), 'b-', label='pre-mix')
+            # plt.plot(d-1000, range(len(d0)), 'r-', label='post-mix')
+            # plt.gca().invert_yaxis()
+            # plt.xlabel('Density-1000 (kg/m3)')
+            # plt.grid(True)
+            # plt.pause(0.05)
+            # plt.show()
             
-            #debug_here()
-            
+            #debug_here()           
         else:
             stat_unstable = False
             
@@ -332,8 +332,7 @@ def mix5(t, s, d, u, v, j):
     v[:j] = np.mean(v[:j])
     
     return t, s, d, u, v
-    
-        
+            
 def rot(u, v, ang):
     
     #This subroutine rotates the vector (u,v) through an angle, ang
@@ -343,7 +342,6 @@ def rot(u, v, ang):
     
     return u, v   
     
-
 def bulk_mix(t, s, d, u, v, dz, g, rb, nz, z, ml_idx):
     #sub-routine to do bulk richardson mixing
     
@@ -391,8 +389,6 @@ def grad_mix(t, s, d, u, v, dz, g, rg, nz):
         r = np.zeros(len(j_range),)
         
         for j in j_range:
-            # if j < 0:
-            #     debug_here()
             
     		dd = (d[j+1]-d[j])/d[j]
     		dv = (u[j+1]-u[j])**2+(v[j+1]-v[j])**2
@@ -400,8 +396,7 @@ def grad_mix(t, s, d, u, v, dz, g, rg, nz):
     			r[j] = np.inf
     		else:
                 #compute grad. rich. number
-    			r[j] = g*dz*dd/dv
-                
+    			r[j] = g*dz*dd/dv                
                 
         #find the smallest value of r in the profile
         r_min = np.min(r)
@@ -424,11 +419,9 @@ def grad_mix(t, s, d, u, v, dz, g, rg, nz):
     		 j2 = nz-1
              
         i+=1
-        
-             
+                     
     return t, s, d, u, v
-        
-        
+                
 def stir(t, s, d, u, v, rc, r, j):
     
     #copied from source script:
@@ -486,26 +479,3 @@ def diffus(dstab,nz,a):
 if __name__ == "__main__":
     
     run()  
-            
-            
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

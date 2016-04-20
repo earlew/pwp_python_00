@@ -310,7 +310,7 @@ def makeSomePlots(forcing, pwp_out, save_plots=False, overwrite=True, suffix='')
     axes[2].set_xlabel('Time')
     
     if save_plots:     
-        plt.savefig('surface_forcing%s.png' %suffix, bbox_inches='tight')
+        plt.savefig('plots/surface_forcing%s.png' %suffix, bbox_inches='tight')
     
     
     ##plot temp and sal change over time
@@ -361,7 +361,7 @@ def makeSomePlots(forcing, pwp_out, save_plots=False, overwrite=True, suffix='')
     par1.axis["top"].major_ticks.set_color(p2.get_color())
     
     if save_plots:     
-        plt.savefig('initial_final_TS_profiles%s.png' %suffix, bbox_inches='tight')
+        plt.savefig('plots/initial_final_TS_profiles%s.png' %suffix, bbox_inches='tight')
         
     
     
