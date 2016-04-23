@@ -2,7 +2,7 @@
 
 This is a Python implementation of the Price Weller Pinkel ([PWP](https://hycom.org/attachments/067_pwp.pdf)) ocean mixed layer model. This code is based on the MATLAB implementation of the PWP model originally written by [Peter Lazarevich and Scott Stoermer](http://www.po.gso.uri.edu/rafos/research/pwp/) (U. Rhode Island) and later modified by Byron Kilbourne (University of Washington) and Sarah Dewey (University of Washington).
 
-For a detailed description of the theory behind the model, I would recommend the original [Price et al. (1986)](http://onlinelibrary.wiley.com/doi/10.1029/JC091iC07p08411/full) paper. A much shorter review of the algorithm is provided in the [HYCOM documentation of the PWP](https://hycom.org/attachments/067_pwp.pdf). A google search yield produce better sources.
+For a detailed description of the theory behind the model, I would recommend the original [Price et al. (1986)](http://onlinelibrary.wiley.com/doi/10.1029/JC091iC07p08411/full) paper. A much shorter review of the algorithm is provided in the [HYCOM documentation of the PWP](https://hycom.org/attachments/067_pwp.pdf); a google search may yield produce better sources.
 
 The code presented here is functionally similar to its MATLAB equivalent (see *matlab_files/PWP_Byron.m*). However, I have made significant changes to the code organization. One big difference is that this code is split into two files: **PWP.py** and **PWP_helper.py**. 
 
