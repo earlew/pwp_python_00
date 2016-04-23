@@ -1,18 +1,62 @@
 ## Description
 
-This is a Python implementation of the Price Weller Pinkel ([PWP](https://hycom.org/attachments/067_pwp.pdf)) ocean mixed layer model. This code is based on the MATLAB implementation of the PWP model written/modified by Byron Kilbourne (University of Washington) and Sarah Dewey (University of Washington).  I did this re-write as a personal exercise, so I would be very cautious about using this code to do any serious work. 
+This is a Python implementation of the Price Weller Pinkel ([PWP](https://hycom.org/attachments/067_pwp.pdf)) ocean mixed layer model. This code is based on the MATLAB implementation of the PWP model originally written by [Peter Lazarevich and Scott Stoermer](http://www.po.gso.uri.edu/rafos/research/pwp/) (U. Rhode Island) and later modified by Byron Kilbourne (University of Washington) and Sarah Dewey (University of Washington).
 
-The code presented here is functionally similar to *PWP_Byron.m* (see *matlab_files/*). However, I made significant changes to the overall code organization. One big difference is that this code is split into two files. The main file, *PWP.py*, contains the core numerical algorithms for the PWP model. These numerical algorithms are mostly line-by-line translations of their MATLAB equivalents. The second file, *PWP_helper.py*, contains helper functions to facilitate model initialization, output analysis and other miscellaneous tasks. 
+For a detailed description of the theory behind the model, I would recommend the original [Price et al. (1986)](http://onlinelibrary.wiley.com/doi/10.1029/JC091iC07p08411/full) paper. A much shorter review of the algorithm is provided in the [HYCOM documentation of the PWP](https://hycom.org/attachments/067_pwp.pdf). A google search yield produce better sources.
 
-To run the code, you can type `%run PWP.py` from the iPython command line. This calls the `PWP.run()` function, which is the main function for the script. Alternatively, you can import PWP.py as a module then run the model directly:
+The code presented here is functionally similar to its MATLAB equivalent (see *matlab_files/PWP_Byron.m*). However, I have made significant changes to the code organization. One big difference is that this code is split into two files: **PWP.py** and **PWP_helper.py**. 
+
+*PWP.py* contains the core numerical algorithms for the PWP model. This is mostly a line-by-line translation of the original MATLAB code. 
+
+*PWP_helper.py* contains helper functions to facilitate model initialization, output analysis and other miscellaneous tasks. Some of these functions were added with this implementation.
+
+**I did this re-write as a personal exercise and I am still experimenting with the code. I would recommend thoroughly examining this code before adopting it for your personal use.** 
+
+## Input data
+
+The PWP model requires two input files **met.nc** and **profile.nc**. Examples of both are provided in the input directory. These are summertime data from the Beaufort Sea, courtesy of Sarah Dewey. 
+
+**met.nc** is a netCDF file containing the surface data. The expected fields are listed below:
+
++ **time**: sample time (days).
++ **sw**: net shortwave radiation (W/m<sup>2</sup>)
++ **lw**: net longwave radiation (W/m<sup>2</sup>)
++ **qlat**: latent heat flux (W/m<sup>2</sup>)
++ **qsens**: sensible heat flux (W/m<sup>2</sup>)
++ **tx**: eastward wind stress (N/m<sup>2</sup>)
++ **ty**: northward wind stress (N/m<sup>2</sup>)
++ **precip**: precipitation rate (m/s)
+
+These variables should be 1-D time series (arrays) of the same length, all corresponding to the **time** array. The example *met.nc* contains 3-hourly surface forcing data over a 28 day period.
+
+**profile.nc** contains the initial profile data. The expected fields are **z**, **t**, **s** and **d**, representing depth (m), temperature (degrees celsius), salinity and density (kg/m<sup>3</sup>) respectively. **t**, **s** and **d** arrays are expected to correspond to the **z** array.
+
+## How the code works
+
+As mentioned earlier, the code is split into two files *PWP.py* and *PWP_helper.py*. Within *PWP.py*, the *run()* function is the main function that controls all the operations. The order of operations is as follows:
+
+1. Set and derive model parameters. (See *set\_params* function in *PWP\_helper.py*). 
+2. Prepare forcing and profile data for model run (see *prep\_data* function in *PWP\_helper.py*).
+3. Iterate the PWP model:
+    + apply heat and salt fluxes.
+    + rotate, adjust to wind, rotate.
+    + apply bulk Richardson number mixing
+    + apply gradient Richardson number. 
+4. Save results to output file.
+5. Make simple plots to visualize the results.    
+
+To get a feel for how this code/model is organized, the `PWP.run()` function would be a good place to start. 
+
+## Running the code
+
+To run the code, you can type `%run PWP.py` from the iPython command line. This calls the `PWP.run()` function. Alternatively, you can import PWP.py as a module then run the model directly:
 
 ```
 import PWP
 PWP.run()
 ```
 
-This approach allows you to modify the model settings and parameters:
-
+This basically runs the model with the default settings. However, you modify the model settings via the `run()` function. For example,
 ```
 p={}
 p['rkz'] = 1e-5 #diff coeff.
@@ -21,28 +65,26 @@ p['dt'] = 6 #time step (hrs)
 PWP.run(met_data='somewhere_else.nc', overwrite=False, param_kwds=p )
 ```
 
-To get a feel for how this code/model is organized, the `PWP.run()` function would be a good place to start. This function has a fairly detailed doc-file, so it should be self-explanatory. 
-
-This repository also contains sample surface forcing and initial profile data files. These are summertime data from the Beaufort Sea, courtesy of Sarah Dewey. If you copy this repository to a local directory, you should be able to run the model immediately - provided you have all the necessary modules.  
-
-### Required modules/libraries
+## Required modules/libraries
 To run this code, you'll need Python 2.7 (some earlier versions might work) and the following libraries:
 
-+ Ipython
 + Numpy
 + Scipy
 + Matplotlib
 + [xray](http://xray.readthedocs.org/en/v0.5/why-xray.html)
 + seawater
 
-The first four are available with the popular python distributions such as [Anaconda](https://www.continuum.io/downloads) and [Canopy](https://store.enthought.com/downloads/#default). To get the other two, you can do pip install from a unix command line:
+The first three are available with the popular python distributions such as [Anaconda](https://www.continuum.io/downloads) and [Canopy](https://store.enthought.com/downloads/#default). To get the other two, you can do pip install from a unix command line:
 
 ```
 pip install xray
 pip install seawater
 ```
 
-### Example output
+Besides the python libraries listed here, this repository should have everything you need to do a model run with the provided datasets.
+
+
+## Example output
 
 ![Sample Forcing](plots/surface_forcing.png)
 
@@ -55,3 +97,7 @@ The plot above compares initial (dashed lines) and final (solid) salinity and te
 ![Sample Forcing](plots/initial_final_TS_profiles_diff.png)
 
 Same as above but with the vertical diffusion co-efficient (`rkz`) set to 1x10<sup>-5</sup> m<sup>2</sup>/s.
+
+## Future work
++ Create an option to add a passive tracer to the model.
++ Incorporate a rudimentary sea-ice model to supply heat and salt fluxes.

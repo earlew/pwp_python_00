@@ -341,7 +341,7 @@ def makeSomePlots(forcing, pwp_out, save_plots=False, overwrite=True, suffix='')
     host.invert_yaxis()
     par1 = host.twiny() #par for parasite axis
     host.set_ylabel("Depth (m)")
-    host.set_xlabel("Temperature ('$^{\circ}$C)")
+    host.set_xlabel("Temperature ($^{\circ}$C)")
     par1.set_xlabel("Salinity (PSU)")
     
     p1, = host.plot(pwp_out['temp'][:,0], pwp_out['z'], '--r', label='$T_i$')

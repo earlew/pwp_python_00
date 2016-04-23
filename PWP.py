@@ -1,7 +1,9 @@
 """
-Python implementation of the Price Weller Pinkel (PWP) mixed layer model.
-This is based on the MATLAB implementation of the PWP model written by
-Byron Kilbourne (University of Washington).
+This is a Python implementation of the Price Weller Pinkel (PWP) ocean mixed layer model. 
+This code is based on the MATLAB implementation of the PWP model originally 
+written by Peter Lazarevich and Scott Stoermer (http://www.po.gso.uri.edu/rafos/research/pwp/) 
+(U. Rhode Island) and later modified by Byron Kilbourne (University of Washington) 
+and Sarah Dewey (University of Washington).
 
 The run() function provides an outline of how the code works. 
 
@@ -32,7 +34,7 @@ def run(met_data='met.nc', prof_data='profile.nc', param_kwds=None, overwrite=Tr
     This is the main controller function for the model. The flow of the algorithm
     is as follows:
     
-        1) Set model parameters (see PWP_helper.set_params.py). 
+        1) Set model parameters (see PWP_helper.set_params). 
         2) Read in forcing and initial profile data.
         3) Prepare forcing and profile data for model run (see PWP_helper.prep_data.py).
             3.1) Interpolate forcing data to prescribed time increments.
