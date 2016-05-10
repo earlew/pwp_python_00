@@ -2,12 +2,11 @@
 
 This is a Python implementation of the Price Weller Pinkel ([PWP](https://hycom.org/attachments/067_pwp.pdf)) ocean mixed layer model. This code is based on the MATLAB implementation of the PWP model originally written by [Peter Lazarevich and Scott Stoermer](http://www.po.gso.uri.edu/rafos/research/pwp/) (U. Rhode Island) and later modified by Byron Kilbourne (University of Washington) and Sarah Dewey (University of Washington).
 
-For a detailed description of the theory behind the model, I would recommend the original [Price et al. (1986)](http://onlinelibrary.wiley.com/doi/10.1029/JC091iC07p08411/full) paper. A much shorter review of the algorithm is provided in the [HYCOM documentation of the PWP](https://hycom.org/attachments/067_pwp.pdf). A google search yield produce better sources.
+For a detailed description of the theory behind the model, I would recommend the original [Price et al. (1986)](http://onlinelibrary.wiley.com/doi/10.1029/JC091iC07p08411/full) paper. A much shorter review of the algorithm is provided in the [HYCOM documentation of the PWP](https://hycom.org/attachments/067_pwp.pdf); a google search may yield produce better sources.
 
 The code presented here is functionally similar to its MATLAB equivalent (see *matlab_files/PWP_Byron.m*). However, I have made significant changes to the code organization. One big difference is that this code is split into two files: **PWP.py** and **PWP_helper.py**. 
 
 *PWP.py* contains the core numerical algorithms for the PWP model. This is mostly a line-by-line translation of the original MATLAB code. 
-
 *PWP_helper.py* contains helper functions to facilitate model initialization, output analysis and other miscellaneous tasks. Some of these functions were added with this implementation.
 
 **I did this re-write as a personal exercise and I am still experimenting with the code. I would recommend thoroughly examining this code before adopting it for your personal use.** 
@@ -56,7 +55,7 @@ import PWP
 PWP.run()
 ```
 
-This basically runs the model with the default settings. However, you modify the model settings via the `run()` function. For example,
+This runs the model with the default settings. You can modify the model settings via the `run()` function. For example,
 ```
 p={}
 p['rkz'] = 1e-5 #diff coeff.
@@ -64,6 +63,8 @@ p['dz'] = 2 #vertical res (m)
 p['dt'] = 6 #time step (hrs)
 PWP.run(met_data='somewhere_else.nc', overwrite=False, param_kwds=p )
 ```
+
+See the documentation for the `set_params()` function in *PWP\_helper.py* for a full list of control parameters. 
 
 ## Required modules/libraries
 To run this code, you'll need Python 2.7 (some earlier versions might work) and the following libraries:
