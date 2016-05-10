@@ -90,14 +90,14 @@ Besides the python libraries listed here, this repository should have everything
 
 The plots above show the sample surface forcing data stored in the *met.nc*. These data represent summertime surface conditions over the Beaufort Sea.
 
-![Sample Forcing](plots/initial_final_TS_profiles.png)
+![Sample Forcing](plots/initial_final_TS_profiles_nodiff.png)
 
 The plot above compares initial (dashed lines) and final (solid) salinity and temperature profiles. This is with diffusion turned off (i.e. `rkz=0`).
 
-![Sample Forcing](plots/initial_final_TS_profiles_diff.png)
+![Sample Forcing](plots/initial_final_TS_profiles_1e6diff.png)
 
-Same as above but with the vertical diffusion co-efficient (`rkz`) set to 1x10<sup>-5</sup> m<sup>2</sup>/s.
+Same as above but with the vertical diffusion co-efficient (`rkz`) set to 1x10<sup>-6</sup> m<sup>2</sup>/s.
 
 ## Future work
 + Create an option to add a passive tracer to the model.
-+ Incorporate a rudimentary sea-ice model to supply heat and salt fluxes.
++ Incorporate a rudimentary sea-ice model to provide ice induced heat and salt fluxes.
