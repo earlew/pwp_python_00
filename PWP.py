@@ -473,9 +473,11 @@ def stir(t, s, d, u, v, rc, r, j):
 def diffus(dstab,nz,a):
     
     "finite difference implementation of diffusion equation"
- 
-    a[1:nz-1] = a[1:nz-1] + dstab*(a[0:nz-2] - 2*a[1:nz-1] + a[2:nz+1])
+     
+    #matlab code:
+    #a(2:nz-1) = a(2:nz-1) + dstab*(a(1:nz-2) - 2*a(2:nz-1) + a(3:nz));
     
+    a[1:nz-1] = a[1:nz-1] + dstab*(a[0:nz-2] - 2*a[1:nz-1] + a[2:nz]) 
     return a    
 
 if __name__ == "__main__":
