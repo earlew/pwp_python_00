@@ -13,7 +13,7 @@ from datetime import datetime
 debug_here = Tracer()
 
 
-def set_params(dt=3., dz=1., max_depth=100., mld_thresh=1e-4, lat=74., dt_save=1., rb=0.65, rg=0.25, rkz=0., beta1=0.6, beta2=20):
+def set_params(dt=3., dz=1., max_depth=100., mld_thresh=1e-4, lat=74., dt_save=1., rb=0.65, rg=0.25, rkz=0., beta1=0.6, beta2=20.0):
     
     """
     This function sets the main paramaters/constants used in the model.
