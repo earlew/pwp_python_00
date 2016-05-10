@@ -34,9 +34,9 @@ def run(met_data='met.nc', prof_data='profile.nc', param_kwds=None, overwrite=Tr
     This is the main controller function for the model. The flow of the algorithm
     is as follows:
     
-        1) Set model parameters (see PWP_helper.set_params). 
+        1) Set model parameters (see set_params function in PWP_helper.py). 
         2) Read in forcing and initial profile data.
-        3) Prepare forcing and profile data for model run (see PWP_helper.prep_data.py).
+        3) Prepare forcing and profile data for model run (see prep_data in PWP_helper.py).
             3.1) Interpolate forcing data to prescribed time increments.
             3.2) Interpolate profile data to prescribed depth increments.
             3.3) Initialize model output variables.

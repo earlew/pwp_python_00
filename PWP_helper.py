@@ -7,13 +7,13 @@ import numpy as np
 import seawater as sw
 import matplotlib.pyplot as plt
 from IPython.core.debugger import Tracer
-import PWP_model as pwp
+import PWP
 from datetime import datetime
 
 debug_here = Tracer()
 
 
-def set_params(dt=3., dz=1., max_depth=100., mld_thresh=1e-4, lat=74., dt_save=1., rb=0.65, rg=0.25, rkz=0., beta1=0.6, beta2=0.2):
+def set_params(dt=3., dz=1., max_depth=100., mld_thresh=1e-4, lat=74., dt_save=1., rb=0.65, rg=0.25, rkz=0., beta1=0.6, beta2=20):
     
     """
     This function sets the main paramaters/constants used in the model.
@@ -130,7 +130,7 @@ def prep_data(met_dset, prof_dset, params):
     zlen = len(init_prof['z'])
     
     #compute absorption and incoming radiation (function defined in PWP_model.py)
-    absrb = pwp.absorb(params['beta1'], params['beta2'], zlen, params['dz']) #(units unclear)
+    absrb = PWP.absorb(params['beta1'], params['beta2'], zlen, params['dz']) #(units unclear)
     dstab = params['dt']*params['rkz']/params['dz']**2 #courant number  
     if dstab > 0.5:
         print "WARNING: unstable CFL condition for diffusion! dt*rkz/dz**2 > 0.5."
@@ -261,13 +261,17 @@ def livePlots(pwp_out, n):
 
     plt.show()
 
-def makeSomePlots(forcing, pwp_out, save_plots=False, overwrite=True, suffix=''):
+def makeSomePlots(forcing, pwp_out, save_plots=False, suffix=''):
     
     """
+    TODO: add doc file
     Function to make plots of the results once the model iterations are complete.
     
     """
-
+    
+    if suffix[0] != '_':
+        suffix = '_%s' %suffix
+    
     #plot summary of ML evolution
     fig, axes = plt.subplots(3,1, sharex=True, figsize=(7.5,9))
     
