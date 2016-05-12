@@ -28,7 +28,7 @@ The PWP model requires two input files **met.nc** and **profile.nc**. Examples o
 
 These variables should be 1-D time series (arrays) of the same length, all corresponding to the **time** array. The example *met.nc* contains 3-hourly surface forcing data over a 28 day period.
 
-**profile.nc** contains the initial profile data. The expected fields are **z**, **t**, **s** and **d**, representing depth (m), temperature (degrees celsius), salinity and density (kg/m<sup>3</sup>) respectively. **t**, **s** and **d** arrays are expected to correspond to the **z** array.
+**profile.nc** contains the initial profile data. The expected fields are **z**, **t**, **s** and **d**, representing depth (m), temperature (degrees celsius), salinity and density (kg/m<sup>3</sup>) respectively. 
 
 ## How the code works
 
@@ -56,9 +56,10 @@ PWP.run()
 ```
 
 This runs the model with the default settings. You can modify the model settings via the `run()` function. For example,
+
 ```
 p={}
-p['rkz'] = 1e-5 #diff coeff.
+p['rkz'] = 1e-6 #diff coeff.
 p['dz'] = 2 #vertical res (m)
 p['dt'] = 6 #time step (hrs)
 PWP.run(met_data='somewhere_else.nc', overwrite=False, param_kwds=p )
@@ -75,7 +76,7 @@ To run this code, you'll need Python 2.7 (some earlier versions might work) and 
 + [xray](http://xray.readthedocs.org/en/v0.5/why-xray.html)
 + seawater
 
-The first three are available with the popular python distributions such as [Anaconda](https://www.continuum.io/downloads) and [Canopy](https://store.enthought.com/downloads/#default). To get the other two, you can do pip install from a unix command line:
+The first three modules are available with the popular python distributions such as [Anaconda](https://www.continuum.io/downloads) and [Canopy](https://store.enthought.com/downloads/#default). You can get the other two modules via the `pip install` command from the unix command line:
 
 ```
 pip install xray
@@ -87,17 +88,19 @@ Besides the python libraries listed here, this repository should have everything
 
 ## Example output
 
+The plots below show the sample surface forcing data stored in the *met.nc*. These data represent summertime surface conditions over the Beaufort Sea.
+
 ![Sample Forcing](plots/surface_forcing.png)
 
-The plots above show the sample surface forcing data stored in the *met.nc*. These data represent summertime surface conditions over the Beaufort Sea.
+The plot below compares initial (dashed lines) and final (solid) salinity and temperature profiles. This is with diffusion turned off (i.e. `rkz=0`).
 
 ![Sample Forcing](plots/initial_final_TS_profiles_nodiff.png)
 
-The plot above compares initial (dashed lines) and final (solid) salinity and temperature profiles. This is with diffusion turned off (i.e. `rkz=0`).
+The next plot shows the effect of setting the vertical diffusion co-efficient (`rkz`) to 1x10<sup>-6</sup> m<sup>2</sup>/s.
 
 ![Sample Forcing](plots/initial_final_TS_profiles_1e6diff.png)
 
-Same as above but with the vertical diffusion co-efficient (`rkz`) set to 1x10<sup>-6</sup> m<sup>2</sup>/s.
+
 
 ## Future work
 + Create an option to add a passive tracer to the model.
