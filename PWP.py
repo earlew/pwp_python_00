@@ -106,7 +106,7 @@ def run(met_data='met.nc', prof_data='profile.nc', param_kwds=None, overwrite=Tr
     ## Get surface forcing and profile data 
     # These are x-ray datasets, but you can treat them as dicts. 
     # Do met_dset.keys() to explore the data fields
-    met_dset = xray.open_dataset('input_data/%s' %met_data)
+    met_dset = xray.open_dataset('input_data/%s' %met_data) 
     prof_dset = xray.open_dataset('input_data/%s' %prof_data)
     
     ## prep forcing and initial profile data for model run (see prep_data function for more details)
@@ -193,8 +193,11 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
     g = params['g']
     ucon = params['ucon']
     
+    print "Number of time steps: %s" %tlen
+    
     for n in xrange(1,tlen):
-        print 'Loop iter. %s' %n
+        percent_comp = 100*n/float(tlen)
+        print 'Loop iter. %s (%.1f %%)' %(n, percent_comp)
         
         #select for previous profile data
         temp = pwp_out['temp'][:, n-1]
