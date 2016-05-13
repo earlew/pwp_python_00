@@ -79,7 +79,7 @@ def prep_data(met_dset, prof_dset, params):
             These fields should store 1-D time series of the respective quantities.
             
     prof_data: dictionary-like object with initial profile data. Fields should include:
-            ['z', 't', 's', 'd']. These represent 1-D vertical profiles of temperature,
+            ['z', 't', 's']. These represent 1-D vertical profiles of temperature,
             salinity and density.
             
     params: dictionary-like object with fields defined by set_params function

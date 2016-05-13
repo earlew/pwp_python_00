@@ -28,7 +28,7 @@ The PWP model requires two input files **met.nc** and **profile.nc**. Examples o
 
 These variables should be 1-D time series (arrays) of the same length, all corresponding to the **time** array. The example *met.nc* contains 3-hourly surface forcing data over a 28 day period.
 
-**profile.nc** contains the initial profile data. The expected fields are **z**, **t**, **s** and **d**, representing depth (m), temperature (degrees celsius), salinity and density (kg/m<sup>3</sup>) respectively. 
+**profile.nc** contains the initial profile data. The expected fields are **z**, **t** and **s**, representing depth (m), temperature (degrees celsius), salinity respectively. 
 
 ## How the code works
 
