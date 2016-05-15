@@ -95,7 +95,7 @@ Besides the python libraries listed here, this repository should have everything
 
 The plots below show the sample surface forcing data stored in the *met.nc*. These data represent summertime surface conditions over the Beaufort Sea.
 
-![Sample Forcing](plots/surface_forcing.png)
+![Sample Forcing](plots/surface_forcing_nodiff.png)
 
 The plot below compares initial (dashed lines) and final (solid) salinity and temperature profiles. This is with diffusion turned off (i.e. `rkz=0`).
 
