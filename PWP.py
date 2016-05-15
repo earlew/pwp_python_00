@@ -28,7 +28,7 @@ import PWP_helper as phf
 reload(phf)
 debug_here = Tracer()
 
-def run(met_data='met.nc', prof_data='profile.nc', param_kwds=None, overwrite=True, diagnostics=True, suffix='', save_plots=False):
+def run(met_data='met.nc', prof_data='profile.nc', param_kwds=None, overwrite=True, diagnostics=True, suffix=None, save_plots=False):
     
     """
     This is the main controller function for the model. The flow of the algorithm
@@ -139,7 +139,10 @@ def run(met_data='met.nc', prof_data='profile.nc', param_kwds=None, overwrite=Tr
         #use unique time stamp
         time_stamp = datetime.now().strftime("_%Y%m%d_%H%M")
     
-    suffix = '_%s' %suffix
+    if suffix is None:
+        suffix = ''
+    else:
+        suffix = '_%s' %suffix
         
     # save output as netCDF file
     pwp_out_ds = xray.Dataset({'temp': (['z', 'time'], pwp_out['temp']), 'sal': (['z', 'time'], pwp_out['sal']), 
