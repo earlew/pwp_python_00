@@ -42,9 +42,10 @@ As mentioned earlier, the code is split into two files *PWP.py* and *PWP_helper.
 2. Prepare forcing and profile data for model run (see *prep\_data* function in *PWP\_helper.py*).
 3. Iterate the PWP model:
     + apply heat and salt fluxes.
-    + rotate, adjust to wind, rotate.
+    + apply wind stress (momentum flux).
     + apply bulk Richardson number mixing
     + apply gradient Richardson number. 
+    + apply diapycnal diffusion (if ON).
 4. Save results to output file.
 5. Make simple plots to visualize the results.    
 
@@ -66,7 +67,7 @@ p={}
 p['rkz'] = 1e-6 #diff coeff.
 p['dz'] = 2 #vertical res (m)
 p['dt'] = 6 #time step (hrs)
-PWP.run(met_data='somewhere_else.nc', overwrite=False, param_kwds=p )
+PWP.run(met_data='somewhere_other_forcing.nc', overwrite=False, param_kwds=p )
 ```
 
 See the documentation for the `set_params()` function in *PWP\_helper.py* for a full list of control parameters. 
