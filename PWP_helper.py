@@ -120,9 +120,9 @@ def prep_data(met_dset, prof_dset, params):
     emp[np.isnan(emp)] = 0.
     forcing['emp'] = emp    
     
-    #define q_in and q_out
+    #define q_in and q_out (positive values should mean ocean warming)
     forcing['q_in'] = forcing['sw'] #heat flux into ocean
-    forcing['q_out'] = forcing['lw'] + forcing['qlat'] + forcing['qsens'] 
+    forcing['q_out'] = -(forcing['lw'] + forcing['qlat'] + forcing['qsens']) 
     
     #add time_vec to forcing
     forcing['time'] = time_vec
@@ -175,8 +175,7 @@ def prep_data(met_dset, prof_dset, params):
     #get profile variables
     temp0 = init_prof['t'] #initial profile temperature
     sal0 = init_prof['s'] #intial profile salinity
-    dens0 = sw.dens0(sal0, temp0) #intial profile density
-       
+    dens0 = sw.dens0(sal0, temp0) #intial profile density       
     
     #initialize variables for output
     pwp_out = {}
@@ -201,9 +200,6 @@ def prep_data(met_dset, prof_dset, params):
     pwp_out['dens'][:,0] = dens0
     
     return forcing, pwp_out, params
-
-
-
     
 def livePlots(pwp_out, n):
     
@@ -272,7 +268,7 @@ def livePlots(pwp_out, n):
 
     plt.show()
 
-def makeSomePlots(forcing, pwp_out, save_plots=False, suffix=''):
+def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix=''):
     
     """
     TODO: add doc file
@@ -286,28 +282,33 @@ def makeSomePlots(forcing, pwp_out, save_plots=False, suffix=''):
     #plot summary of ML evolution
     fig, axes = plt.subplots(3,1, sharex=True, figsize=(7.5,9))
     
+    if time_vec is None:
+        tvec = pwp_out['time']
+    else:
+        tvec = time_vec
+    
     axes = axes.flatten()
     ##plot surface heat flux
-    axes[0].plot(pwp_out['time'], -forcing['lw'], label='$Q_{lw}$')
-    axes[0].plot(pwp_out['time'], -forcing['qlat'], label='$Q_{lat}$')
-    axes[0].plot(pwp_out['time'], -forcing['qsens'], label='$Q_{sens}$')
-    axes[0].plot(pwp_out['time'], forcing['sw'], label='$Q_{sw}$')
-    axes[0].hlines(0, pwp_out['time'][0], pwp_out['time'][-1], linestyle='-', color='0.3')
-    #axes[0].plot(time_vec, q_out, ls='-', lw=2, color='k', label='$Q_{lw} + Q_{lat} + Q_{sens}$')
+    axes[0].plot(tvec, forcing['lw'], label='$Q_{lw}$')
+    axes[0].plot(tvec, forcing['qlat'], label='$Q_{lat}$')
+    axes[0].plot(tvec, forcing['qsens'], label='$Q_{sens}$')
+    axes[0].plot(tvec, forcing['sw'], label='$Q_{sw}$')
+    axes[0].hlines(0, tvec[0], pwp_out['time'][-1], linestyle='-', color='0.3')
+    #axes[0].plot(tvec, q_out, ls='-', lw=2, color='k', label='$Q_{lw} + Q_{lat} + Q_{sens}$')
     #axes[0].plot(pwp_out['time'], forcing['q_in']-forcing['q_out'], ls='--', lw=2, color='k', label='$Q_{sw} - Q_{lw} - Q_{lat} - Q_{sens}$')
-    axes[0].plot(pwp_out['time'], forcing['q_in']-forcing['q_out'], ls='-', lw=2, color='k', label='$Q_{net}$')   
+    axes[0].plot(tvec, forcing['q_in']-forcing['q_out'], ls='-', lw=2, color='k', label='$Q_{net}$')   
     axes[0].set_ylabel('Heat flux (W/m2)')
     axes[0].set_title('Heat flux into ocean')
     axes[0].grid(True)
-    axes[0].set_ylim(-500,300)
+    #axes[0].set_ylim(-500,300)
     
     axes[0].legend(loc=0, ncol=2, fontsize='smaller')
     
     
     ##plot wind stress
-    axes[1].plot(pwp_out['time'], forcing['tx'], label=r'$\tau_x$')
-    axes[1].plot(pwp_out['time'], forcing['ty'], label=r'$\tau_y$')
-    axes[1].hlines(0, pwp_out['time'][0], pwp_out['time'][-1], linestyle='--', color='0.3')
+    axes[1].plot(tvec, forcing['tx'], label=r'$\tau_x$')
+    axes[1].plot(tvec, forcing['ty'], label=r'$\tau_y$')
+    axes[1].hlines(0, tvec[0], pwp_out['time'][-1], linestyle='--', color='0.3')
     axes[1].set_ylabel('Wind stress (N/m2)')
     axes[1].set_title('Wind stress')
     axes[1].grid(True)
@@ -316,8 +317,8 @@ def makeSomePlots(forcing, pwp_out, save_plots=False, suffix=''):
     
     ## plot freshwater forcing
     emp_mmpd = forcing['emp']*1000*3600*24 #convert to mm per day
-    axes[2].plot(pwp_out['time'], emp_mmpd, label='E-P')
-    axes[2].hlines(0, pwp_out['time'][0], pwp_out['time'][-1], linestyle='--', color='0.3')
+    axes[2].plot(tvec, emp_mmpd, label='E-P')
+    axes[2].hlines(0, tvec[0], pwp_out['time'][-1], linestyle='--', color='0.3')
     axes[2].set_ylabel('Freshwater forcing (mm/day)')
     axes[2].set_title('Freshwater forcing')
     axes[2].grid(True)
