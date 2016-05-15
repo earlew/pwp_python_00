@@ -150,7 +150,7 @@ def run(met_data='met.nc', prof_data='profile.nc', param_kwds=None, overwrite=Tr
     pwp_out_ds.to_netcdf("output/pwp_output%s%s.nc" %(suffix, time_stamp))
 
     # also output and forcing as pickle file
-    pickle.dump(forcing, open( "output/forcing%s.p" %time_stamp, "wb" ))
+    pickle.dump(forcing, open( "output/forcing%s%s.p" %(suffix, time_stamp), "wb" ))
     pickle.dump(pwp_out, open( "output/pwp_out%s%s.p" %(suffix, time_stamp), "wb" ))
     
     ## do analysis of the results
