@@ -75,8 +75,19 @@ def prep_data(met_dset, prof_dset, params):
     
     INPUT:
     met_data: dictionary-like object with forcing data. Fields should include: 
-            ['time', 'sw', 'lw', 'qlat', 'qsens', 'tx', 'ty', 'precip'].
-            These fields should store 1-D time series of the respective quantities.
+            ['time', 'sw', 'lw', 'qlat', 'qsens', 'tx', 'ty', 'precip']. These fields should 
+            store 1-D time series of the same length. 
+            
+            The model expects positive heat flux values to represent ocean warming. The time
+            data field should contain a 1-D array representing fraction of day. For example, 
+            for 6 hourly data, met_data['time'] should contain a number series that increases
+            in steps of 0.25, such as np.array([1.0, 1.25, 1.75, 2.0, 2.25...]).
+
+            See https://github.com/earlew/pwp_python#input-data for more info about the
+            expect intput data. 
+    
+            TODO: Modify code to accept met_data['time'] as an array of datetime objects
+    
             
     prof_data: dictionary-like object with initial profile data. Fields should include:
             ['z', 't', 's']. These represent 1-D vertical profiles of temperature,

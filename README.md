@@ -26,7 +26,11 @@ The PWP model requires two input files **met.nc** and **profile.nc**. Examples o
 + **ty**: northward wind stress (N/m<sup>2</sup>)
 + **precip**: precipitation rate (m/s)
 
-These variables should be 1-D time series (arrays) of the same length, all corresponding to the **time** array. The example *met.nc* contains 3-hourly surface forcing data over a 28 day period.
+These variables should be 1-D time series (arrays) of the same length, all corresponding to the **time** array. **Positive heat fluxes should represent heat gained by the ocean**. 
+
+The time data field should contain a 1-D array representing fraction of day. For example, for 6 hourly data, met_data['time'] should contain a number series that increases in steps of 0.25, such as np.array([1.0, 1.25, 1.75, 2.0, 2.25...]).
+
+The example *met.nc* file contains 3-hourly surface forcing data over a 28 day period.
 
 **profile.nc** contains the initial profile data. The expected fields are **z**, **t** and **s**, representing depth (m), temperature (degrees celsius), salinity respectively. 
 

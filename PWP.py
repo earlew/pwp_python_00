@@ -49,8 +49,20 @@ def run(met_data='met.nc', prof_data='profile.nc', param_kwds=None, overwrite=Tr
         5) Save results to output file
     
     Input: 
-    met_data -  path to netCDF file containing forcing/meterological data. 
-                Default is 'met.nc'. This must be in input_data/ directory.
+    met_data -  path to netCDF file containing forcing/meterological data. Default is 'met.nc'. 
+                This file must be in the input_data/ directory. 
+                
+                The data fields should include 'time', 'sw', 'lw', 'qlat', 'qsens', 'tx', 
+                'ty', and 'precip'. These fields should store 1-D time series of the same 
+                length. 
+                
+                The model expects positive heat flux values to represent ocean warming. The time
+                data field should contain a 1-D array representing fraction of day. For example, 
+                for 6 hourly data, met_data['time'] should contain a number series that increases
+                in steps of 0.25, such as np.array([1.0, 1.25, 1.75, 2.0, 2.25...]).
+    
+                See https://github.com/earlew/pwp_python#input-data for more info about the
+                expect intput data.
                   
     prof_data - path to netCDF file containing initial profile data.
                 Default is 'profile.nc'. This must be in input_data/ directory.
