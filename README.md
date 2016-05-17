@@ -95,16 +95,17 @@ Besides the python libraries listed here, this repository should have everything
 
 The plots below show the sample surface forcing data stored in the *met.nc*. These data represent summertime surface conditions over the Beaufort Sea.
 
-![Sample Forcing](plots/surface_forcing_nodiff.png)
+![Sample Forcing](plots/surface_forcing_demo.png)
 
 The plot below compares initial (dashed lines) and final (solid) salinity and temperature profiles. This is with diffusion turned off (i.e. `rkz=0`).
 
-![Sample Forcing](plots/initial_final_TS_profiles_nodiff.png)
+![Sample Forcing](plots/initial_final_TS_profiles_demo_nodiff.png)
 
 The next plot shows the effect of setting the vertical diffusion co-efficient (`rkz`) to 1x10<sup>-6</sup> m<sup>2</sup>/s.
 
-![Sample Forcing](plots/initial_final_TS_profiles_1e6diff.png)
+![Sample Forcing](plots/initial_final_TS_profiles_demo_1e6diff.png)
 
+Side note: I later realized that the example provided here is not an ideal test case. You will notice that the latent heat flux shown here is positive (i.e. it warms the ocean). This is because it contains a contribution from ice melt. This current implementation of the PWP model is not equipped to handle ice melt/growth. Furthermore, the model uses the latent heat flux to compute the surface freshwater loss due to evaporation. Therefore, **the latent heat flux supplied to the model must only represent the heat flux associated with evaporation**.
 
 
 ## Future work
