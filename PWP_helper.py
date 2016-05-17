@@ -37,7 +37,7 @@ def run_demo2():
     p['rkz']=1e-6
     p['dz'] = 2.0 
     p['max_depth'] = 500.0 
-    forcing, pwp_out = PWP.run(met_data=forcing_fname, prof_data=prof_fname, suffix='demo2_nodiff', save_plots=True, param_kwds=p)
+    forcing, pwp_out = PWP.run(met_data=forcing_fname, prof_data=prof_fname, suffix='demo2_1e6diff', save_plots=True, param_kwds=p)
     
 
 def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1., rb=0.65, rg=0.25, rkz=0., beta1=0.6, beta2=20.0):
