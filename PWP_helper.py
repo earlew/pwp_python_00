@@ -294,8 +294,6 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix=''):
     axes[0].plot(tvec, forcing['qsens'], label='$Q_{sens}$')
     axes[0].plot(tvec, forcing['sw'], label='$Q_{sw}$')
     axes[0].hlines(0, tvec[0], pwp_out['time'][-1], linestyle='-', color='0.3')
-    #axes[0].plot(tvec, q_out, ls='-', lw=2, color='k', label='$Q_{lw} + Q_{lat} + Q_{sens}$')
-    #axes[0].plot(pwp_out['time'], forcing['q_in']-forcing['q_out'], ls='--', lw=2, color='k', label='$Q_{sw} - Q_{lw} - Q_{lat} - Q_{sens}$')
     axes[0].plot(tvec, forcing['q_in']-forcing['q_out'], ls='-', lw=2, color='k', label='$Q_{net}$')   
     axes[0].set_ylabel('Heat flux (W/m2)')
     axes[0].set_title('Heat flux into ocean')
@@ -323,7 +321,7 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix=''):
     axes[2].set_title('Freshwater forcing')
     axes[2].grid(True)
     axes[2].legend(loc=0, fontsize='medium')
-    axes[2].set_xlabel('Time')
+    axes[2].set_xlabel('Time (days)')
     
     if save_plots:     
         plt.savefig('plots/surface_forcing%s.png' %suffix, bbox_inches='tight')
@@ -333,21 +331,19 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix=''):
     fig, axes = plt.subplots(2,1, sharex=True)
     vble = ['temp', 'sal']
     units = ['$^{\circ}$C', 'PSU']
-    sf = 0.8
-    cmap = custom_div_cmap(numcolors=17)
+    #cmap = custom_div_cmap(numcolors=17)
+    cmap = plt.cm.rainbow
     for i in xrange(2):
         ax = axes[i]
-        x0 = pwp_out[vble[i]][:,0]
-        x0 = x0[:,np.newaxis]
-        dx = pwp_out[vble[i]] - x0
-        mx = np.max(abs(dx))
-        clvls = np.round(np.linspace(-mx*sf, mx*sf, 15), 2)
-        im = ax.contourf(pwp_out['time'], pwp_out['z'], dx, clvls, cmap=cmap, vmin=-mx*sf, vmax=mx*sf, extend='both')
+        im = ax.contourf(pwp_out['time'], pwp_out['z'], pwp_out[vble[i]], 15, cmap=cmap, extend='both')
         ax.set_ylabel('Depth (m)')
-        ax.set_title('Change in ocean %s (%s)' %(vble[i], units[i]))
+        ax.set_title('Evolution of ocean %s (%s)' %(vble[i], units[i]))
         ax.invert_yaxis()   
-        cb = plt.colorbar(im, ax=ax, ticks=clvls[::2], format='%.1f')
-        
+        cb = plt.colorbar(im, ax=ax, format='%.1f')
+     
+    ax.set_xlabel('Days')   
+    
+    
     ## plot initial and final T-S profiles
     from mpl_toolkits.axes_grid1 import host_subplot
     import mpl_toolkits.axisartist as AA
