@@ -513,4 +513,8 @@ def diffus(dstab,nz,a):
 
 if __name__ == "__main__":
     
-    run()  
+    print "Running default test case using data from Beaufort gyre..."
+    
+    forcing_fname = 'beaufort_met.nc'
+    prof_fname = 'beaufort_profile.nc'
+    run(met_data=forcing_fname, prof_data=prof_fname)
