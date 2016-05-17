@@ -126,7 +126,7 @@ The effect of setting the vertical diffusion co-efficient (`rkz`) to 1x10<sup>-6
 
 ![Sample Forcing](plots/initial_final_TS_profiles_demo1_1e6diff.png)
 
-<sup>*</sup> I later realized that this is an unfortunate test case. You will notice that the latent heat flux shown here is positive (i.e. it warms the ocean). This is because it contains a contribution from ice melt. However, **this current implementation of the PWP model is not equipped to handle ice melt/growth.The latent heat flux supplied to the model must only represent the heat flux associated with evaporation**.
+<sup>\*</sup> I later realized that this is an unfortunate test case. You will notice that the latent heat flux shown here is positive (i.e. it warms the ocean). This is because it contains a contribution from ice melt. However, **this current implementation of the PWP model is not equipped to handle ice melt/growth.The latent heat flux supplied to the model must only represent the heat flux associated with evaporation**.
 
 ## Test case 2: Southern Ocean in the summer
 This test case uses data from the default input files, *SO\_met\_30day.nc* and *SO\_profile1.nc*. The *SO\_met\_30day.nc* file contains 6-hourly NCEP reanalysis surface fluxes at -53.5 N and 0.02 E, which is situated in the Atlantic sector of the Southern Ocean - just north of the winter ice-edge. The *SO_profile1.nc* file contains temperature and salinity profile data at the above location, collected on December 11, 2014. This data is the the first profile from Argo float [5904469](http://www.ifremer.fr/co-argoFloats/float?detail=false&ptfCode=5904469).
