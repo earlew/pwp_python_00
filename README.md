@@ -12,31 +12,24 @@ The code presented here is functionally similar to its MATLAB equivalent (see *m
 
 **I did this re-write as a personal exercise and I am still experimenting with the code. I would recommend thoroughly examining this code before adopting it for your personal use.** 
 
-## Input data
+## Required modules/libraries
+To run this code, you'll need Python 2.7 (some earlier versions might work) and the following libraries:
 
-The PWP model requires two input netCDF files: one for the surface forcing and another for the initial profile. The surface forcing file must have the following data fields:
++ Numpy
++ Scipy
++ Matplotlib
++ [xray](http://xray.readthedocs.org/en/v0.5/why-xray.html)
++ seawater
 
-+ **time**: sample time (days).
-+ **sw**: net shortwave radiation (W/m<sup>2</sup>)
-+ **lw**: net longwave radiation (W/m<sup>2</sup>)
-+ **qlat**: latent heat flux (W/m<sup>2</sup>)
-+ **qsens**: sensible heat flux (W/m<sup>2</sup>)
-+ **tx**: eastward wind stress (N/m<sup>2</sup>)
-+ **ty**: northward wind stress (N/m<sup>2</sup>)
-+ **precip**: precipitation rate (m/s)
+The first three modules are available with the popular python distributions such as [Anaconda](https://www.continuum.io/downloads) and [Canopy](https://store.enthought.com/downloads/#default). You can get the other two modules via the `pip install` command from the unix command line:
 
-For the heat fluxes, **positive values should represent heat gained by the ocean**. Note that the MATLAB version of this code uses a different sign convention. 
+```
+pip install xray
+pip install seawater
+```
 
-The time data field should contain a 1-D array representing fraction of day. For example, for 6 hourly data, met_data['time'] should contain a number series that increases in steps of 0.25, such as np.array([1.0, 1.25, 1.75, 2.0, 2.25...]).
+Besides the python libraries listed here, this repository should have everything you need to do a model run with the provided datasets.
 
-The initial profile file should have the following data fiels:
- 
-+ **z**: 1-D array of depth levels (m) 
-+ **t**: 1-D array containing temperature profile (degrees celsius)
-+ **s**: 1-D array containing salinity profile (PSU) 
-+ **lat**: float representing latitude of profile
-
-Examples of both input files are provided in the input directory. 
 
 ## How the code works
 
@@ -56,26 +49,39 @@ As mentioned earlier, the code is split into two files *PWP.py* and *PWP_helper.
 
 To get a feel for how this code/model is organized, the `PWP.run()` function would be a good place to start. 
 
+## Input data
+
+The PWP model requires two input netCDF files: one for the surface forcing and another for the initial profile. The surface forcing file must have the following data fields:
+
++ **time**: sample time (days).
++ **sw**: net shortwave radiation (W/m<sup>2</sup>)
++ **lw**: net longwave radiation (W/m<sup>2</sup>)
++ **qlat**: latent heat flux (W/m<sup>2</sup>)
++ **qsens**: sensible heat flux (W/m<sup>2</sup>)
++ **tx**: eastward wind stress (N/m<sup>2</sup>)
++ **ty**: northward wind stress (N/m<sup>2</sup>)
++ **precip**: precipitation rate (m/s)
+
+For the heat fluxes, **positive values should correspond to heat gained by the ocean**. Note that the MATLAB version of this code uses a different sign convention. 
+
+The time data field should contain a 1-D array representing fraction of day. For example, for 6 hourly data, met_data['time'] should contain a number series that increases in steps of 0.25, such as np.array([1.0, 1.25, 1.75, 2.0, 2.25...]).
+
+The initial profile file should have the following data fields:
+ 
++ **z**: 1-D array of depth levels (m) 
++ **t**: 1-D array containing temperature profile (degrees celsius)
++ **s**: 1-D array containing salinity profile (PSU) 
++ **lat**: float representing latitude of profile
+
+Examples of both input files are provided in the input directory. 
+
 ## Running the code
 
-To run the code, you can type `%run PWP.py` from the iPython command line. This calls the `PWP.run()` function. Alternatively, you can import PWP.py as a module then run the model directly:
+For examples of how to run the code, see the `run_demo1()` and `run_demo2()` functions in *PWP_helper.py*. These examples are also demo-ed in the test runs below.
 
-```
-import PWP
-PWP.run()
-```
+## Default settings
 
-This runs the model with the default settings. You can modify the model settings via the `run()` function. For example,
-
-```
-p={}
-p['rkz'] = 1e-6 #diff coeff.
-p['dz'] = 2 #vertical res (m)
-p['dt'] = 6 #time step (hrs)
-PWP.run(met_data='somewhere_other_forcing.nc', overwrite=False, param_kwds=p )
-```
-
-The main model parameters and their defaults are listed below (see `set_params()` function in *PWP_helper.py*):
+The main model parameters and their defaults are listed below (see the `set_params()` function in *PWP_helper.py*):
 
 + **dt**: time-step increment. Input value in units of hours, but this is immediately converted to seconds. [3 hours]
 + **dz**: depth increment (meters). [1m]
@@ -87,24 +93,6 @@ The main model parameters and their defaults are listed below (see `set_params()
 + **rkz**: background vertical diffusion (m**2/s). [0.]
 + **beta1**: longwave extinction coefficient (meters) [0.6] 
 + **beta2**: shortwave extinction coefficient (meters). [20]
-
-## Required modules/libraries
-To run this code, you'll need Python 2.7 (some earlier versions might work) and the following libraries:
-
-+ Numpy
-+ Scipy
-+ Matplotlib
-+ [xray](http://xray.readthedocs.org/en/v0.5/why-xray.html)
-+ seawater
-
-The first three modules are available with the popular python distributions such as [Anaconda](https://www.continuum.io/downloads) and [Canopy](https://store.enthought.com/downloads/#default). You can get the other two modules via the `pip install` command from the unix command line:
-
-```
-pip install xray
-pip install seawater
-```
-
-Besides the python libraries listed here, this repository should have everything you need to do a model run with the provided datasets.
 
 
 ## Test runs
