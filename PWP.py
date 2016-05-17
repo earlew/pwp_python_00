@@ -45,12 +45,13 @@ def run(met_data, prof_data, param_kwds=None, overwrite=True, diagnostics=True, 
             4.2) rotate, adjust to wind, rotate
             4.3) apply bulk Richardson number mixing
             4.4) apply gradient Richardson number mixing
+            4.5) apply drag associated with internal wave dissipation
             4.5) apply diapycnal diffusion       
         5) Save results to output file
     
     Input: 
-    met_data -  path to netCDF file containing forcing/meterological data. Default is 'met.nc'. 
-                This file must be in the input_data/ directory. 
+    met_data -  path to netCDF file containing forcing/meterological data. This file must be in the 
+                input_data/ directory. 
                 
                 The data fields should include 'time', 'sw', 'lw', 'qlat', 'qsens', 'tx', 
                 'ty', and 'precip'. These fields should store 1-D time series of the same 
@@ -64,8 +65,7 @@ def run(met_data, prof_data, param_kwds=None, overwrite=True, diagnostics=True, 
                 See https://github.com/earlew/pwp_python#input-data for more info about the
                 expect intput data.
                   
-    prof_data - path to netCDF file containing initial profile data.
-                Default is 'profile.nc'. This must be in input_data/ directory.
+    prof_data - path to netCDF file containing initial profile data. This must be in input_data/ directory.
     
     overwrite - controls the naming of output file. If True, the same filename is used for 
                 every model run. If False, a unique time_stamp is generated and appended
@@ -152,9 +152,7 @@ def run(met_data, prof_data, param_kwds=None, overwrite=True, diagnostics=True, 
         #use unique time stamp
         time_stamp = datetime.now().strftime("_%Y%m%d_%H%M")
     
-    if suffix is None:
-        suffix = ''
-    else:
+    if len(suffix)>0 and suffix[0] != '_':
         suffix = '_%s' %suffix
         
     # save output as netCDF file
