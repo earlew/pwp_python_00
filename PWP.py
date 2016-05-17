@@ -120,17 +120,19 @@ def run(met_data, prof_data, param_kwds=None, overwrite=True, diagnostics=True, 
     #start timer
     t0 = timeit.default_timer()
     
-    ## get model parameters and constants (read docs for set_params function)
-    if param_kwds is None:
-        params = phf.set_params() 
-    else:
-        params = phf.set_params(**param_kwds)
-    
     ## Get surface forcing and profile data 
     # These are x-ray datasets, but you can treat them as dicts. 
     # Do met_dset.keys() to explore the data fields
     met_dset = xray.open_dataset('input_data/%s' %met_data) 
     prof_dset = xray.open_dataset('input_data/%s' %prof_data)
+    
+    ## get model parameters and constants (read docs for set_params function)
+    lat = prof_dset['lat'] #needed to compute internal wave dissipation
+    if param_kwds is None:
+        params = phf.set_params(lat=lat) 
+    else:
+        param_kwds['lat'] = lat
+        params = phf.set_params(**param_kwds)
     
     ## prep forcing and initial profile data for model run (see prep_data function for more details)
     forcing, pwp_out, params = phf.prep_data(met_dset, prof_dset, params)

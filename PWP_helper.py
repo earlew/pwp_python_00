@@ -13,7 +13,7 @@ from datetime import datetime
 debug_here = Tracer()
 
 
-def set_params(dt=3., dz=1., max_depth=100., mld_thresh=1e-4, lat=74., dt_save=1., rb=0.65, rg=0.25, rkz=0., beta1=0.6, beta2=20.0):
+def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1., rb=0.65, rg=0.25, rkz=0., beta1=0.6, beta2=20.0):
     
     """
     This function sets the main paramaters/constants used in the model.
@@ -21,12 +21,12 @@ def set_params(dt=3., dz=1., max_depth=100., mld_thresh=1e-4, lat=74., dt_save=1
     Definitions are listed below.
     
     CONTROLS (default values are in [ ]):
+    lat: latitude of profile
     dt: time-step increment. Input value in units of hours, but this is immediately converted to seconds.[3 hours]
     dz: depth increment (meters). [1m]
     max_depth: Max depth of vertical coordinate (meters). [100]
     mld_thresh: Density criterion for MLD (kg/m3). [1e-4] 
     dt_save: time-step increment for saving to file (multiples of dt). [1]
-    lat: latitude of profile (degrees). [74.0]
     rb: critical bulk richardson number. [0.65]
     rg: critical gradient richardson number. [0.25]
     rkz: background vertical diffusion (m**2/s). [0.]
@@ -164,13 +164,16 @@ def prep_data(met_dset, prof_dset, params):
     #interpolate profile data to new z-coordinate
     from scipy.interpolate import InterpolatedUnivariateSpline 
     for vname in prof_dset:
-        #first strip nans
-        not_nan = np.logical_not(np.isnan(prof_dset[vname]))
-        indices = np.arange(len(prof_dset[vname]))
-        #p_intp = interp1d(prof_dset['z'], prof_dset[vname], axis=0, kind='linear', bounds_error=False)
-        #interp1d doesn't work here because it doesn't extrapolate. Can't have Nans in interpolated profile
-        p_intp = InterpolatedUnivariateSpline(prof_dset['z'][not_nan], prof_dset[vname][not_nan], k=1)
-        init_prof[vname] = p_intp(init_prof['z'])    
+        if vname == 'lat':
+            continue
+        else:
+            #first strip nans
+            not_nan = np.logical_not(np.isnan(prof_dset[vname]))
+            indices = np.arange(len(prof_dset[vname]))
+            #p_intp = interp1d(prof_dset['z'], prof_dset[vname], axis=0, kind='linear', bounds_error=False)
+            #interp1d doesn't work here because it doesn't extrapolate. Can't have Nans in interpolated profile
+            p_intp = InterpolatedUnivariateSpline(prof_dset['z'][not_nan], prof_dset[vname][not_nan], k=1)
+            init_prof[vname] = p_intp(init_prof['z'])    
         
     #get profile variables
     temp0 = init_prof['t'] #initial profile temperature
