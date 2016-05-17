@@ -12,6 +12,33 @@ from datetime import datetime
 
 debug_here = Tracer()
 
+def run_demo1():
+    """
+    Example script of how to run the PWP model. 
+    This run uses summertime data from the Beaufort gyre
+    """
+    
+    forcing_fname = 'beaufort_met.nc'
+    prof_fname = 'beaufort_profile.nc'
+    print "Running Test Case 1 with data from Beaufort gyre..."
+    forcing, pwp_out = PWP.run(met_data=forcing_fname, prof_data=prof_fname, suffix='demo1_nodiff', save_plots=True)
+
+def run_demo2():
+    
+    """
+    Example script of how to run the PWP model.
+    This run uses summertime data from the Atlantic sector of the Southern Ocean
+    """
+    
+    forcing_fname = 'SO_met_30day.nc'
+    prof_fname = 'SO_profile1.nc'
+    print "Running Test Case 2 with data from Southern Ocean..."
+    p={}
+    p['rkz']=1e-6
+    p['dz'] = 2.0 
+    p['max_depth'] = 500.0 
+    forcing, pwp_out = PWP.run(met_data=forcing_fname, prof_data=prof_fname, suffix='demo2_nodiff', save_plots=True, param_kwds=p)
+    
 
 def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1., rb=0.65, rg=0.25, rkz=0., beta1=0.6, beta2=20.0):
     
@@ -279,8 +306,8 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix=''):
     
     """
     
-    if suffix[0] != '_':
-        suffix = '_%s' %suffix
+    if len(suffix)>0 and suffix[0] != '_':
+            suffix = '_%s' %suffix
     
     #plot summary of ML evolution
     fig, axes = plt.subplots(3,1, sharex=True, figsize=(7.5,9))
