@@ -40,9 +40,9 @@ As mentioned earlier, the code is split into two files *PWP.py* and *PWP_helper.
 3. Iterate the PWP model:
     + apply heat and salt fluxes.
     + apply wind stress (momentum flux).
+    + apply drag associated with internal wave dissipation.
     + apply bulk Richardson mixing.
     + apply gradient Richardson mixing. 
-    + apply drag caused by internal wave dissipation.
     + apply diapycnal diffusion (if ON).
 4. Save results to output file.
 5. Make simple plots to visualize the results.    
