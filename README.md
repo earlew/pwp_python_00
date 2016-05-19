@@ -98,7 +98,6 @@ The main model parameters and their defaults are listed below (see the `set_para
 + Create an option to add a passive tracer to the model.
 + Incorporate a rudimentary sea-ice model to provide ice induced heat and salt fluxes.
 
-
 ## Test case 1: Southern Ocean in the summer
 This test case uses data from the default input files, *SO\_met\_30day.nc* and *SO\_profile1.nc*. The *SO\_met\_30day.nc* file contains 6-hourly [NCEP reanalysis surface fluxes](http://www.esrl.noaa.gov/psd/data/gridded/data.ncep.reanalysis.surfaceflux.html) at -53.5 N and 0.02 E, which is situated in the Atlantic sector of the Southern Ocean - just north of the winter ice-edge. The *SO_profile1.nc* file contains temperature and salinity profile data at the above location, collected on December 11, 2014. This data is the the first profile from Argo float [5904469](http://www.ifremer.fr/co-argoFloats/float?detail=false&ptfCode=5904469).
 
