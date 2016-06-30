@@ -245,9 +245,15 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         sal[0] = sal[0]/(1-emp[n-1]*dt/dz)
     
         #check if temp is less than freezing point
-        T_fz = sw.fp(sal_old, 1) #why use sal_old? Need to recheck
+        T_fz = sw.fp(sal_old, p=1) #why use sal_old? Need to recheck
         if temp[0] < T_fz:
+            
+            #create sea ice
+            #h_si,T_si = seaIce()
+            
             temp[0] = T_fz
+            
+            
         
         ### Absorb rad. at depth ###
         temp[1:] = temp[1:] + q_in[n-1]*absrb[1:]*dt/(dz*dens[1:]*cpw)
@@ -510,6 +516,85 @@ def diffus(dstab,nz,a):
     
     a[1:nz-1] = a[1:nz-1] + dstab*(a[0:nz-2] - 2*a[1:nz-1] + a[2:nz]) 
     return a    
+
+def seaIce(temp_sw, sal_sw, rho_sw, dz, dt, qnet, temp_ice_surf, h_ice=0.):
+    """
+    input:
+    
+    temp - ocean temp profile
+    sal - ocean salinity profile
+    rho - ocean density profile
+    dz - thickness of ocean layers
+    dt - time step in seconds
+    qnet - net surface heating (positive into the ocean)
+    temp_ice_surf - surface ice temperature
+    h_i - ice thickness
+    
+    """
+    #input
+    
+    
+    #define constants
+    L_ice = 333e3 #Latent heat of fusion (J kg-1) - from Hyatt 2006
+    rho_ice = 920. #density of ice (kg/m3) - from Hyatt 2006
+    k_ice = 2. #thermal conductivity of sea ice (W m-1 K-1) - from Thorndike 1992
+    c_ice = 2e6/rho_i #heat capacity of sea ice (J kg-1 K-1) - from Thorndike 1992/Hyatt 2006
+    c_sw = 4183. #heat capacity of seawater (J kg-1 K-1) - from Hyatt 2006
+    sal_ice = 4. #salinity of sea ice (PSU) - from Hyatt 2006
+    
+    #derive additional parameter
+    rho_w = rho[0] #density of seawater in model layer 1 (kg/m3)
+    temp_swfz = sw.fp(s[0], p=1) #freezing point of seawater at given salinity
+    temp_ice_base = temp_fz
+    qnet_rem = 0. #heat left over after melting ice
+    
+    assert h_ice >=0., "Error! negative ice thickness. Something went terribly wrong."
+    
+    if h_ice == 0.:
+        print "initiating ice growth..."
+        ##create ice according to Hyatt 2006
+        #first, create a thin layer of sea ice (eqn. 5.11, Hyatt 2006)
+        h_ice = rho_sw*c_sw*dz*(temp_swfz-temp_sw[0])/(rho_ice*L_ice)
+        
+        #compute salinity change in top layer due to brine rejection (eqn. 5.12, Hyatt 2006)
+        dsal_sw = h_ice*(sal_sw[0]-sal_ice)/dz
+        
+        #set ice to freezing temp of water
+        temp_ice_surf = temp_swfz
+        
+        return h_ice, temp_ice_surf
+        
+        
+    elif h_ice > 0:
+        #TODO: incorporate ice fraction
+        #TODO: add ocean heat flux feedback
+        
+        ## modify existing ice according to Thorndike 1992
+        temp_ice_avg_i = (temp_ice_base + temp_ice_surf)/2 #initial average ice temp  
+        
+        heat_store = h_ice * L_ice * rho_ice #heat required to melt ice
+        
+        if qnet*dt >= heat_store:
+            print "ice has completely melted."
+            qnet_rem = heat_store-qnet
+            h_ice = 0.0
+            temp_ice_surf = temp_swfz
+            
+        else:
+            #cool/warm ice assuming a linear temp profile (eqn. 11, Thorndike 1992)   
+            dtemp_ice_avg = qnet*dt/(c_ice*h_ice*rho_ice)       
+            temp_ice_avg_f = temp_ice_avg_i + dtemp_ice_avg #final average ice temp
+            temp_ice_grad = 2*(temp_ice_avg_f-temp_ice_base)/h_ice #temperature gradient in ice
+            temp_ice_surf = temp_ice_grad*h_ice #dT_dz = (T_avg + dT_avg - T_base)/(h/2)
+        
+            #grow/melt ice
+            h_ice = -k_ice*temp_ice_grad*dt/L_ice
+         
+        
+    return h_ice, temp_ice_surf, qnet_rem
+
+    
+
 
 if __name__ == "__main__":
     
