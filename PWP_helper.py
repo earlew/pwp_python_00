@@ -164,10 +164,14 @@ def prep_data(met_dset, prof_dset, params):
     pwp_out: dictionary with initialized variables to collect model output.
     """
     
+    import warnings
     
     #create new time vector with time step dt_d
-    time_vec = np.arange(met_dset['time'][0], met_dset['time'][-1]+params['dt_d'], params['dt_d']) 
+    #time_vec = np.arange(met_dset['time'][0], met_dset['time'][-1]+params['dt_d'], params['dt_d']) 
+    time_vec = np.arange(met_dset['time'][0], met_dset['time'][-1], params['dt_d']) 
     tlen = len(time_vec)
+    
+    #debug_here()
     
     #interpolate surface forcing data to new time vector
     from scipy.interpolate import interp1d
