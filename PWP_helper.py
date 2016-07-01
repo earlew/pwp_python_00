@@ -183,15 +183,19 @@ def prep_data(met_dset, prof_dset, params):
     #check depth resolution of profile data
     prof_incr = np.diff(prof_dset['z']).mean()
     if params['dz'] < prof_incr/5.:
-        inpt = input("Depth increment, dz, is much smaller than profile resolution. Is this okay? (Enter 'y'or 'n')")
-        if inpt is 'n':
-            raise ValueError("Please restart PWP.m with a new dz >= %s Exiting..." %prof_incr/5.)
+        message = "Specified depth increment (%s m), is much smaller than mean profile resolution (%s m)." %(params['dz'], prof_incr)
+        warnings.warn(message)
+        
+        
+        # inpt = input("Depth increment, dz, is much smaller than profile resolution. Is this okay? (Enter 'y'or 'n')")
+        # if inpt is 'n':
+        #     raise ValueError("Please restart PWP.m with a new dz >= %s Exiting..." %prof_incr/5.)
     
     #debug_here()
     #interpolate profile data to new z-coordinate
     from scipy.interpolate import InterpolatedUnivariateSpline 
     for vname in prof_dset:
-        if vname == 'lat':
+        if vname == 'lat' or vname=='lon':
             continue
         else:
             #first strip nans
