@@ -151,7 +151,9 @@ def prep_data(met_dset, prof_dset, params):
     emp[np.isnan(emp)] = 0.
     forcing['emp'] = emp    
     
-    #define q_in and q_out (positive values should mean ocean warming)
+    #define q_in and q_out 
+    #for sw, lw, qlat and qsens and positive values should mean ocean warming
+    #for the purpose of the PWP code, we flip the sign of q_out
     forcing['q_in'] = forcing['sw'] #heat flux into ocean
     forcing['q_out'] = -(forcing['lw'] + forcing['qlat'] + forcing['qsens']) 
     
@@ -237,6 +239,10 @@ def prep_data(met_dset, prof_dset, params):
     pwp_out['temp'][:,0] = temp0
     pwp_out['dens'][:,0] = dens0
     
+    #create variables for sea ice
+    pwp_out['surf_ice_temp'] = np.nan*np.zeros((tlen,))
+    pwp_out['ice_thickness'] = np.zeros((tlen,))
+    
     return forcing, pwp_out, params
     
 def livePlots(pwp_out, n):
@@ -281,6 +287,10 @@ def livePlots(pwp_out, n):
     ax1.plot(uvel[:,n], z, 'b', label='uvel')
     ax1.plot(vvel[:,n], z, 'r', label='vvel')
     ax1.invert_yaxis()
+    # xlims = ax1.get_xlim()
+    # xticks = np.round(np.linspace(xlims[0], xlims[1], 4), 1)
+    # ax1.set_xticks(xticks)
+    ax1.set_xlim(-0.06, 0.06)
     ax1.grid(True)
     ax1.legend(loc=3)    
 
@@ -302,6 +312,7 @@ def livePlots(pwp_out, n):
     xticks = np.round(np.linspace(xlims[0], xlims[1], 4), 1)
     ax3.set_xticks(xticks)
 
+    plt.subplots_adjust(wspace=0.4)
     plt.pause(0.05)
 
     plt.show()
