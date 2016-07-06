@@ -40,7 +40,7 @@ def run_demo2():
     forcing, pwp_out = PWP.run(met_data=forcing_fname, prof_data=prof_fname, suffix='demo2_1e6diff', save_plots=True, param_kwds=p)
     
 
-def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1., rb=0.65, rg=0.25, rkz=0., beta1=0.6, beta2=20.0):
+def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1., rb=0.65, rg=0.25, rkz=0., beta1=0.6, beta2=20.0, ice_ON=False, winds_ON=True, emp_ON=True):
     
     """
     This function sets the main paramaters/constants used in the model.
@@ -85,6 +85,10 @@ def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1., r
     params['cpw'] = 4183.3
     params['ucon'] = (0.1*np.abs(params['f']))
     params['mld_thresh'] = mld_thresh
+    
+    params['ice_ON'] = ice_ON
+    params['winds_ON'] = winds_ON
+    params['emp_ON'] = emp_ON
     
     return params
 
@@ -149,7 +153,12 @@ def prep_data(met_dset, prof_dset, params):
     evap = (0.03456/(86400*1000))*evap_intp(np.floor(time_vec)) #(meters per second?)
     emp = evap-forcing['precip']
     emp[np.isnan(emp)] = 0.
-    forcing['emp'] = emp    
+    forcing['emp'] = emp  
+    
+    if params['emp_ON'] == False:
+        print "E-P is turned OFF."
+        forcing['emp'][:] = 0.0
+          
     
     #define q_in and q_out 
     #for sw, lw, qlat and qsens and positive values should mean ocean warming
@@ -159,6 +168,11 @@ def prep_data(met_dset, prof_dset, params):
     
     #add time_vec to forcing
     forcing['time'] = time_vec
+    
+    if params['winds_ON'] == False:
+        print "Winds are set to OFF."
+        forcing['tx'][:] = 0.0
+        forcing['ty'][:] = 0.0
            
     #define depth coordinate, but first check to see if profile max depth
     #is greater than user defined max depth

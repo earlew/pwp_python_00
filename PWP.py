@@ -202,6 +202,7 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
     """
     This is the main driver of the PWP module.
     """
+    print_ice_warning = True
     
     #unpack some of the variables (I could probably do this more elegantly)
     q_in = forcing['q_in']
@@ -264,33 +265,48 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
             
             #check if temp is less than freezing point
             T_fz = sw.fp(sal_old, p=1) #why use sal_old? Need to recheck
-            if temp[0] < T_fz:           
-                #generate sea ice
-                h_ice, temp_ice_surf, temp, sal = PWP_ice.create_initial_ice(h_ice, temp_ice_surf, temp, sal, dens, dz)   
-                ice_frac = 1 #TODO: In the future, this will be time varying
-                q_in = (1-ice_frac)*q_in #TODO: think about this... Why is this even here?
-                #temp[0] = T_fz
-                pwp_out['surf_ice_temp'][n] = temp_ice_surf
-                pwp_out['ice_thickness'][n] = h_ice
+            if temp[0] < T_fz: 
+                
+                if params['ice_ON']:          
+                    #generate sea ice
+                    h_ice, temp_ice_surf, temp, sal = PWP_ice.create_initial_ice(h_ice, temp_ice_surf, temp, sal, dens, dz)   
+                    ice_frac = 1 #TODO: In the future, this will be time varying
+                    #q_in = (1-ice_frac)*q_in #TODO: think about this... Why is this even here?
+                    #temp[0] = T_fz
+                    pwp_out['surf_ice_temp'][n] = temp_ice_surf
+                    pwp_out['ice_thickness'][n] = h_ice
+                    
+                else: 
+                    temp[0] = T_fz
+                    if print_ice_warning:
+                        print "surface has reached freezing temp. However, ice creation is off."
+                        print_ice_warning = False
+                    
+                    
             
         else:
-            #if there is sea ice, the sea ice layer becomes layer 1 
-            h_ice, temp_ice_surf, temp, sal = PWP_ice.grow_existing_ice(temp, sal, dens, z, dt, q_net_n, temp_ice_surf, h_ice, params)
             
-            #if qnet is postive and the ice has completely melted, use the remaining heat flux to warm ocean
-            #Here, I am assuming qnet is all shortwave TODO: think about this some more (applied this heating in ice model)
-            # temp[0] = temp[0] + (qnet_rem*absrb[0]-q_out[n-1])*dt/(dz*dens[0]*cpw)
-            #temp[1:] = temp[1:] + q_in[n-1]*absrb[1:]*dt/(dz*dens[1:]*cpw)
+            if params['ice_ON']:
+                ### if there is sea ice, the sea ice layer becomes layer 1 ###    
+                #compute ocean->ice heat flux required to bring SST to freezing point
+                F_ocean = PWP_ice.get_ocean_ice_heat_flux(temp, sal, dens, params) 
             
-            pwp_out['surf_ice_temp'][n] = temp_ice_surf
-            pwp_out['ice_thickness'][n] = h_ice
+                #modify existing sea ice using updated heat fluxes
+                h_ice, temp_ice_surf, temp, sal = PWP_ice.modify_existing_ice(temp_ice_surf, h_ice, temp, sal, dens, q_net_n, F_ocean, params)
             
-        if n==30:
-            debug_here()
+                #save ice related output
+                pwp_out['surf_ice_temp'][n] = temp_ice_surf
+                pwp_out['ice_thickness'][n] = h_ice
+                pwp_out['F_ocean_ice'][n] = F_ocean
+            
+        # if n==2:
+        #     debug_here()
 
+        #debug_here()
         ### compute new density ###
         dens = sw.dens0(sal, temp)
     
+        #debug_here()
         ### relieve static instability ###
         temp, sal, dens, uvel, vvel = remove_si(temp, sal, dens, uvel, vvel)
     
