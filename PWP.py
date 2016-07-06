@@ -130,7 +130,7 @@ def run(met_data, prof_data, param_kwds=None, overwrite=True, diagnostics=True, 
     prof_dset = xray.open_dataset('input_data/%s' %prof_data)
     
     ## get model parameters and constants (read docs for set_params function)
-    lat = prof_dset['lat'] #needed to compute internal wave dissipation
+    lat = prof_dset['lat'][0] #needed to compute internal wave dissipation
     if param_kwds is None:
         params = phf.set_params(lat=lat) 
     else:

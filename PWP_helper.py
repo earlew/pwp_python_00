@@ -215,15 +215,21 @@ def prep_data(met_dset, prof_dset, params):
     #interpolate profile data to new z-coordinate
     from scipy.interpolate import InterpolatedUnivariateSpline 
     for vname in prof_dset:
-        if vname == 'lat' or vname=='lon':
+        if vname == 'lat' or vname=='lon' or vname=='p' or vname=='z':
             continue
         else:
+            
+            vble = prof_dset[vname].values
+            vble = np.atleast_2d(vble)
+            
+            assert vble.shape[1] ==2
+            
             #first strip nans
-            not_nan = np.logical_not(np.isnan(prof_dset[vname]))
-            indices = np.arange(len(prof_dset[vname]))
+            not_nan = np.logical_not(np.isnan(vble[:,0]))
+            indices = np.arange(len(vble[:,0]))
             #p_intp = interp1d(prof_dset['z'], prof_dset[vname], axis=0, kind='linear', bounds_error=False)
             #interp1d doesn't work here because it doesn't extrapolate. Can't have Nans in interpolated profile
-            p_intp = InterpolatedUnivariateSpline(prof_dset['z'][not_nan], prof_dset[vname][not_nan], k=1)
+            p_intp = InterpolatedUnivariateSpline(prof_dset['z'][not_nan], vble[not_nan, 0], k=1)
             init_prof[vname] = p_intp(init_prof['z'])    
         
     #get profile variables
@@ -253,6 +259,15 @@ def prep_data(met_dset, prof_dset, params):
     pwp_out['temp'][:,0] = temp0
     pwp_out['dens'][:,0] = dens0
     
+    # debug_here()
+    
+    #if final observed profile is available, save it
+    if np.shape(prof_dset['t'])[1] == 2:
+        pwp_out['obs_zlvl'] = prof_dset['z'].values
+        pwp_out['sal_f'] = prof_dset['s'][:,1].values
+        pwp_out['temp_f'] = prof_dset['t'][:,1].values
+        
+
     #create variables for sea ice
     pwp_out['surf_ice_temp'] = np.nan*np.zeros((tlen,))
     pwp_out['ice_thickness'] = np.zeros((tlen,))
@@ -407,25 +422,35 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix=''):
     ax.set_xlabel('Days')   
     
     
-    ## plot initial and final T-S profiles
+    ## plot initial and final T-S profiles (TODO: add actual T,S profiles)
     from mpl_toolkits.axes_grid1 import host_subplot
     import mpl_toolkits.axisartist as AA
     
     plt.figure()
     host = host_subplot(111, axes_class=AA.Axes)
-    host.invert_yaxis()
     par1 = host.twiny() #par for parasite axis
     host.set_ylabel("Depth (m)")
     host.set_xlabel("Temperature ($^{\circ}$C)")
     par1.set_xlabel("Salinity (PSU)")
+    
+    host.set_ylim(0, max(pwp_out['z']))
+    host.invert_yaxis()
     
     p1, = host.plot(pwp_out['temp'][:,0], pwp_out['z'], '--r', label='$T_i$')
     host.plot(pwp_out['temp'][:,-1], pwp_out['z'], '-r', label='$T_f$')
     p2, = par1.plot(pwp_out['sal'][:,0], pwp_out['z'], '--b', label='$S_i$')
     par1.plot(pwp_out['sal'][:,-1], pwp_out['z'], '-b', label='$S_f$')
     host.grid(True)
-    host.legend(loc=0, ncol=2)
+    
+    host.legend(loc=3, ncol=2)
     #par1.legend(loc=3)
+    
+    #if observed final profiles are available, plot them:
+    if 'sal_f' in pwp_out.keys() and 'temp_f' in pwp_out.keys():
+        host.plot(pwp_out['temp_f'], pwp_out['obs_zlvl'], '-o', color='r', label='$T_{obs}$')
+        par1.plot(pwp_out['sal_f'], pwp_out['obs_zlvl'], '-o', color='b', label='$S_{obs}$')
+    
+    
     
     host.axis["bottom"].label.set_color(p1.get_color())
     host.axis["bottom"].major_ticklabels.set_color(p1.get_color())
