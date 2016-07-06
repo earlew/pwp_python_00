@@ -463,10 +463,28 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix=''):
     par1.axis["top"].label.set_color(p2.get_color())
     par1.axis["top"].major_ticklabels.set_color(p2.get_color())
     par1.axis["top"].major_ticks.set_color(p2.get_color())
+
     
     if save_plots:     
         plt.savefig('plots/initial_final_TS_profiles%s.png' %suffix, bbox_inches='tight')
         
+        
+        
+    ## plot ice growth and ice temp
+    plt.figure()
+    plt.subplot(211)
+    plt.plot(tvec, pwp_out['ice_thickness'], 'o')
+    plt.ylabel('Ice thickness (m)')
+    plt.xlabel('Time (days)')
+    plt.grid(True)
+    
+    plt.subplot(212)
+    plt.plot(tvec, pwp_out['surf_ice_temp'], 'o')
+    plt.ylabel('Ice temperature (C)')
+    plt.xlabel('Time (days)')
+    plt.grid(True)
+    
+    
     
     
     plt.show()
