@@ -229,6 +229,19 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
     
     q_net = q_in-q_out
     
+    #add dz and dt to params
+    params['dt'] = dt
+    params['dz'] = dz
+    
+    #create output variable for ocean and atmospheric heat flux
+    pwp_out['F_ocean_ice'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan
+    pwp_out['F_atm'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan
+    
+    #initialize ice thickness:
+    #TESTING
+    # pwp_out['ice_thickness'][0] = 0.2
+    # pwp_out['surf_ice_temp'][0] = -2
+    
     
     #debug_here()
     print "Number of time steps: %s" %tlen
@@ -241,13 +254,13 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         #print '===================================='
         
         #select for previous profile data
-        temp = pwp_out['temp'][:, n-1]
-        sal = pwp_out['sal'][:, n-1]
-        dens = pwp_out['dens'][:, n-1]
-        uvel = pwp_out['uvel'][:, n-1]
-        vvel = pwp_out['vvel'][:, n-1]
-        h_ice = pwp_out['ice_thickness'][n-1]
-        temp_ice_surf = pwp_out['surf_ice_temp'][n-1]
+        temp = pwp_out['temp'][:, n-1].copy()
+        sal = pwp_out['sal'][:, n-1].copy()
+        dens = pwp_out['dens'][:, n-1].copy()
+        uvel = pwp_out['uvel'][:, n-1].copy()
+        vvel = pwp_out['vvel'][:, n-1].copy()
+        h_ice = pwp_out['ice_thickness'][n-1].copy()
+        temp_ice_surf = pwp_out['surf_ice_temp'][n-1].copy()
         q_net_n = q_net[n-1]
         
         ### Absorb solar radiation and FWF in surf layer ###
@@ -360,12 +373,12 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
             vvel = diffus(params['dstab'], zlen, vvel)
             
         ### Apply ocean ice feedback ###
-        if h_ice > 0:
-            #print "Applying ocean ice feedback..."
-            F_sw = PWP_ice.get_ocean_ice_heat_flux(temp, sal, dens, dz)
-            h_ice, temp_ice_surf, temp, sal= PWP_ice.melt_ice(h_ice, temp_ice_surf, temp, sal, dens, F_sw, dz, dt, source='ocean')
-            pwp_out['surf_ice_temp'][n] = temp_ice_surf
-            pwp_out['ice_thickness'][n] = h_ice
+        # if h_ice > 0:
+        #     #print "Applying ocean ice feedback..."
+        #     F_sw = PWP_ice.get_ocean_ice_heat_flux(temp, sal, dens, dz)
+        #     h_ice, temp_ice_surf, temp, sal= PWP_ice.melt_ice(h_ice, temp_ice_surf, temp, sal, dens, F_sw, dz, dt, source='ocean')
+        #     pwp_out['surf_ice_temp'][n] = temp_ice_surf
+        #     pwp_out['ice_thickness'][n] = h_ice
         
         ### update output profile data ###
         pwp_out['temp'][:, n] = temp 
