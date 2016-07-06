@@ -140,8 +140,10 @@ def run(met_data, prof_data, param_kwds=None, overwrite=True, diagnostics=True, 
     ## prep forcing and initial profile data for model run (see prep_data function for more details)
     forcing, pwp_out, params = phf.prep_data(met_dset, prof_dset, params)
     
+    # debug_here()
     ## run the model
     pwp_out = pwpgo(forcing, params, pwp_out, diagnostics)
+    
     
     #check timer
     tnow = timeit.default_timer()
@@ -253,7 +255,7 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         #save initial T,S (may not be necessary)
         temp_old = pwp_out['temp'][0, n-1]
         sal_old = pwp_out['sal'][0, n-1] 
-    
+        
         if h_ice==0:
             #update layer 1 temp and sal
             temp[0] = temp[0] + (q_in[n-1]*absrb[0]-q_out[n-1])*dt/(dz*dens[0]*cpw)
@@ -316,6 +318,7 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         ml_idx = np.flatnonzero(np.diff(dens)>ml_thresh)[0] #finds the first index that exceed ML threshold
         ml_idx = ml_idx+1
     
+        #debug_here()
         #check to ensure that ML is defined
         assert ml_idx.size is not 0, "Error: Mixed layer depth is undefined."
     
@@ -371,6 +374,7 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         pwp_out['uvel'][:, n] = uvel
         pwp_out['vvel'][:, n] = vvel
         pwp_out['mld'][n] = mld
+        pwp_out['F_atm'][n] = q_net_n
     
         #do diagnostics
         if diagnostics==1:

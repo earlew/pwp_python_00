@@ -122,7 +122,10 @@ def prep_data(met_dset, prof_dset, params):
             
     prof_data: dictionary-like object with initial profile data. Fields should include:
             ['z', 't', 's']. These represent 1-D vertical profiles of temperature,
-            salinity and density.
+            salinity and density. 
+    
+            NOTE: Code now accepts two column arrays. Second column will be treated as observed
+            profile at the end of run.
             
     params: dictionary-like object with fields defined by set_params function
     
@@ -201,7 +204,8 @@ def prep_data(met_dset, prof_dset, params):
     params['dstab'] = dstab
     
     #check depth resolution of profile data
-    prof_incr = np.diff(prof_dset['z']).mean()
+    prof_z = prof_dset['z']; max_z = params['max_depth']
+    prof_incr = np.diff(prof_dset['z'][prof_z<=max_z]).mean()
     if params['dz'] < prof_incr/5.:
         message = "Specified depth increment (%s m), is much smaller than mean profile resolution (%s m)." %(params['dz'], prof_incr)
         warnings.warn(message)
@@ -366,7 +370,7 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix=''):
         tvec = time_vec
     
     axes = axes.flatten()
-    ##plot surface heat flux
+    ## plot surface heat flux
     axes[0].plot(tvec, forcing['lw'], label='$Q_{lw}$')
     axes[0].plot(tvec, forcing['qlat'], label='$Q_{lat}$')
     axes[0].plot(tvec, forcing['qsens'], label='$Q_{sens}$')
