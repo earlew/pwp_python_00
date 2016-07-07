@@ -484,6 +484,17 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix=''):
     plt.xlabel('Time (days)')
     plt.grid(True)
     
+    ## plot OCEAN-ICE heat flux and ATM-ICE heat flux
+    plt.figure()
+    plt.subplot(111)
+    plt.plot(tvec, pwp_out['F_atm'], '-o', label='Air-ice heat flux')
+    plt.plot(tvec, pwp_out['F_ocean_ice'], 'o', label='Ocean-ice heat flux')
+    plt.hlines(0, tvec[0], tvec[-1])
+    plt.xlabel('Time (days)')
+    plt.ylabel('Heat flux (W/m2)')
+    plt.legend(loc=0)
+    plt.grid(True)
+    
     
     
     
