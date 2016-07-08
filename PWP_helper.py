@@ -40,7 +40,7 @@ def run_demo2():
     forcing, pwp_out = PWP.run(met_data=forcing_fname, prof_data=prof_fname, suffix='demo2_1e6diff', save_plots=True, param_kwds=p)
     
 
-def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1., rb=0.65, rg=0.25, rkz=0., beta1=0.6, beta2=20.0, ice_ON=False, winds_ON=True, emp_ON=True):
+def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1., rb=0.65, rg=0.25, rkz=0., beta1=0.6, beta2=20.0, alpha=1., qnet_offset=0., ice_ON=False, winds_ON=True, emp_ON=True):
     
     """
     This function sets the main paramaters/constants used in the model.
@@ -89,6 +89,9 @@ def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1., r
     params['ice_ON'] = ice_ON
     params['winds_ON'] = winds_ON
     params['emp_ON'] = emp_ON
+    
+    params['alpha'] = alpha #sea ice concentration
+    params['qnet_offset'] = qnet_offset #arbitrary offset to the net atmospheric heat flux.
     
     return params
 

@@ -226,8 +226,10 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
     cpw = params['cpw']
     g = params['g']
     ucon = params['ucon']
+    alpha = params['alpha']
     
     q_net = q_in-q_out
+    q_net = q_net+params['qnet_offset']
     
     #add dz and dt to params
     params['dt'] = dt
@@ -296,19 +298,22 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
                     if print_ice_warning:
                         print "surface has reached freezing temp. However, ice creation is off."
                         print_ice_warning = False
-                    
-                    
+               
             
         else:
             
             if params['ice_ON']:
-                ### if there is sea ice, the sea ice layer becomes layer 1 ###    
+                ### if there is sea ice, the sea ice layer becomes layer 1 ### 
+                   
                 #compute ocean->ice heat flux required to bring SST to freezing point
                 F_ocean = PWP_ice.get_ocean_ice_heat_flux(temp, sal, dens, params) 
             
                 #modify existing sea ice using updated heat fluxes
                 h_ice, temp_ice_surf, temp, sal = PWP_ice.modify_existing_ice(temp_ice_surf, h_ice, temp, sal, dens, q_net_n, F_ocean, params)
-            
+                
+                # apply E-P flux through leads
+                sal[0] = sal[0]/(1-alpha*emp[n-1]*dt/dz)
+                
                 #save ice related output
                 pwp_out['surf_ice_temp'][n] = temp_ice_surf
                 pwp_out['ice_thickness'][n] = h_ice
