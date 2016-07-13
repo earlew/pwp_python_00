@@ -228,6 +228,8 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
     g = params['g']
     ucon = params['ucon']
     
+    printDragWarning = True
+    
     print "Number of time steps: %s" %tlen
     
     for n in xrange(1,tlen):
@@ -268,7 +270,7 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         ### Compute MLD ###       
         #find ml index
         ml_thresh = params['mld_thresh']
-        mld_idx = np.flatnonzero(dens[0]-dens>ml_thresh)[0] #finds the first index that exceed ML threshold
+        mld_idx = np.flatnonzero(dens-dens[0]>ml_thresh)[0] #finds the first index that exceed ML threshold
     
         #check to ensure that ML is defined
         assert mld_idx.size is not 0, "Error: Mixed layer depth is undefined."
@@ -287,9 +289,14 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
 
         ### Apply drag to current ###
         #Original comment: this is a horrible parameterization of inertial-internal wave dispersion
-        if ucon > 1e-10:
-            uvel = uvel*(1-dt*ucon)
-            vvel = vvel*(1-dt*ucon)
+        if params['drag_ON']:
+            if ucon > 1e-10:
+                uvel = uvel*(1-dt*ucon)
+                vvel = vvel*(1-dt*ucon)
+        else:
+            if printDragWarning:
+                print "Warning: Parameterization for inertial-internal wave dispersion is turned off."
+                printDragWarning = False
 
         uvel, vvel = rot(uvel, vvel, ang)
     

@@ -23,7 +23,7 @@ def run_demo1():
     print "Running Test Case 1 with data from Beaufort gyre..."
     forcing, pwp_out = PWP.run(met_data=forcing_fname, prof_data=prof_fname, suffix='demo1_nodiff', save_plots=True)
 
-def run_demo2():
+def run_demo2(winds_ON=True, emp_ON=True, heat_ON=True, drag_ON=True):
     
     """
     Example script of how to run the PWP model.
@@ -37,10 +37,36 @@ def run_demo2():
     p['rkz']=1e-6
     p['dz'] = 2.0 
     p['max_depth'] = 500.0 
-    forcing, pwp_out = PWP.run(met_data=forcing_fname, prof_data=prof_fname, suffix='demo2_1e6diff', save_plots=True, param_kwds=p)
+    p['winds_ON'] = winds_ON
+    p['emp_ON'] = emp_ON
+    p['heat_ON'] = heat_ON
+    p['drag_ON'] = drag_ON
+    
+    if emp_ON: 
+        emp_flag=''
+    else:
+        emp_flag='_empOFF'
+        
+    if winds_ON: 
+        winds_flag=''
+    else:
+        winds_flag='_windsOFF'
+        
+    if heat_ON: 
+        heat_flag=''
+    else:
+        heat_flag='_heatingOFF'
+        
+    if drag_ON:
+        drag_flag=''
+    else:
+        drag_flag='_dragOFF'
+        
+    suffix = 'demo2_1e6diff%s%s%s%s' %(winds_flag, emp_flag, heat_flag, drag_flag)
+    forcing, pwp_out = PWP.run(met_data=forcing_fname, prof_data=prof_fname, suffix=suffix, save_plots=True, param_kwds=p)
     
 
-def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1., rb=0.65, rg=0.25, rkz=0., beta1=0.6, beta2=20.0, winds_ON=True, emp_ON=True):
+def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1., rb=0.65, rg=0.25, rkz=0., beta1=0.6, beta2=20.0, heat_ON=True, winds_ON=True, emp_ON=True, drag_ON=True):
     
     """
     This function sets the main paramaters/constants used in the model.
@@ -59,6 +85,10 @@ def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1., r
     rkz: background vertical diffusion (m**2/s). [0.]
     beta1: longwave extinction coefficient (meters). [0.6] 
     beta2: shortwave extinction coefficient (meters). [20] 
+    winds_ON: True/False flag to turn ON/OFF wind forcing. [True]
+    emp_ON: True/False flag to turn ON/OFF freshwater forcing. [True]
+    heat_ON: True/False flag to turn ON/OFF surface heat flux forcing. [True]
+    drag_ON: True/False flag to turn ON/OFF current drag due to internal-inertial wave breaking. [True]
     
     OUTPUT is dict with fields containing the above variables plus the following:
     dt_d: time increment (dt) in units of days
@@ -88,6 +118,8 @@ def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1., r
     
     params['winds_ON'] = winds_ON
     params['emp_ON'] = emp_ON
+    params['heat_ON'] = heat_ON
+    params['drag_ON'] = drag_ON
     
     return params
 
@@ -152,8 +184,15 @@ def prep_data(met_dset, prof_dset, params):
     forcing['emp'] = emp  
     
     if params['emp_ON'] == False:
-        print "E-P is turned OFF."
+        print "WARNING: E-P is turned OFF."
         forcing['emp'][:] = 0.0
+        
+    if params['heat_ON'] == False:
+        print "WARNING: Surface heating is turned OFF."
+        forcing['sw'][:] = 0.0
+        forcing['lw'][:] = 0.0
+        forcing['qlat'][:] = 0.0
+        forcing['qsens'][:] = 0.0
           
     
     #define q_in and q_out (positive values should mean ocean warming)
