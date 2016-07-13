@@ -38,3 +38,6 @@ ehthumbs.db
 Thumbs.db
 pwp_output_diff.nc
 output
+plots
+input_data
+pwp_soccom.py
