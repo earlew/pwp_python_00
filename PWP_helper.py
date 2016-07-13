@@ -40,7 +40,7 @@ def run_demo2():
     forcing, pwp_out = PWP.run(met_data=forcing_fname, prof_data=prof_fname, suffix='demo2_1e6diff', save_plots=True, param_kwds=p)
     
 
-def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1., rb=0.65, rg=0.25, rkz=0., beta1=0.6, beta2=20.0, alpha=1., qnet_offset=0., ice_ON=False, winds_ON=True, emp_ON=True):
+def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1., rb=0.65, rg=0.25, rkz=0., beta1=0.6, beta2=20.0, alpha=0., qnet_offset=0., ice_ON=False, winds_ON=True, emp_ON=True):
     
     """
     This function sets the main paramaters/constants used in the model.
@@ -90,7 +90,7 @@ def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1., r
     params['winds_ON'] = winds_ON
     params['emp_ON'] = emp_ON
     
-    params['alpha'] = alpha #sea ice concentration
+    params['alpha'] = alpha #sea ice concentration (TODO: delete here and add to forcing)
     params['qnet_offset'] = qnet_offset #arbitrary offset to the net atmospheric heat flux.
     
     return params
@@ -124,7 +124,7 @@ def prep_data(met_dset, prof_dset, params):
     
             
     prof_data: dictionary-like object with initial profile data. Fields should include:
-            ['z', 't', 's']. These represent 1-D vertical profiles of temperature,
+            ['z', 't', 's', 'lat']. These represent 1-D vertical profiles of temperature,
             salinity and density. 
     
             NOTE: Code now accepts two column arrays. Second column will be treated as observed
@@ -154,9 +154,16 @@ def prep_data(met_dset, prof_dset, params):
         p_intp = interp1d(met_dset['time'], met_dset[vname], axis=0)
         forcing[vname] = p_intp(time_vec)
         
+    #adjust skin temperature if it exists
+    if 'skt' in forcing.keys():
+        #if met_dset['skt'].attrs['units'] == 'degK':
+        forcing['skt'] = forcing['skt'] - 273.15
+        # forcing['skt'].attrs['units'] = 'degC'
+            
+        
     #interpolate E-P to dt resolution (not sure why this has to be done separately)
     evap_intp = interp1d(met_dset['time'], met_dset['qlat'], axis=0, kind='nearest', bounds_error=False)
-    evap = (0.03456/(86400*1000))*evap_intp(np.floor(time_vec)) #(meters per second?)
+    evap = (0.03456/(86400*1000))*evap_intp(np.floor(time_vec)) #(meters per second)
     emp = evap-forcing['precip']
     emp[np.isnan(emp)] = 0.
     forcing['emp'] = emp  
@@ -227,9 +234,11 @@ def prep_data(met_dset, prof_dset, params):
         else:
             
             vble = prof_dset[vname].values
-            vble = np.atleast_2d(vble)
             
-            assert vble.shape[1] ==2
+            if vble.ndim==1:
+                vble = vble[:, np.newaxis]
+            
+            assert vble.ndim>1, "profile variable should be 2-D"
             
             #first strip nans
             not_nan = np.logical_not(np.isnan(vble[:,0]))
@@ -266,10 +275,10 @@ def prep_data(met_dset, prof_dset, params):
     pwp_out['temp'][:,0] = temp0
     pwp_out['dens'][:,0] = dens0
     
-    # debug_here()
+    #debug_here()
     
     #if final observed profile is available, save it
-    if np.shape(prof_dset['t'])[1] == 2:
+    if prof_dset['t'].ndim == 2:
         pwp_out['obs_zlvl'] = prof_dset['z'].values
         pwp_out['sal_f'] = prof_dset['s'][:,1].values
         pwp_out['temp_f'] = prof_dset['t'][:,1].values
@@ -298,7 +307,7 @@ def livePlots(pwp_out, n):
 
 
     #plot depth int. KE and momentum
-    plt.figure(num=1)
+    plt.figure(num=101)
 
     plt.subplot(211)
     plt.plot(time[n]-time[0], np.trapz(0.5*dens[:,n]*(uvel[:,n]**2+vvel[:,n]**2)), 'b.')
@@ -318,7 +327,7 @@ def livePlots(pwp_out, n):
         #plt.get_current_fig_manager().window.wm_geometry("400x600+20+40")
     
     #plot T,S and U,V
-    plt.figure(num=2, figsize=(12,6))
+    plt.figure(num=102, figsize=(12,6))
     ax1 = plt.subplot2grid((1,4), (0, 0), colspan=2)
     ax1.plot(uvel[:,n], z, 'b', label='uvel')
     ax1.plot(vvel[:,n], z, 'r', label='vvel')
@@ -353,7 +362,7 @@ def livePlots(pwp_out, n):
 
     plt.show()
 
-def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix=''):
+def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', justForcing=False):
     
     """
     TODO: add doc file
@@ -408,6 +417,9 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix=''):
     axes[2].legend(loc=0, fontsize='medium')
     axes[2].set_xlabel('Time (days)')
     
+    if justForcing:
+        return
+    
     if save_plots:     
         plt.savefig('plots/surface_forcing%s.png' %suffix, bbox_inches='tight')
     
@@ -453,10 +465,10 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix=''):
     #par1.legend(loc=3)
     
     #if observed final profiles are available, plot them:
-    if 'sal_f' in pwp_out.keys() and 'temp_f' in pwp_out.keys():
-        host.plot(pwp_out['temp_f'], pwp_out['obs_zlvl'], '-o', color='r', label='$T_{obs}$')
-        par1.plot(pwp_out['sal_f'], pwp_out['obs_zlvl'], '-o', color='b', label='$S_{obs}$')
-    
+    # if 'sal_f' in pwp_out.keys() and 'temp_f' in pwp_out.keys():
+    #     host.plot(pwp_out['temp_f'], pwp_out['obs_zlvl'], '-o', color='r', label='$T_{obs}$')
+    #     par1.plot(pwp_out['sal_f'], pwp_out['obs_zlvl'], '-o', color='b', label='$S_{obs}$')
+    #
     
     
     host.axis["bottom"].label.set_color(p1.get_color())
@@ -474,29 +486,70 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix=''):
         
         
     ## plot ice growth and ice temp
-    plt.figure()
-    plt.subplot(211)
-    plt.plot(tvec, pwp_out['ice_thickness'], 'o')
-    plt.ylabel('Ice thickness (m)')
-    plt.xlabel('Time (days)')
-    plt.grid(True)
+    fig, axes = plt.subplots(2,1, sharex=True)
+    axes[0].plot(tvec, pwp_out['ice_thickness'], 'o')
+    axes[0].set_ylabel('Ice thickness (m)')
+    #axes[0].xlabel('Time (days)')
+    axes[0].set_title('Ice thickness')
+    axes[0].grid(True)
     
-    plt.subplot(212)
-    plt.plot(tvec, pwp_out['surf_ice_temp'], 'o')
-    plt.ylabel('Ice temperature (C)')
-    plt.xlabel('Time (days)')
-    plt.grid(True)
+    axes[1].plot(tvec, pwp_out['surf_ice_temp'], 'o')
+    axes[1].set_ylabel('Temperature (C)')
+    axes[1].set_xlabel('Time (days)')
+    axes[1].set_title('Ice surface temperature')
+    axes[1].grid(True)
     
+    if save_plots:     
+        plt.savefig('plots/ice_temp_thickness%s.png' %suffix, bbox_inches='tight')
+        
     ## plot OCEAN-ICE heat flux and ATM-ICE heat flux
     plt.figure()
     plt.subplot(111)
-    plt.plot(tvec, pwp_out['F_atm'], '-o', label='Air-ice heat flux')
-    plt.plot(tvec, pwp_out['F_ocean_ice'], 'o', label='Ocean-ice heat flux')
+    plt.plot(tvec, pwp_out['F_atm'], '-', label='Atm heat flux', ms=2)
+    plt.plot(tvec, pwp_out['F_i'], '-', label='Conductive heat flux', ms=2)
+    plt.plot(tvec, pwp_out['F_ocean_ice'], '-', label='Ocean-ice heat flux', ms=2)
     plt.hlines(0, tvec[0], tvec[-1])
     plt.xlabel('Time (days)')
     plt.ylabel('Heat flux (W/m2)')
     plt.legend(loc=0)
     plt.grid(True)
+    
+    if save_plots:     
+        plt.savefig('plots/ice_ocean_fluxes%s.png' %suffix, bbox_inches='tight')
+      
+    #plot change in MLD  
+    plt.figure()
+    plt.subplot(111)
+    plt.plot(tvec, pwp_out['mld'], label='model approx.')
+    plt.plot(tvec, pwp_out['mld_exact'], label='exact')
+    plt.plot(tvec[1], pwp_out['mld'][1], 'ro', label='day0', ms=7)
+    plt.plot(tvec[tvec==1], pwp_out['mld'][tvec==1], 'go', label='day1', ms=7)
+    plt.plot(tvec[tvec==5], pwp_out['mld'][tvec==5], 'ko', label='day5', ms=7)
+    plt.gca().invert_yaxis() 
+    plt.xlabel('Time (days)')
+    plt.ylabel('MLD (m)')
+    plt.legend()
+    plt.grid(True)
+    
+    if save_plots:     
+        plt.savefig('plots/MLD_evolution_%s.png' %suffix, bbox_inches='tight')
+    
+    #plot density evolution
+    
+    plt.figure()
+    plt.subplot(111)
+    plt.pcolormesh(tvec, pwp_out['z'], pwp_out['dens']-1000, cmap=plt.cm.rainbow)
+    plt.plot(tvec, pwp_out['mld_exact'], 'w')
+    # plt.plot(tvec, pwp_out['mld_approx'], 'w')
+    plt.gca().invert_yaxis() 
+    plt.ylabel('Depth (m)')
+    plt.xlabel('Time (days)')
+    plt.colorbar()
+    
+    # if save_plots:
+    #     plt.savefig('plots/MLD_evolution_%s.png' %suffix, bbox_inches='tight')
+    
+    
     
     
     
