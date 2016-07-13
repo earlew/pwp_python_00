@@ -261,22 +261,21 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         ### Compute MLD ###       
         #find ml index
         ml_thresh = params['mld_thresh']
-        ml_idx = np.flatnonzero(np.diff(dens)>ml_thresh)[0] #finds the first index that exceed ML threshold
-        ml_idx = ml_idx+1
+        mld_idx = np.flatnonzero(dens[0]-dens>ml_thresh)[0] #finds the first index that exceed ML threshold
     
         #check to ensure that ML is defined
-        assert ml_idx.size is not 0, "Error: Mixed layer depth is undefined."
+        assert mld_idx.size is not 0, "Error: Mixed layer depth is undefined."
     
         #get surf MLD
-        mld = z[ml_idx]    
+        mld = z[mld_idx]    
         
         ### Rotate u,v do wind input, rotate again, apply mixing ###
         ang = -f*dt/2
         uvel, vvel = rot(uvel, vvel, ang)
         du = (taux[n-1]/(mld*dens[0]))*dt
         dv = (tauy[n-1]/(mld*dens[0]))*dt
-        uvel[:ml_idx] = uvel[:ml_idx]+du
-        vvel[:ml_idx] = vvel[:ml_idx]+dv
+        uvel[:mld_idx] = uvel[:mld_idx]+du
+        vvel[:mld_idx] = vvel[:mld_idx]+dv
     
 
         ### Apply drag to current ###
@@ -289,7 +288,7 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
     
         ### Apply Bulk Richardson number instability form of mixing (as in PWP) ###
         if rb > 1e-5:
-            temp, sal, dens, uvel, vvel = bulk_mix(temp, sal, dens, uvel, vvel, dz, g, rb, zlen, z, ml_idx)
+            temp, sal, dens, uvel, vvel = bulk_mix(temp, sal, dens, uvel, vvel, dz, g, rb, zlen, z, mld_idx)
     
         ### Do the gradient Richardson number instability form of mixing ###
         if rg > 0:
@@ -375,12 +374,12 @@ def rot(u, v, ang):
     
     return u, v   
     
-def bulk_mix(t, s, d, u, v, dz, g, rb, nz, z, ml_idx):
+def bulk_mix(t, s, d, u, v, dz, g, rb, nz, z, mld_idx):
     #sub-routine to do bulk richardson mixing
     
     rvc = rb #critical rich number??
     
-    for j in xrange(ml_idx, nz):
+    for j in xrange(mld_idx, nz):
     	h 	= z[j]
         #it looks like density and velocity are mixed from the surface down to the ML depth
     	dd 	= (d[j]-d[0])/d[0]
