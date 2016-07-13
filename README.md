@@ -40,7 +40,7 @@ As mentioned earlier, the code is split into two files *PWP.py* and *PWP_helper.
 3. Iterate the PWP model:
     + apply heat and salt fluxes.
     + apply wind stress (momentum flux).
-    + apply drag associated with internal wave dissipation.
+    + apply drag associated with internal-inertial wave dispersion.
     + apply bulk Richardson mixing.
     + apply gradient Richardson mixing. 
     + apply diapycnal diffusion (if ON).
@@ -93,6 +93,10 @@ The main model parameters and their defaults are listed below (see the `set_para
 + **rkz**: background vertical diffusion (m**2/s). [0.]
 + **beta1**: longwave extinction coefficient (meters) [0.6] 
 + **beta2**: shortwave extinction coefficient (meters). [20]
++ **winds_ON**: True/False flag to turn ON/OFF wind forcing. [True]
++ **emp_ON**: True/False flag to turn ON/OFF freshwater forcing. [True]
++ **heat_ON**: True/False flag to turn ON/OFF surface heat flux forcing. [True]
++ **drag_ON**: True/False flag to turn ON/OFF current drag due to internal-inertial wave dispersion. [True]
 
 ## Future work
 + Create an option to add a passive tracer to the model.
@@ -101,9 +105,10 @@ The main model parameters and their defaults are listed below (see the `set_para
 ## Test case 1: Southern Ocean in the summer
 This test case uses data from the default input files, *SO\_met\_30day.nc* and *SO\_profile1.nc*. The *SO\_met\_30day.nc* file contains 6-hourly [NCEP reanalysis surface fluxes](http://www.esrl.noaa.gov/psd/data/gridded/data.ncep.reanalysis.surfaceflux.html) at -53.5 N and 0.02 E, which is situated in the Atlantic sector of the Southern Ocean - just north of the winter ice-edge. The *SO_profile1.nc* file contains temperature and salinity profile data at the above location, collected on December 11, 2014. This data is the the first profile from Argo float [5904469](http://www.ifremer.fr/co-argoFloats/float?detail=false&ptfCode=5904469).
 
+### Run1: Full simulation
 The surface forcing time series are shown below.
 
-![Sample Forcing](plots/surface_forcing_demo2.png)
+![Sample Forcing](example_plots/surface_forcing_demo2_1e6diff.png)
 
 For this model run, we set the vertical diffusivity to 1x10<sup>-6</sup> m<sup>2</sup>/s, and change the max depth and depth increment to 500m and 2m, respectively:
 
@@ -119,7 +124,39 @@ forcing, pwp_out = PWP.run(met_data=forcing_fname, prof_data=prof_fname, save_pl
 
 The results are displayed below.    
 
-![Sample Forcing](plots/initial_final_TS_profiles_demo2_1e6diff.png)
+![Sample Forcing](example_plots/initial_final_TS_profiles_demo2_1e6diff.png)
 
 You can repeat this test case by running the `run_demo2()` function in *PWP_helper.py*.
+
+### Run2: Freshwater fluxes off
+
+In this run, everything is the same as the first run except that the E-P forcing is turned off. This is done by setting `emp_ON` switch to False:
+
+```
+p['emp_ON'] = False 
+```
+
+![Sample Forcing](example_plots/surface_forcing_demo2_1e6diff_empOFF.png)
+
+The end result is shown below:
+
+![Sample Forcing](example_plots/initial_final_TS_profiles_demo2_1e6diff_empOFF.png)
+
+Without the freshening effect of E-P, the resulting mixed layer is slightly deeper, saltier and cooler.
+
+You can repeat this test case by running the `run_demo2(emp_ON=False)` function in *PWP_helper.py*.
+
+### Run3: Wind forcing off
+
+![Sample Forcing](example_plots/surface_forcing_demo2_1e6diff_windsOFF.png)
+
+In this simulation, the wind forcing is turned off. Without wind driven mixing the effects heat and freshwater fluxes are trapped near the surface. 
+
+![Sample Forcing](example_plots/initial_final_TS_profiles_demo2_1e6diff_windsOFF.png)
+
+You can repeat this test case by running the `run_demo2(winds_ON=False)` function in *PWP_helper.py*
+
+
+
+
 
