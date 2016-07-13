@@ -66,6 +66,13 @@ def run(met_data, prof_data, param_kwds=None, overwrite=True, diagnostics=True, 
                 expect intput data.
                   
     prof_data - path to netCDF file containing initial profile data. This must be in input_data/ directory.
+                The fields of this dataset should include:
+                ['z', 't', 's', 'lat']. These represent 1-D vertical profiles of temperature,
+                salinity and density. 'lat' is expected to be a length=1 array-like object. e.g. 
+                prof_data['lat'] = [25.0].
+    
+                See https://github.com/earlew/pwp_python#input-data for more info about the
+                expect intput data.
     
     overwrite - controls the naming of output file. If True, the same filename is used for 
                 every model run. If False, a unique time_stamp is generated and appended

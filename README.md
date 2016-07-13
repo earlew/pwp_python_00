@@ -71,7 +71,7 @@ The initial profile file should have the following data fields:
 + **z**: 1-D array of depth levels (m) 
 + **t**: 1-D array containing temperature profile (degrees celsius)
 + **s**: 1-D array containing salinity profile (PSU) 
-+ **lat**: float representing latitude of profile
++ **lat**: Array with float representing the latitude of profile. e.g. `prof_data['lat'] = [45] #45N`
 
 Examples of both input files are provided in the input directory. 
 

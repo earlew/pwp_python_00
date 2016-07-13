@@ -117,8 +117,9 @@ def prep_data(met_dset, prof_dset, params):
     
             
     prof_data: dictionary-like object with initial profile data. Fields should include:
-            ['z', 't', 's']. These represent 1-D vertical profiles of temperature,
-            salinity and density.
+            ['z', 't', 's', 'lat']. These represent 1-D vertical profiles of temperature,
+            salinity and density. 'lat' is expected to be a length=1 array-like object. e.g. 
+            prof_data['lat'] = [25.0]
             
     params: dictionary-like object with fields defined by set_params function
     
