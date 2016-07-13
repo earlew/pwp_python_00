@@ -334,7 +334,7 @@ def remove_si(t, s, d, u, v):
             stat_unstable=True
             first_inst_idx = np.flatnonzero(d_diff<0)[0]
             d0 = d
-            (t, s, d, u, c) = mix5(t, s, d, u, v, first_inst_idx+1)
+            (t, s, d, u, v) = mix5(t, s, d, u, v, first_inst_idx+1)
             
             #plot density 
             # plt.figure(num=86)
