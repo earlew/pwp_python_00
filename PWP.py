@@ -207,7 +207,8 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
     This is the main driver of the PWP module.
     """
     
-    #unpack some of the variables (I could probably do this more elegantly)
+    #unpack some of the variables 
+    #This is not necessary, but I don't want to update all the variable names just yet.
     q_in = forcing['q_in']
     q_out = forcing['q_out']
     emp = forcing['emp']
@@ -302,7 +303,7 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
     
         ### Apply Bulk Richardson number instability form of mixing (as in PWP) ###
         if rb > 1e-5:
-            temp, sal, dens, uvel, vvel = bulk_mix(temp, sal, dens, uvel, vvel, dz, g, rb, zlen, z, mld_idx)
+            temp, sal, dens, uvel, vvel = bulk_mix(temp, sal, dens, uvel, vvel, g, rb, zlen, z, mld_idx)
     
         ### Do the gradient Richardson number instability form of mixing ###
         if rg > 0:
@@ -388,7 +389,7 @@ def rot(u, v, ang):
     
     return u, v   
     
-def bulk_mix(t, s, d, u, v, dz, g, rb, nz, z, mld_idx):
+def bulk_mix(t, s, d, u, v, g, rb, nz, z, mld_idx):
     #sub-routine to do bulk richardson mixing
     
     rvc = rb #critical rich number??
