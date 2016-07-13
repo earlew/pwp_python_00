@@ -130,7 +130,11 @@ You can repeat this test case by running the `run_demo2()` function in *PWP_help
 
 ### Run2: Freshwater fluxes off
 
-In this run, everything is the same as the first run except that the E-P forcing is turned off.
+In this run, everything is the same as the first run except that the E-P forcing is turned off. This is done by setting `emp_ON` switch to False:
+
+```
+p['emp_ON'] = False 
+```
 
 ![Sample Forcing](example_plots/surface_forcing_demo2_1e6diff_empOFF.png)
 
