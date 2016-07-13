@@ -105,7 +105,7 @@ The main model parameters and their defaults are listed below (see the `set_para
 ## Test case 1: Southern Ocean in the summer
 This test case uses data from the default input files, *SO\_met\_30day.nc* and *SO\_profile1.nc*. The *SO\_met\_30day.nc* file contains 6-hourly [NCEP reanalysis surface fluxes](http://www.esrl.noaa.gov/psd/data/gridded/data.ncep.reanalysis.surfaceflux.html) at -53.5 N and 0.02 E, which is situated in the Atlantic sector of the Southern Ocean - just north of the winter ice-edge. The *SO_profile1.nc* file contains temperature and salinity profile data at the above location, collected on December 11, 2014. This data is the the first profile from Argo float [5904469](http://www.ifremer.fr/co-argoFloats/float?detail=false&ptfCode=5904469).
 
-#### Run1: Full simulation
+### Run1: Full simulation
 The surface forcing time series are shown below.
 
 ![Sample Forcing](example_plots/surface_forcing_demo2_1e6diff.png)
@@ -128,7 +128,7 @@ The results are displayed below.
 
 You can repeat this test case by running the `run_demo2()` function in *PWP_helper.py*.
 
-#### Run2: Freshwater fluxes off
+### Run2: Freshwater fluxes off
 
 In this run, everything is the same as the first run except that the E-P forcing is turned off.
 
@@ -142,7 +142,7 @@ Without the freshening effect of E-P, the resulting mixed layer is slightly deep
 
 You can repeat this test case by running the `run_demo2(emp_ON=False)` function in *PWP_helper.py*.
 
-#### Run3: Wind forcing off
+### Run3: Wind forcing off
 
 ![Sample Forcing](example_plots/surface_forcing_demo2_1e6diff_windsOFF.png)
 
