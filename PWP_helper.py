@@ -487,13 +487,13 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
         
     ## plot ice growth and ice temp
     fig, axes = plt.subplots(2,1, sharex=True)
-    axes[0].plot(tvec, pwp_out['ice_thickness'], 'o')
+    axes[0].plot(tvec, pwp_out['ice_thickness'], '-')
     axes[0].set_ylabel('Ice thickness (m)')
     #axes[0].xlabel('Time (days)')
     axes[0].set_title('Ice thickness')
     axes[0].grid(True)
     
-    axes[1].plot(tvec, pwp_out['surf_ice_temp'], 'o')
+    axes[1].plot(tvec, pwp_out['surf_ice_temp'], '-')
     axes[1].set_ylabel('Temperature (C)')
     axes[1].set_xlabel('Time (days)')
     axes[1].set_title('Ice surface temperature')
@@ -534,23 +534,68 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
     if save_plots:     
         plt.savefig('plots/MLD_evolution_%s.png' %suffix, bbox_inches='tight')
     
-    #plot density evolution
+    #plot density evolution    
+    fig = plt.figure(figsize=(7,9))
+    ax1 = plt.subplot2grid((4,1), (0,0), colspan=1)
+    ax2 = plt.subplot2grid((4,1), (1,0), rowspan=4)
     
-    plt.figure()
-    plt.subplot(111)
-    plt.pcolormesh(tvec, pwp_out['z'], pwp_out['dens']-1000, cmap=plt.cm.rainbow)
-    plt.plot(tvec, pwp_out['mld_exact'], 'w')
+    #plot Ice
+    ax1.plot(tvec, 100*pwp_out['ice_thickness'], '-b')
+    ax1.set_title('Ice thickness (cm)', fontsize=12)
+    ax1.set_ylabel('Thickness (cm)', fontsize=12)
+    ax1.get_xaxis().set_visible(False)
+    ax1.grid(True)
+    
+    #plot ocean
+    im = ax2.pcolormesh(tvec, pwp_out['z'], pwp_out['dens']-pwp_out['dens'][:,:1], vmin=-0.1, vmax=0.1, cmap=plt.cm.rainbow)
+    ax2.plot(tvec, pwp_out['mld_exact'], 'w')
     # plt.plot(tvec, pwp_out['mld_approx'], 'w')
-    plt.gca().invert_yaxis() 
-    plt.ylabel('Depth (m)')
-    plt.xlabel('Time (days)')
-    plt.colorbar()
+    ax2.invert_yaxis() 
+    ax2.set_ylabel('Depth (m)', fontsize=12)
+    ax2.set_xlabel('Time (days)', fontsize=12)
+    ax2.set_title('Density and MLD evolution', fontsize=12)
     
-    # if save_plots:
-    #     plt.savefig('plots/MLD_evolution_%s.png' %suffix, bbox_inches='tight')
+    cbar_ax = fig.add_axes([0.83, 0.10, 0.025, 0.58]) #make a new axes for the colorbar
+    fig.subplots_adjust(right=0.8) #adjust sublot to make colorbar fit
+    fig.subplots_adjust(hspace=0.3) 
+    fig.colorbar(im, ax=ax2, cax=cbar_ax)
+    
+    if save_plots:
+        #pass
+        plt.savefig('plots/MLD_density_evolution_%s.png' %suffix, bbox_inches='tight')
+        
+        
+    #plot salinity evolution    
+    fig = plt.figure(figsize=(7,9))
+    ax1 = plt.subplot2grid((4,1), (0,0), colspan=1)
+    ax2 = plt.subplot2grid((4,1), (1,0), rowspan=4)
+    
+    #plot Ice
+    ax1.plot(tvec, 100*pwp_out['ice_thickness'], '-b')
+    ax1.set_title('Ice thickness (cm)', fontsize=12)
+    ax1.set_ylabel('Thickness (cm)', fontsize=12)
+    ax1.get_xaxis().set_visible(False)
+    ax1.grid(True)
+    
+    #plot ocean
+    im = ax2.pcolormesh(tvec, pwp_out['z'], pwp_out['sal']-pwp_out['sal'][:,:1], vmin=-0.1, vmax=0.1, cmap=plt.cm.RdYlGn_r)
+    ax2.plot(tvec, pwp_out['mld_exact'], 'b')
+    # plt.plot(tvec, pwp_out['mld_approx'], 'w')
+    #ax2.set_ylim(0,250)
+    ax2.invert_yaxis() 
+    ax2.set_ylabel('Depth (m)', fontsize=12)
+    ax2.set_xlabel('Time (days)', fontsize=12)
+    ax2.set_title('Salinity and MLD evolution', fontsize=12)
+    
+    cbar_ax = fig.add_axes([0.83, 0.10, 0.025, 0.58]) #make a new axes for the colorbar
+    fig.subplots_adjust(right=0.8) #adjust sublot to make colorbar fit
+    fig.subplots_adjust(hspace=0.3) 
+    fig.colorbar(im, ax=ax2, cax=cbar_ax)
     
     
-    
+    if save_plots:
+        #pass
+        plt.savefig('plots/MLD_sal_evolution_%s.png' %suffix, bbox_inches='tight')
     
     
     

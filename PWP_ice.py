@@ -24,7 +24,7 @@ sal_ice = 4. #salinity of sea ice (PSU) - from Hyatt 2006
 
 melt_lyrs = 2 #TODO: play with this. PWP has issues with super thin, freshwater lenses.
 bdry_lyr = 1
-thin_ice = 0.005 #m    
+thin_ice = 0.001 #m    
 T_fzi = 0.0 #freezing point of (pure) ice
 override_alpha = True
 
@@ -610,7 +610,7 @@ def ice_model_v3(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_atm, F_oce
         #warm ocean
         temp_sw[0] = temp_sw[0]+dT_surf1
         
-        
+    #debug_here()  
     ### Modify sea ice ###
     if temp_ice_surf_i < 0 and h_ice_i>thin_ice:
         
