@@ -40,7 +40,7 @@ def run_demo2():
     forcing, pwp_out = PWP.run(met_data=forcing_fname, prof_data=prof_fname, suffix='demo2_1e6diff', save_plots=True, param_kwds=p)
     
 
-def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1., rb=0.65, rg=0.25, rkz=0., beta1=0.6, beta2=20.0, alpha=0., qnet_offset=0., ice_ON=False, winds_ON=True, emp_ON=True):
+def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1., rb=0.65, rg=0.25, rkz=0., beta1=0.6, beta2=20.0, alpha=0., h_i0=0.0, qnet_offset=0., ice_ON=False, winds_ON=True, emp_ON=True):
     
     """
     This function sets the main paramaters/constants used in the model.
@@ -91,6 +91,7 @@ def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1., r
     params['emp_ON'] = emp_ON
     
     params['alpha'] = alpha #sea ice concentration (TODO: delete here and add to forcing)
+    params['h_i0'] = h_i0 #initial ice thickness
     params['qnet_offset'] = qnet_offset #arbitrary offset to the net atmospheric heat flux.
     
     return params
@@ -522,6 +523,7 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
     plt.subplot(111)
     plt.plot(tvec, pwp_out['mld'], label='model approx.')
     plt.plot(tvec, pwp_out['mld_exact'], label='exact')
+    plt.plot(tvec, pwp_out['mld_exact2'], label='exact2')
     plt.plot(tvec[1], pwp_out['mld'][1], 'ro', label='day0', ms=7)
     plt.plot(tvec[tvec==1], pwp_out['mld'][tvec==1], 'go', label='day1', ms=7)
     plt.plot(tvec[tvec==5], pwp_out['mld'][tvec==5], 'ko', label='day5', ms=7)

@@ -255,8 +255,12 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
     pwp_out['F_atm'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan
     pwp_out['F_i'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan
     pwp_out['mld_exact'] = pwp_out['mld'].copy()
+    pwp_out['mld_exact2'] = pwp_out['mld'].copy()
     
     #initialize ice thickness:
+    pwp_out['ice_thickness'][0] = params['h_i0']
+    if params['h_i0'] > 0.0:
+        print "Initializing ice model with %sm slab of ice." %params['h_i0']
     #TESTING
     # pwp_out['ice_thickness'][0] = 0.2
     # pwp_out['surf_ice_temp'][0] = -2
@@ -293,6 +297,10 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         sal_old = pwp_out['sal'][0, n-1] 
         
         if h_ice==0:
+            
+            #set alpha (ice fraction) to 0.0:
+            alpha_n = 0.0
+            
             #update layer 1 temp and sal
             temp[0] = temp[0] + (q_in[n-1]*absrb[0]-q_out[n-1])*dt/(dz*dens[0]*cpw)
             sal[0] = sal[0]/(1-emp[n-1]*dt/dz)
@@ -305,7 +313,7 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
             T_fz = sw.fp(sal_old, p=1) #why use sal_old? Need to recheck
             if temp[0] < T_fz: 
                 
-                if params['ice_ON'] and alpha_n>0:          
+                if params['ice_ON']:          
                     #generate sea ice
                     h_ice, temp_ice_surf, temp, sal = PWP_ice.create_initial_ice(h_ice, temp_ice_surf, temp, sal, dens, params)   
                     pwp_out['surf_ice_temp'][n] = temp_ice_surf
@@ -402,6 +410,7 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         from scipy.interpolate import interp1d
         p_int = interp1d(dens[mld_idx2:], z[mld_idx2:]) # interp1d does not work well with perfectly homogenous mixed layers
         mld_exact = p_int(dens[mld_idx2]+params['mld_thresh'])
+        mld_exact2 = p_int(dens[mld_idx2]+0.05) #
         
         # print "MLD_approx: %s. MLD_exact: %s" %(mld_post_mix, mld_exact)
         # debug_here()
@@ -414,7 +423,8 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         pwp_out['vvel'][:, n] = vvel
         pwp_out['mld'][n] = mld_post_mix
         pwp_out['mld_exact'][n] = mld_exact
-        pwp_out['F_atm'][n] = F_atm
+        pwp_out['mld_exact2'][n] = mld_exact2
+        pwp_out['F_atm'][n] = (1-alpha_n)*F_atm
     
         #do diagnostics
         if diagnostics==1:
