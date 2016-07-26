@@ -84,6 +84,10 @@ def get_ocean_ice_heat_flux(temp_sw, sal_sw, rho_sw, params):
     
     dT_surf = temp_sw[:bdry_lyr].mean() - temp_swfz
     F_sw = dT_surf*params['dz']*rho_sw0*c_sw*bdry_lyr #J per m2 per time step
+    if F_sw<0:
+        #F_sw can turn negative if there is freshening event that increases the freezing point of water
+        F_sw=0.0
+        
     F_sw_dt = F_sw/params['dt'] #in W/m2
 
     return F_sw_dt
@@ -577,6 +581,7 @@ def ice_model_v3(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_atm, F_oce
     temp_swfz = sw.fp(sal_sw[0], p=1) #freezing point of seawater at given salinity
     temp_ice_base = temp_swfz
     F_i = np.nan
+    switch_algorithm = False
     #temp_ice_surf_i = forcing['skt'] #experimenting...
 
 
@@ -612,7 +617,8 @@ def ice_model_v3(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_atm, F_oce
         
     #debug_here()  
     ### Modify sea ice ###
-    if temp_ice_surf_i < 0 and h_ice_i>thin_ice:
+    #TODO: eventually this should work for all temperatures
+    if temp_ice_surf_i < 0:
         
         #print "running sea ice algorithm..."
         print "running ice model with specified surface temperatures..."
@@ -636,12 +642,30 @@ def ice_model_v3(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_atm, F_oce
             ode.integrate(ode.t + dt_ice_model)
             h_ice = ode.y[0]
             ts.append(ode.t)
-            ys.append(ode.y)
+            ys.append(ode.y[0])
+            
+            
+            #TODO: Add a clause that causes the loop to break if ice is thin AND melting
+            #debug_here()
+            ti = len(ys)-1
+            if h_ice<=thin_ice and ti>0 and ys[ti]<ys[ti-1]:
+                print "ice is melting and has become too thin. Switching to thin ice algorithm..."
+                switch_algorithm=True
+
+                #abort and switch to thin ice algorithm.??
+                break
 
         
-        t = np.vstack(ts)
-        y = np.vstack(ys)
-        h_ice_f = y[-1,0]
+        if switch_algorithm:
+            #this restarts the ice growth/melt process
+            h_ice_f, temp_ice_surf_f, temp_sw, sal_sw = modify_thin_ice(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_atm, F_ocean, alpha, params)
+            
+            return h_ice_f, temp_ice_surf_f, temp_sw, sal_sw, F_i
+            
+        else:
+            t = np.vstack(ts)
+            y = np.vstack(ys)
+            h_ice_f = y[-1,0]
         
         #get change in ice thickness
         dh_ice = h_ice_f - h_ice_i
@@ -672,9 +696,8 @@ def ice_model_v3(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_atm, F_oce
       
     temp_ice_surf_f = temp_ice_surf_i
     #compute salinity change  
-    num_lyrs = 1
-    dsal_sw = alpha*dh_ice*(sal_sw[:num_lyrs].mean()-sal_ice)/(dz*num_lyrs)
-    sal_sw[:num_lyrs] = sal_sw[:num_lyrs]+dsal_sw
+    dsal_sw = alpha*dh_ice*(sal_sw[:bdry_lyr].mean()-sal_ice)/(dz*bdry_lyr)
+    sal_sw[:bdry_lyr] = sal_sw[:bdry_lyr]+dsal_sw
 
 
     return h_ice_f, temp_ice_surf_f, temp_sw, sal_sw, F_i
