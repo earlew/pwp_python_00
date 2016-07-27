@@ -41,3 +41,5 @@ output
 plots
 input_data
 pwp_soccom.py
+personal_modules.py
+pwp_argo.py
