@@ -618,3 +618,51 @@ def custom_div_cmap(numcolors=11, name='custom_div_cmap', mincol='blue', midcol=
                                              colors =[mincol, midcol, maxcol],
                                              N=numcolors)
     return cmap   
+    
+    
+    
+def save2nc(pwp_out, fpath):
+    
+    pwp_out_ds = xray.Dataset()
+    # zt_vars = ['temp', 'sal', 'uvel', 'vvel', 'dens']
+    # t_vars = ['mld', 'F_atm', 'F_i', 'F_ocean_ice', 'ice_thickness', 'surf_ice_temp', 'mld_exact', 'mld_exact2']
+    # z_vars = ['z']
+    
+    zt_shape = pwp_out['temp'].shape
+    t_shape = pwp_out['mld'].shape
+    z_shape = pwp_out['z'].shape
+    
+    for key in pwp_out:
+        
+        if isinstance(pwp_out[key], (float, int)):
+            pwp_out_ds[key] =  pwp_out[key]
+            
+        else:
+        
+            if pwp_out[key].shape == zt_shape:
+                dims = ('z', 't')
+            elif pwp_out[key].shape == t_shape:
+                dims = ('t',)
+            elif pwp_out[key].shape == z_shape:
+                dims = ('z', )
+            else:
+                print "%s variable has unrecognized shape. Can't save to ncfile. Skipping..." %key
+                continue
+                
+            pwp_out_ds[key] = (dims, pwp_out[key])
+            
+    
+    pwp_out_ds.to_netcdf(fpath)
+    pwp_out_ds.close
+    
+    return
+    
+
+
+    
+    
+    
+    
+    
+    
+    
