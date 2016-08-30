@@ -83,12 +83,19 @@ def get_ocean_ice_heat_flux(temp_sw, sal_sw, rho_sw, params):
     temp_swfz = sw.fp(sal_sw[0], p=1) #freezing point of seawater at given salinity
     
     dT_surf = temp_sw[:bdry_lyr].mean() - temp_swfz
-    F_sw = dT_surf*params['dz']*rho_sw0*c_sw*bdry_lyr #J per m2 per time step
-    if F_sw<0:
-        #F_sw can turn negative if there is freshening event that increases the freezing point of water
-        F_sw=0.0
+    # F_sw = dT_surf*params['dz']*rho_sw0*c_sw*bdry_lyr #J per m2 per time step
+    # F_sw_dt = F_sw/params['dt'] #in W/m2
+    
+    #mcphee turbulent heat flux parameterization
+    c_d = 0.0056
+    u_star = 0.01
+    F_sw_dt = 4180*1025*c_d*u_star*dT_surf
+    
+    if F_sw_dt<0:
+        #F_sw can turn negative if there is a large enough salt flux event that increases the freezing point of water
+        F_sw_dt=0.0
         
-    F_sw_dt = F_sw/params['dt'] #in W/m2
+    
 
     return F_sw_dt
     
