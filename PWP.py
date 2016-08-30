@@ -136,9 +136,9 @@ def run(met_data, prof_data, param_kwds=None, overwrite=True, diagnostics=True, 
     
     ## get model parameters and constants (read docs for set_params function)
     try:
-        lat = prof_dset['lat'][0] #needed to compute internal wave dissipation
+        lat = prof_dset['lat'].values[0] #needed to compute internal wave dissipation
     except IndexError:
-        lat = prof_dset['lat']
+        lat = prof_dset['lat'].values
         
     if param_kwds is None:
         params = phf.set_params(lat=lat) 
@@ -146,6 +146,7 @@ def run(met_data, prof_data, param_kwds=None, overwrite=True, diagnostics=True, 
         param_kwds['lat'] = lat
         params = phf.set_params(**param_kwds)
     
+    #debug_here()
     ## prep forcing and initial profile data for model run (see prep_data function for more details)
     forcing, pwp_out, params = phf.prep_data(met_dset, prof_dset, params)
     
@@ -155,7 +156,7 @@ def run(met_data, prof_data, param_kwds=None, overwrite=True, diagnostics=True, 
     # plot forcing
     phf.makeSomePlots(forcing, pwp_out, justForcing=True)
     plt.show()
-    #debug_here()
+
     ## run the model
     pwp_out = pwpgo(forcing, params, pwp_out, diagnostics)
     
@@ -176,16 +177,25 @@ def run(met_data, prof_data, param_kwds=None, overwrite=True, diagnostics=True, 
         suffix = '_%s' %suffix
         
     # save output as netCDF file
-    pwp_out_ds = xray.Dataset({'temp': (['z', 'time'], pwp_out['temp']), 'sal': (['z', 'time'], pwp_out['sal']), 
-                'uvel': (['z', 'time'], pwp_out['uvel']), 'vvel': (['z', 'time'], pwp_out['vvel']),
-                'dens': (['z', 'time'],  pwp_out['dens']), 'mld': (['time'],  pwp_out['mld'])}, 
-                coords={'z': pwp_out['z'], 'time': pwp_out['time']})
+    #debug_here()
+    output_fpath = "output/pwp_output%s%s.nc" %(suffix, time_stamp)
+    forcing_fpath = "output/forcing%s%s.nc" %(suffix, time_stamp)
+    #TODO: save forcing as well
+    phf.save2nc(pwp_out, output_fpath)
+    phf.save2nc(pwp_out, forcing_fpath)
+    #debug_here()
+    #
+    #
+    # #pwp_out_ds = xray.Dataset({'temp': (['z', 'time'], pwp_out['temp']), 'sal': (['z', 'time'], pwp_out['sal']),
+    #             # 'uvel': (['z', 'time'], pwp_out['uvel']), 'vvel': (['z', 'time'], pwp_out['vvel']),
+    #             # 'dens': (['z', 'time'],  pwp_out['dens']), 'mld': (['time'],  pwp_out['mld'])},
+    #             # coords={'z': pwp_out['z'], 'time': pwp_out['time']})
+    #
+    # pwp_out_ds.to_netcdf("output/pwp_output%s%s.nc" %(suffix, time_stamp))
 
-    pwp_out_ds.to_netcdf("output/pwp_output%s%s.nc" %(suffix, time_stamp))
-
-    # also output and forcing as pickle file
-    pickle.dump(forcing, open( "output/forcing%s%s.p" %(suffix, time_stamp), "wb" ))
-    pickle.dump(pwp_out, open( "output/pwp_out%s%s.p" %(suffix, time_stamp), "wb" ))
+    # also output and forcing as pickle file (PICKLE DOESN'T WORK WELL WITH DICT ARRAYS!!!)
+    # pickle.dump(forcing, open( "output/forcing%s%s.p" %(suffix, time_stamp), "wb" ))
+    # pickle.dump(pwp_out, open( "output/pwp_out%s%s.p" %(suffix, time_stamp), "wb" ))
     
     ## do analysis of the results
     phf.makeSomePlots(forcing, pwp_out, suffix=suffix, save_plots=save_plots)
@@ -220,6 +230,7 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
     This is the main driver of the PWP module.
     """
     print_ice_warning = True
+    print_lead_warning = True
     
     #unpack some of the variables (I could probably do this more elegantly)
     q_in = forcing['q_in']
@@ -228,6 +239,7 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
     taux = forcing['tx']
     tauy = forcing['ty']
     absrb = forcing['absrb']
+    alpha = forcing['icec']
     
     z = pwp_out['z']
     dz = pwp_out['dz']
@@ -271,14 +283,14 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
     # pwp_out['surf_ice_temp'][0] = -2
     
     
-    #debug_here()
+    debug_here()
     print "Number of time steps: %s" %tlen
     
     for n in xrange(1,tlen):
         #print '-------------------------------'
         print '===================================='
         percent_comp = 100*n/float(tlen)
-        print 'Loop iter. %s (%.1f %%)' %(n, percent_comp)
+        print 'Loop iter. %s (%.1f %%). Day: %.2f' %(n, percent_comp, pwp_out['time'][n])
         #print '===================================='
         
         #select previous profile data
@@ -290,32 +302,39 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         h_ice = pwp_out['ice_thickness'][n-1].copy()
         temp_ice_surf = pwp_out['surf_ice_temp'][n-1].copy()
         
+        
+        #compute mlt and mls before applying surface fluxes
+        mld_pre, mld_idx_pre = getMLD(dens, z, params)
+        
         #select previous forcing data
         F_atm = q_net[n-1]
+        #alpha_n = params['alpha'] 
         alpha_n = forcing['icec'][n-1]
         skt_n = forcing['skt'][n-1]
         
-        ### Absorb solar radiation and FWF in surf layer ###
         
         #save initial T,S (may not be necessary)
-        temp_old = pwp_out['temp'][0, n-1]
-        sal_old = pwp_out['sal'][0, n-1] 
+        # temp_old = pwp_out['temp'][0, n-1]
+        sal_old = pwp_out['sal'][0, n-1]
         
+        
+        ### Absorb solar radiation and FWF in surf layer ###
         if h_ice==0:
             
             #set alpha (ice fraction) to 0.0:
             alpha_n = 0.0
             
             #update layer 1 temp and sal
-            temp[0] = temp[0] + (q_in[n-1]*absrb[0]-q_out[n-1])*dt/(dz*dens[0]*cpw)
+            temp[0] = temp[0] + (q_in[n-1]*absrb[0]-*q_out[n-1])*dt/(dz*dens[0]*cpw)
             sal[0] = sal[0]/(1-emp[n-1]*dt/dz)
+            #Hmm. I would assume sal change is given by: sal[0] = sal[0] + sal[0]*emp[n-1]*dt/dz
             
             ### Absorb rad. at depth ### 
             #TODO: check if it matters whether this comes before or after the following block
-            temp[1:] = temp[1:] + q_in[n-1]*absrb[1:]*dt/(dz*dens[1:]*cpw)
+            temp[1:] = temp[1:] + (1-alpha_n)*q_in[n-1]*absrb[1:]*dt/(dz*dens[1:]*cpw)
             
             #check if temp is less than freezing point
-            T_fz = sw.fp(sal_old, p=1) #why use sal_old? Need to recheck
+            T_fz = sw.fp(sal[0], p=dz) #why use sal_old? Need to recheck
             if temp[0] < T_fz: 
                 
                 if params['ice_ON']:          
@@ -334,16 +353,38 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         else:
             
             if params['ice_ON']:
-                ### if there is sea ice, the sea ice layer becomes layer 1 ### 
-                   
-                #compute ocean->ice heat flux required to bring SST to freezing point
+                
+                 
+                #compute ocean->ice heat flux 
                 F_ocean = PWP_ice.get_ocean_ice_heat_flux(temp, sal, dens, params) 
             
                 #modify existing sea ice 
                 #h_ice, temp_ice_surf, temp, sal = PWP_ice.modify_existing_ice(temp_ice_surf, h_ice, temp, sal, dens, F_atm, F_ocean, alpha_n, skt_n, params)
-                h_ice, temp_ice_surf, temp, sal, F_i = PWP_ice.ice_model_v3(h_ice, skt_n, temp, sal, dens, F_atm, F_ocean, params, forcing)
+                h_ice, temp_ice_surf, temp, sal, F_i = PWP_ice.ice_model_v3(h_ice, skt_n, temp, sal, dens, F_atm, F_ocean, alpha_n, params)
+                
+                
                 # apply E-P flux through leads
-                sal[0] = sal[0]/(1-alpha_n*emp[n-1]*dt/dz)
+                #sal[0] = sal[0]/(1-(1-alpha_n)*emp[n-1]*dt/dz)
+                sal[0] = sal[0] + sal[0]*(1-alpha_n)*emp[n-1]*dt/dz
+                #TODO: keep track of rain/snow on top of ice
+                
+                # apply heat flux through leads
+                temp = temp + (1-alpha_n)*(q_in[n-1]*absrb)*dt/(dz*dens*cpw) #incoming solar
+                temp[:mld_idx_pre] = temp[:mld_idx_pre] - (1-alpha_n)*q_out[n-1]*dt/(mld_pre*dens[:mld_idx_pre]*cpw) #outgoing radiation from ML
+                
+                if n==2:
+                    F_oa = (1-alpha_n)*F_atm
+                    print "F_atm: %.2f" %F_oa
+                
+                #check if temp is less than freezing point 
+                T_fz = sw.fp(sal_old, p=dz) #here it might be better to use sal_old rather than what is essentially brine water
+                dT = temp[:mld_idx_pre].mean()-T_fz
+                
+                if dT<0:
+                    temp[:mld_idx_pre] = T_fz
+                    print "WARNING: heat fluxes through leads has cool ML past freezing point. Resetting to T_fz."
+                    #debug_here()
+                    
                 
                 #save ice related output
                 pwp_out['surf_ice_temp'][n] = temp_ice_surf
@@ -392,6 +433,7 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
 
         uvel, vvel = rot(uvel, vvel, ang)
     
+        # debug_here()
         ### Apply Bulk Richardson number instability form of mixing (as in PWP) ###
         if rb > 1e-5:
             temp, sal, dens, uvel, vvel = bulk_mix(temp, sal, dens, uvel, vvel, dz, g, rb, zlen, z, mld_idx)
@@ -425,9 +467,7 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         MLT_post = np.mean(temp[:mld_idx])
         T_fz = sw.fp(MLS_post, 0)
         T_elev = MLT_post - T_fz
-        
-        # print "MLD_approx: %s. MLD_exact: %s" %(mld_post_mix, mld_exact
-        #debug_here()
+
     
         ### update output profile data ###
         pwp_out['temp'][:, n] = temp 
@@ -436,13 +476,19 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         pwp_out['uvel'][:, n] = uvel
         pwp_out['vvel'][:, n] = vvel
         pwp_out['mld'][n] = mld_post_mix
+        pwp_out['mlt'][n] = MLT_post
+        pwp_out['mls'][n] = MLS_post
+        pwp_out['mlt_elev'][n] = T_elev
         pwp_out['mld_exact'][n] = mld_exact
         pwp_out['mld_exact2'][n] = mld_exact2
         pwp_out['F_atm'][n] = (1-alpha_n)*F_atm
+        pwp_out['F_ent'][n] = F_ent
+        pwp_out['alpha_true'][n] = alpha_n
     
         #do diagnostics
         if diagnostics==1:
             phf.livePlots(pwp_out, n)
+            
         
     return pwp_out
     
@@ -460,9 +506,9 @@ def remove_si(t, s, d, u, v):
         d_diff = np.diff(d)
         if np.any(d_diff<0):
             stat_unstable=True
-            first_inst_idx = np.flatnonzero(d_diff<0)[0]
+            first_inst_idx = np.flatnonzero(d_diff<0)[0]+1 #+1 because of diff function
             #d0 = d
-            (t, s, d, u, v) = mix5(t, s, d, u, v, first_inst_idx+1)
+            (t, s, d, u, v) = mix5(t, s, d, u, v, first_inst_idx)
             
             #plot density 
             # plt.figure(num=86)
@@ -484,11 +530,12 @@ def remove_si(t, s, d, u, v):
     
 def mix5(t, s, d, u, v, j):
     
-    #This subroutine mixes the arrays t, s, u, v down to level j.
+    #This subroutine mixes the arrays t, s, u, v down to level j (level where there is instability).
     j = j+1 #so that the j-th layer is included in the mixing
     t[:j] = np.mean(t[:j])
     s[:j] = np.mean(s[:j])
     d[:j] = sw.dens0(s[:j], t[:j])
+    #d[:j] = np.mean(d[:j]) #doing ignores the non-linearities in the eqn of state
     u[:j] = np.mean(u[:j])
     v[:j] = np.mean(v[:j])
     
@@ -510,9 +557,9 @@ def bulk_mix(t, s, d, u, v, dz, g, rb, nz, z, ml_idx):
     
     for j in xrange(ml_idx, nz):
     	h 	= z[j]
-        #it looks like density and velocity are mixed from the surface down to the ML depth
     	dd 	= (d[j]-d[0])/d[0]
     	dv 	= (u[j]-u[0])**2+(v[j]-v[0])**2
+        
     	if dv == 0:
     		rv = np.inf
     	else:
