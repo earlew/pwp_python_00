@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from IPython.core.debugger import Tracer
 import PWP
 from datetime import datetime
+import xray
 
 debug_here = Tracer()
 
@@ -159,7 +160,16 @@ def prep_data(met_dset, prof_dset, params):
     if 'skt' in forcing.keys():
         #if met_dset['skt'].attrs['units'] == 'degK':
         forcing['skt'] = forcing['skt'] - 273.15
+        forcing['skt'] = 0.75*forcing['skt']
         # forcing['skt'].attrs['units'] = 'degC'
+        
+    #arbitrarily adjust (tune) fluxes
+    forcing['qsens'][:] = 0.0
+    forcing['sw'] = 0.75*forcing['sw']
+    forcing['lw'] = 1.2*forcing['lw']
+    forcing['qlat'] = 1.2*forcing['qlat']
+    forcing['precip'] = 0.25*forcing['precip']
+    print "WARNING: fluxes were adjusted!!!"
             
         
     #interpolate E-P to dt resolution (not sure why this has to be done separately)
@@ -177,6 +187,7 @@ def prep_data(met_dset, prof_dset, params):
     #define q_in and q_out 
     #for sw, lw, qlat and qsens and positive values should mean ocean warming
     #for the purpose of the PWP code, we flip the sign of q_out
+    
     forcing['q_in'] = forcing['sw'] #heat flux into ocean
     forcing['q_out'] = -(forcing['lw'] + forcing['qlat'] + forcing['qsens']) 
     
@@ -203,6 +214,8 @@ def prep_data(met_dset, prof_dset, params):
     
     #compute absorption and incoming radiation (function defined in PWP_model.py)
     absrb = PWP.absorb(params['beta1'], params['beta2'], zlen, params['dz']) #(units unclear)
+    
+    #check for numeric stability. This relates to the diffusion equation
     dstab = params['dt']*params['rkz']/params['dz']**2 #courant number  
     if dstab > 0.5:
         print "WARNING: unstable CFL condition for diffusion! dt*rkz/dz**2 > 0.5."
@@ -269,12 +282,16 @@ def prep_data(met_dset, prof_dset, params):
     pwp_out['dens'] = np.zeros(arr_sz)
     pwp_out['uvel'] = np.zeros(arr_sz)
     pwp_out['vvel'] = np.zeros(arr_sz)
-    pwp_out['mld'] = np.zeros((tlen,))
+    pwp_out['mld'] = np.zeros((tlen,))*np.nan
     
     #use temp, sal and dens profile data for the first time step
     pwp_out['sal'][:,0] = sal0
     pwp_out['temp'][:,0] = temp0
     pwp_out['dens'][:,0] = dens0
+    
+    #find initial ml index
+    mld_idx = np.flatnonzero(dens0-dens0[0]>params['mld_thresh'])[0]
+    pwp_out['mld'][0] = pwp_out['z'][mld_idx] 
     
     #debug_here()
     
@@ -374,8 +391,8 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
     if len(suffix)>0 and suffix[0] != '_':
             suffix = '_%s' %suffix
     
-    #plot summary of ML evolution
-    fig, axes = plt.subplots(3,1, sharex=True, figsize=(7.5,9))
+    ## Plot surface fluxes
+    fig0, axes = plt.subplots(3,1, sharex=True, figsize=(7.5,9))
     
     if time_vec is None:
         tvec = pwp_out['time']
@@ -418,28 +435,53 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
     axes[2].legend(loc=0, fontsize='medium')
     axes[2].set_xlabel('Time (days)')
     
+    ## plot ice conc. and surf temp.
+    fig1, axes = plt.subplots(2,1, sharex=True, figsize=(7.5,9))
+    axes = axes.flatten()
+    axes[0].plot(tvec, forcing['icec'])
+    axes[0].set_ylabel('Ice cover percentage (%)')
+    axes[0].set_title('Ice concentration')
+    axes[0].grid(True)
+    
+    axes[1].plot(tvec, forcing['skt'])
+    axes[1].set_ylabel('Temperature (C)')
+    axes[1].set_title('Skin temperature')
+    axes[1].grid(True)
+    axes[1].set_xlabel('Time (days)')
+    
+    
+    
+    
     if justForcing:
         return
     
     if save_plots:     
-        plt.savefig('plots/surface_forcing%s.png' %suffix, bbox_inches='tight')
+        fig0.savefig('plots/surface_forcing%s.png' %suffix, bbox_inches='tight')
+        fig1.savefig('plots/surface_forcing2%s.png' %suffix, bbox_inches='tight')
     
     
+    #plot summary of ML evolution
     ##plot temp and sal change over time
-    fig, axes = plt.subplots(2,1, sharex=True)
+    fig, axes = plt.subplots(2,1, sharex=True, figsize=(8,8))
     vble = ['temp', 'sal']
     units = ['$^{\circ}$C', 'PSU']
     #cmap = custom_div_cmap(numcolors=17)
-    cmap = plt.cm.rainbow
+    clim = ([-1.5, 2.5], [33.75, 34.75])
+    cmap = [plt.cm.coolwarm, plt.cm.RdYlGn_r]
     for i in xrange(2):
         ax = axes[i]
-        im = ax.contourf(pwp_out['time'], pwp_out['z'], pwp_out[vble[i]], 15, cmap=cmap, extend='both')
+        clvls = np.linspace(clim[i][0], clim[i][1], 21)
+        im = ax.contourf(pwp_out['time'], pwp_out['z'], pwp_out[vble[i]], clvls, cmap=cmap[i], extend='both')
+        ax.plot(tvec[1:], pwp_out['mld_exact2'][1:], '-k')
         ax.set_ylabel('Depth (m)')
         ax.set_title('Evolution of ocean %s (%s)' %(vble[i], units[i]))
         ax.invert_yaxis()   
         cb = plt.colorbar(im, ax=ax, format='%.1f')
      
-    ax.set_xlabel('Days')   
+    ax.set_xlabel('Days') 
+    
+    if save_plots:     
+        plt.savefig('plots/sal_temp_ztseries_%s.png' %suffix, bbox_inches='tight')  
     
     
     ## plot initial and final T-S profiles (TODO: add actual T,S profiles)
@@ -506,10 +548,12 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
     ## plot OCEAN-ICE heat flux and ATM-ICE heat flux
     plt.figure()
     plt.subplot(111)
-    plt.plot(tvec, pwp_out['F_atm'], '-', label='Atm heat flux', ms=2)
-    plt.plot(tvec, pwp_out['F_i'], '-', label='Conductive heat flux', ms=2)
+    plt.plot(tvec, pwp_out['F_atm'], '-', label='Ocean-Atmosphere heat flux', ms=2)
+    plt.plot(tvec, pwp_out['F_i'], '-', label='Ice-Atmosphere flux', ms=2)
     plt.plot(tvec, pwp_out['F_ocean_ice'], '-', label='Ocean-ice heat flux', ms=2)
     plt.hlines(0, tvec[0], tvec[-1])
+    plt.ylim(-100, 100)
+    #plt.ylim(-1.5*np.abs(pwp_out['F_atm'].max()), 1.5*np.abs(pwp_out['F_atm'].max()))
     plt.xlabel('Time (days)')
     plt.ylabel('Heat flux (W/m2)')
     plt.legend(loc=0)
@@ -521,22 +565,43 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
     #plot change in MLD  
     plt.figure()
     plt.subplot(111)
-    plt.plot(tvec, pwp_out['mld'], label='model approx.')
-    plt.plot(tvec, pwp_out['mld_exact'], label='exact')
-    plt.plot(tvec, pwp_out['mld_exact2'], label='exact2')
+    plt.plot(tvec[1:], pwp_out['mld'][1:], label='model approx.')
+    plt.plot(tvec[1:], pwp_out['mld_exact'][1:], label='exact')
+    plt.plot(tvec[1:], pwp_out['mld_exact2'][1:], label='exact2')
     plt.plot(tvec[1], pwp_out['mld'][1], 'ro', label='day0', ms=7)
     plt.plot(tvec[tvec==1], pwp_out['mld'][tvec==1], 'go', label='day1', ms=7)
     plt.plot(tvec[tvec==5], pwp_out['mld'][tvec==5], 'ko', label='day5', ms=7)
     plt.gca().invert_yaxis() 
     plt.xlabel('Time (days)')
     plt.ylabel('MLD (m)')
-    plt.legend()
+    plt.legend(loc=0)
     plt.grid(True)
     
     if save_plots:     
         plt.savefig('plots/MLD_evolution_%s.png' %suffix, bbox_inches='tight')
+        
+        
+    #plot change in MLT, MLS and MLT elevation
+    fig, axes = plt.subplots(3,1, sharex=True, figsize=(6.5, 8.5)) 
+    axes[0].plot(tvec[1:], pwp_out['mlt'][1:]) 
+    axes[0].set_ylabel('Temperature (C)')
+    axes[0].set_title('Mixed Layer Temperature')
+    axes[0].grid(True)
     
-    #plot density evolution    
+    axes[1].plot(tvec[1:], pwp_out['mls'][1:]) 
+    axes[1].set_ylabel('Salinity (PSU)')
+    axes[1].set_title('Mixed Layer Salinity')
+    axes[1].grid(True)
+    
+    axes[2].semilogy(tvec[1:], pwp_out['mlt_elev'][1:]) 
+    axes[2].set_ylabel('Temperature (C)')
+    axes[2].set_xlabel('Time (days)')
+    axes[2].set_title('MLT - T_fz')
+    axes[2].grid(True) 
+        
+        
+    
+    #plot temperature evolution    
     fig = plt.figure(figsize=(7,9))
     ax1 = plt.subplot2grid((4,1), (0,0), colspan=1)
     ax2 = plt.subplot2grid((4,1), (1,0), rowspan=4)
@@ -549,13 +614,13 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
     ax1.grid(True)
     
     #plot ocean
-    im = ax2.pcolormesh(tvec, pwp_out['z'], pwp_out['dens']-pwp_out['dens'][:,:1], vmin=-0.1, vmax=0.1, cmap=plt.cm.rainbow)
-    ax2.plot(tvec, pwp_out['mld_exact'], 'w')
+    im = ax2.pcolormesh(tvec, pwp_out['z'], pwp_out['temp']-pwp_out['temp'][:,:1], vmin=-1.0, vmax=1.0, cmap=plt.cm.coolwarm)
+    ax2.plot(tvec, pwp_out['mld_exact2'], 'k')
     # plt.plot(tvec, pwp_out['mld_approx'], 'w')
     ax2.invert_yaxis() 
     ax2.set_ylabel('Depth (m)', fontsize=12)
     ax2.set_xlabel('Time (days)', fontsize=12)
-    ax2.set_title('Density and MLD evolution', fontsize=12)
+    ax2.set_title('Temperature ($^{\circ}$C) and MLD evolution', fontsize=12)
     
     cbar_ax = fig.add_axes([0.83, 0.10, 0.025, 0.58]) #make a new axes for the colorbar
     fig.subplots_adjust(right=0.8) #adjust sublot to make colorbar fit
@@ -564,7 +629,7 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
     
     if save_plots:
         #pass
-        plt.savefig('plots/MLD_density_evolution_%s.png' %suffix, bbox_inches='tight')
+        plt.savefig('plots/MLD_temp_evolution_%s.png' %suffix, bbox_inches='tight')
         
         
     #plot salinity evolution    
@@ -580,8 +645,8 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
     ax1.grid(True)
     
     #plot ocean
-    im = ax2.pcolormesh(tvec, pwp_out['z'], pwp_out['sal']-pwp_out['sal'][:,:1], vmin=-0.1, vmax=0.1, cmap=plt.cm.RdYlGn_r)
-    ax2.plot(tvec, pwp_out['mld_exact'], 'b')
+    im = ax2.pcolormesh(tvec, pwp_out['z'], pwp_out['sal']-pwp_out['sal'][:,:1], vmin=-0.5, vmax=0.5, cmap=plt.cm.RdYlGn_r)
+    ax2.plot(tvec, pwp_out['mld_exact2'], 'k')
     # plt.plot(tvec, pwp_out['mld_approx'], 'w')
     #ax2.set_ylim(0,250)
     ax2.invert_yaxis() 
