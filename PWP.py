@@ -254,8 +254,13 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
     pwp_out['F_ocean_ice'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan
     pwp_out['F_atm'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan
     pwp_out['F_i'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan
-    pwp_out['mld_exact'] = pwp_out['mld'].copy()
-    pwp_out['mld_exact2'] = pwp_out['mld'].copy()
+    pwp_out['F_ent'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan
+    pwp_out['mld_exact'] = np.zeros(len(pwp_out['mld']))*np.nan
+    pwp_out['mld_exact2'] = np.zeros(len(pwp_out['mld']))*np.nan
+    pwp_out['mlt'] = np.zeros(len(pwp_out['mld']))*np.nan
+    pwp_out['mls'] = np.zeros(len(pwp_out['mld']))*np.nan
+    pwp_out['mlt_elev'] = np.zeros(len(pwp_out['mld']))*np.nan
+    pwp_out['alpha_true'] = np.zeros(len(pwp_out['mld']))*np.nan
     
     #initialize ice thickness:
     pwp_out['ice_thickness'][0] = params['h_i0']
@@ -346,27 +351,30 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
                 pwp_out['F_ocean_ice'][n] = F_ocean
                 pwp_out['F_i'][n] = F_i
             
-        # if n==2:
-        #     debug_here()
 
         ### compute new density ###
         dens = sw.dens0(sal, temp)
-    
-        #debug_here()
+        
+        #save pre-entrainment temp
+        temp_pre = temp.copy()
+        
         ### relieve static instability ###
         temp, sal, dens, uvel, vvel = remove_si(temp, sal, dens, uvel, vvel)
-    
-        ### Compute MLD ###       
-        #find ml index
-        mld_idx = np.flatnonzero(dens-dens[0]>params['mld_thresh'])[0]
-    
-        #debug_here()
-        #check to ensure that ML is defined
-        assert mld_idx.size is not 0, "Error: Mixed layer depth is undefined."
-    
-        #get surf MLD
-        mld = z[mld_idx]    
         
+        #compute mlt and mls after entrainment
+        mld_post_ent, mld_idx_post_ent = getMLD(dens, z, params)
+        dMLD = mld_post_ent - mld_pre
+
+        if dMLD==0:
+            F_ent = 0
+        else:
+            #compute change in heat content of entrained layer
+            dT = np.abs(temp[mld_idx_pre:mld_idx_post_ent].mean() - temp_pre[mld_idx_pre:mld_idx_post_ent].mean())
+            F_ent = dMLD*1025*4180*dT/params['dt']
+
+        ### Compute MLD ###    
+        mld, mld_idx = getMLD(dens, z, params)   
+
         ### Rotate u,v do wind input, rotate again, apply mixing ###
         ang = -f*dt/2
         uvel, vvel = rot(uvel, vvel, ang)
@@ -401,7 +409,7 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
             uvel = diffus(params['dstab'], zlen, uvel)
             vvel = diffus(params['dstab'], zlen, vvel)
         
-        # find MLD again, after mixing is complete
+        # find MLD again, after all mixing processes complete
         mld_idx = np.flatnonzero(dens-dens[0]>params['mld_thresh'])[0] #finds the first index that exceed ML threshold
         mld_post_mix = z[mld_idx]
   
@@ -410,10 +418,16 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         from scipy.interpolate import interp1d
         p_int = interp1d(dens[mld_idx2:], z[mld_idx2:]) # interp1d does not work well with perfectly homogenous mixed layers
         mld_exact = p_int(dens[mld_idx2]+params['mld_thresh'])
-        mld_exact2 = p_int(dens[mld_idx2]+0.05) #
+        mld_exact2 = p_int(dens[mld_idx2]+0.01) #
         
-        # print "MLD_approx: %s. MLD_exact: %s" %(mld_post_mix, mld_exact)
-        # debug_here()
+        #save MLT, MLS and MLT_elevation
+        MLS_post = np.mean(sal[:mld_idx]); 
+        MLT_post = np.mean(temp[:mld_idx])
+        T_fz = sw.fp(MLS_post, 0)
+        T_elev = MLT_post - T_fz
+        
+        # print "MLD_approx: %s. MLD_exact: %s" %(mld_post_mix, mld_exact
+        #debug_here()
     
         ### update output profile data ###
         pwp_out['temp'][:, n] = temp 
@@ -625,6 +639,21 @@ def diffus(dstab,nz,a):
     a[1:nz-1] = a[1:nz-1] + dstab*(a[0:nz-2] - 2*a[1:nz-1] + a[2:nz]) 
     return a    
 
+def getMLD(dens, z, params):
+    
+    #find ml index
+    mld_idx = np.flatnonzero(dens-dens[0]>params['mld_thresh'])[0]
+    
+    #check to ensure that ML is defined
+    assert mld_idx.size is not 0, "Error: Mixed layer depth is undefined." 
+      
+    #get MLD
+    mld = z[mld_idx-1] 
+    
+    if mld_idx==1:
+        mld = params['dz']
+
+    return mld, mld_idx 
 
 
 if __name__ == "__main__":
