@@ -26,7 +26,7 @@ melt_lyrs = 2 #TODO: play with this. PWP has issues with super thin, freshwater 
 bdry_lyr = 1
 thin_ice = 0.001 #m    
 T_fzi = 0.0 #freezing point of (pure) ice
-override_alpha = True
+override_alpha = False
 
 
 # def melt_all_ice(h_ice, temp_ice_surf, sal_sw, temp_sw):
@@ -591,10 +591,12 @@ def ice_model_v3(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_atm, F_oce
     switch_algorithm = False
     #temp_ice_surf_i = forcing['skt'] #experimenting...
 
+    if override_alpha:
+        alpha = params['alpha']
 
     dz = params['dz']
     dt = params['dt']
-    alpha = params['alpha']
+    # alpha = params['alpha']
     
     assert h_ice_i >=0., "Error! negative ice thickness. Something went terribly wrong!"
     
