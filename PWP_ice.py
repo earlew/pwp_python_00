@@ -220,8 +220,8 @@ def modify_thin_ice(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_atm, F_
     if total_available_heat>0:
         
         #apply net ocean heat flux through leads
-        dT_surf1 = (1-alpha)*(F_atm)*params['dt']/(params['dz']*rho_sw0*c_sw) #TODO: should ocean heat fluxes apply here??
-        temp_sw[0] = temp_sw[0]+dT_surf1
+        # dT_surf1 = (1-alpha)*(F_atm)*params['dt']/(params['dz']*rho_sw0*c_sw) #TODO: should ocean heat fluxes apply here??
+        # temp_sw[0] = temp_sw[0]+dT_surf1
         
         
         if total_available_heat<= warming_heat_sink:
@@ -304,7 +304,7 @@ def modify_thin_ice(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_atm, F_
         #what's leftover, we use to creat sea-ice
         
         #apply net heat flux through leads
-        dT_surf1 = (1-alpha)*(F_atm+F_ocean)/(params['dz']*rho_sw0*c_sw)
+        dT_surf1 = (1-alpha)*(F_atm)*params['dt']/(params['dz']*rho_sw0*c_sw)
         temp_sw0 = temp_sw[0]+dT_surf1
     
         #compute ocean surface temp change due to heat loss through ice (combine with the above?)
@@ -601,24 +601,35 @@ def ice_model_v3(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_atm, F_oce
     
     
     ### first apply heat flux through leads ###
-    dT_surf1 = (1-alpha)*(F_atm+F_ocean)/(params['dz']*rho_sw0*c_sw)
-    
-    if dT_surf1 < 0:
-        #grow ice
-        dh_ice_leads = rho_sw0*c_sw*params['dz']*(dT_surf1)/(rho_ice*L_ice)
-        h_ice_i = h_ice_i + dh_ice_leads
-        #create brine
-        dsal_sw_leads = alpha*dh_ice_leads*(sal_sw[0]-sal_ice)/params['dz'] 
-        sal_sw[0] = sal_sw[0]+dsal_sw_leads
-        #debug_here()
-    else:
-        #warm ocean
-        temp_sw[0] = temp_sw[0]+dT_surf1
+    # dT_surf = (1-alpha)*(F_atm*params['dt'])/(params['dz']*rho_sw0*c_sw) #TODO: Should this include F_ocean? No.
+    # temp_sw0 = temp_sw[0]+dT_surf
+    # #TODO: apply this to the entire ML???
+    # #TODO: need to fix
+    # if temp_sw0 < temp_swfz:
+    #
+    #     #set surf temp to freezing
+    #     temp_sw[0] = temp_swfz
+    #
+    #     #grow ice
+    #     dh_ice_leads = rho_sw0*c_sw*params['dz']*(temp_swfz-temp_sw0)/(rho_ice*L_ice)
+    #     h_ice_i = h_ice_i + dh_ice_leads
+    #
+    #     #create brine
+    #     dsal_sw_leads = alpha*dh_ice_leads*(sal_sw[0]-sal_ice)/params['dz']
+    #     sal_sw[0] = sal_sw[0]+dsal_sw_leads
+    #
+    #     debug_here()
+    #     #need to adjust F_ocean
+    #     #F_ocean = F_ocean - (1-alpha)*(F_atm) #?????
+    #
+    # else:
+    #     #cool/warm ocean.
+    #     temp_sw[0] = temp_sw[0]+dT_surf
         
     #debug_here()  
     ### Modify sea ice ###
     #TODO: eventually this should work for all temperatures
-    if temp_ice_surf_i < 0:
+    if temp_ice_surf_i < -2 and F_atm<0:
         
         #print "running sea ice algorithm..."
         print "running ice model with specified surface temperatures..."
