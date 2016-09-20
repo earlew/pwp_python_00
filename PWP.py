@@ -231,6 +231,7 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
     """
     print_ice_warning = True
     print_lead_warning = True
+    transition_ice_frac = True
     
     #unpack some of the variables (I could probably do this more elegantly)
     q_in = forcing['q_in']
@@ -239,7 +240,7 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
     taux = forcing['tx']
     tauy = forcing['ty']
     absrb = forcing['absrb']
-    alpha = forcing['icec']
+    forcing['icec2'] = forcing['icec'].copy()
     
     z = pwp_out['z']
     dz = pwp_out['dz']
@@ -351,6 +352,23 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
                
             
         else:
+            
+            #need to implement a smooth transition in ice-fraction from open water to non-zero ice percentage
+            #without this, ice frac can abruptly transition from open ocean to >50% ice cover
+            
+            if transition_ice_frac:
+                alpha_true = pwp_out['alpha_true'][n-1]
+                alpha_forc = alpha_n
+                d_alpha = alpha_true-alpha_forc
+                if np.abs(d_alpha)>0.05:
+                    t_adj = 10*(1./params['dt_d']) #give model 10 days to catch up to the ice frac forcing
+                    alpha_nt = forcing['icec2'][n-2+t_adj]  
+                    alpha_adj = np.linspace(alpha_true, alpha_nt, t_adj)
+                    forcing['icec2'][n-2:n-2+t_adj] = pwp_out['alpha_true'][n-2:n-2+t_adj]+alpha_adj
+                    alpha_n = forcing['icec2'][n-1]
+                    transition_ice_frac = False
+                    
+                    #debug_here()
             
             if params['ice_ON']:
                 
