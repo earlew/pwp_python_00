@@ -180,23 +180,10 @@ def run(met_data, prof_data, param_kwds=None, overwrite=True, diagnostics=True, 
     #debug_here()
     output_fpath = "output/pwp_output%s%s.nc" %(suffix, time_stamp)
     forcing_fpath = "output/forcing%s%s.nc" %(suffix, time_stamp)
-    #TODO: save forcing as well
-    phf.save2nc(pwp_out, output_fpath)
-    phf.save2nc(pwp_out, forcing_fpath)
-    #debug_here()
-    #
-    #
-    # #pwp_out_ds = xray.Dataset({'temp': (['z', 'time'], pwp_out['temp']), 'sal': (['z', 'time'], pwp_out['sal']),
-    #             # 'uvel': (['z', 'time'], pwp_out['uvel']), 'vvel': (['z', 'time'], pwp_out['vvel']),
-    #             # 'dens': (['z', 'time'],  pwp_out['dens']), 'mld': (['time'],  pwp_out['mld'])},
-    #             # coords={'z': pwp_out['z'], 'time': pwp_out['time']})
-    #
-    # pwp_out_ds.to_netcdf("output/pwp_output%s%s.nc" %(suffix, time_stamp))
 
-    # also output and forcing as pickle file (PICKLE DOESN'T WORK WELL WITH DICT ARRAYS!!!)
-    # pickle.dump(forcing, open( "output/forcing%s%s.p" %(suffix, time_stamp), "wb" ))
-    # pickle.dump(pwp_out, open( "output/pwp_out%s%s.p" %(suffix, time_stamp), "wb" ))
-    
+    phf.save2nc(pwp_out, output_fpath)
+    phf.save2nc(forcing, forcing_fpath, type='forc')
+
     ## do analysis of the results
     phf.makeSomePlots(forcing, pwp_out, suffix=suffix, save_plots=save_plots)
     
@@ -320,9 +307,9 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         mld_pre, mld_idx_pre = getMLD(dens, z, params)
         
         #select previous forcing data
-        F_atm = q_net[n-1]
+        # F_atm = q_net[n-1]
         #alpha_n = params['alpha'] 
-        alpha_n = forcing['icec'][n-1]
+        alpha_n = forcing['icec2'][n-1]
         skt_n = forcing['skt'][n-1]
         
         
@@ -582,7 +569,7 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         pwp_out['mlt_elev'][n] = T_elev
         pwp_out['mld_exact'][n] = mld_exact
         pwp_out['mld_exact2'][n] = mld_exact2
-        pwp_out['F_atm'][n] = (1-alpha_n)*F_atm
+        # pwp_out['F_atm'][n] = (1-alpha_n)*F_atm
         pwp_out['F_ent'][n] = F_ent
         pwp_out['alpha_true'][n] = alpha_n
     
