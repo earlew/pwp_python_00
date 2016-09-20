@@ -377,7 +377,7 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
                 else: 
                     temp[0] = T_fz
                     if print_ice_warning:
-                        print "surface has reached freezing temp. However, ice creation is either off or ice_conc is set to zero."
+                        print "surface has reached freezing temp. However, ice creation is either turned off or ice_conc is set to zero."
                         print_ice_warning = False
                
             
@@ -465,17 +465,35 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
                 
                 if dT<0:
                     temp[:mld_idx_pre] = T_fz
-                    print "WARNING: heat fluxes through leads has cool ML past freezing point. Resetting to T_fz."
+                    
+                    print "Creating frazil ice in leads."
+                    
+                    #generate sea ice (aka frazil ice)
+                    h_ice, temp_ice_surf, temp, sal = PWP_ice.create_initial_ice(h_ice, temp_ice_surf, temp, sal, dens, params)   
+                    pwp_out['surf_ice_temp'][n] = temp_ice_surf
+                    pwp_out['ice_thickness'][n] = h_ice
+                    
+                    
                     #debug_here()
                     
                 
                 #save ice related output
                 pwp_out['surf_ice_temp'][n] = temp_ice_surf
                 pwp_out['ice_thickness'][n] = h_ice
-                pwp_out['F_ocean_ice'][n] = F_ocean
+                pwp_out['F_oi'][n] = F_oi
+                pwp_out['F_ai'][n] = F_ai
+                pwp_out['F_ao'][n] = q_net_ao
                 pwp_out['F_i'][n] = F_i
-            
-
+                pwp_out['alpha_true'][n] = alpha_n
+                
+            else:
+                
+                print "Whoops! This is unexpected. You need to turn ice growth back on add something here."
+                debug_here()
+          
+        
+        pwp_out['alpha_true'][n-1] = alpha_n
+        
         ### compute new density ###
         dens = sw.dens0(sal, temp)
         
