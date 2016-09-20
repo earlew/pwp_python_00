@@ -166,11 +166,11 @@ def prep_data(met_dset, prof_dset, params):
         # forcing['skt'].attrs['units'] = 'degC'
         
     #arbitrarily adjust (tune) fluxes
-    forcing['qsens'][:] = 0.0
+    # forcing['qsens'][:] = 0.0
     forcing['sw'] = 0.75*forcing['sw']
-    forcing['lw'] = 1.2*forcing['lw']
-    forcing['qlat'] = 1.2*forcing['qlat']
-    forcing['precip'] = 0.25*forcing['precip']
+    # forcing['lw'] = 1.2*forcing['lw']
+    # forcing['qlat'] = 1.2*forcing['qlat']
+    forcing['precip'] = 0.5*forcing['precip']
     print "WARNING: fluxes were adjusted!!!"
             
         
@@ -400,6 +400,7 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
         tvec = pwp_out['time']
     else:
         tvec = time_vec
+    
     
     axes = axes.flatten()
     ## plot surface heat flux
@@ -759,39 +760,59 @@ def custom_div_cmap(numcolors=11, name='custom_div_cmap', mincol='blue', midcol=
     
     
     
-def save2nc(pwp_out, fpath):
+def save2nc(data_dict, fpath, type='out'):
     
-    pwp_out_ds = xray.Dataset()
+    data_ds = xray.Dataset()
     # zt_vars = ['temp', 'sal', 'uvel', 'vvel', 'dens']
     # t_vars = ['mld', 'F_atm', 'F_i', 'F_ocean_ice', 'ice_thickness', 'surf_ice_temp', 'mld_exact', 'mld_exact2']
     # z_vars = ['z']
     
-    zt_shape = pwp_out['temp'].shape
-    t_shape = pwp_out['mld'].shape
-    z_shape = pwp_out['z'].shape
-    
-    for key in pwp_out:
+    # if type=='out':
+    #     zt_shape = data_dict['temp'].shape
+    #     t_shape = data_dict['mld'].shape
+    #     z_shape = data_dict['z'].shape
+    # else:
+    #     t_shape = data_dict['time'].shape
         
-        if isinstance(pwp_out[key], (float, int)):
-            pwp_out_ds[key] =  pwp_out[key]
+    
+    for key in data_dict:
+        
+        if isinstance(data_dict[key], (float, int)):
+            data_ds[key] =  data_dict[key]
             
         else:
-        
-            if pwp_out[key].shape == zt_shape:
-                dims = ('z', 't')
-            elif pwp_out[key].shape == t_shape:
-                dims = ('t',)
-            elif pwp_out[key].shape == z_shape:
-                dims = ('z', )
-            else:
-                print "%s variable has unrecognized shape. Can't save to ncfile. Skipping..." %key
-                continue
+            
+            if type=='out':
                 
-            pwp_out_ds[key] = (dims, pwp_out[key])
+                zt_shape = data_dict['temp'].shape
+                t_shape = data_dict['mld'].shape
+                z_shape = data_dict['z'].shape
+
+                if data_dict[key].shape == t_shape:
+                    dims = ('t',)
+    
+                elif data_dict[key].shape == z_shape:
+                    dims = ('z', )
+    
+                elif data_dict[key].shape == zt_shape:
+                    dims = ('z', 't')
+
+                else:
+                    print "%s variable has unrecognized shape. Can't save to ncfile. Skipping..." %key
+                    continue
+            else:
+                
+                if key=='absrb':
+                    continue
+                    
+                dims = ('t',)
+
+                
+            data_ds[key] = (dims, data_dict[key])
             
     
-    pwp_out_ds.to_netcdf(fpath)
-    pwp_out_ds.close
+    data_ds.to_netcdf(fpath)
+    data_ds.close
     
     return
     
