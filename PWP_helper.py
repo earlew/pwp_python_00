@@ -438,7 +438,7 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
     ## plot ice conc. and surf temp.
     fig1, axes = plt.subplots(2,1, sharex=True, figsize=(7.5,9))
     axes = axes.flatten()
-    axes[0].plot(tvec, forcing['icec'])
+    axes[0].plot(tvec, forcing['icec'], label='Forced')
     axes[0].set_ylabel('Ice cover percentage (%)')
     axes[0].set_title('Ice concentration')
     axes[0].grid(True)
@@ -454,13 +454,74 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
     
     if justForcing:
         return
+        
+    #add true ice conc. to above plot
+    axes[0].plot(tvec, pwp_out['alpha_true'], label='Actual')
+    axes[0].legend(loc=0, fontsize='medium')
     
     if save_plots:     
         fig0.savefig('plots/surface_forcing%s.png' %suffix, bbox_inches='tight')
         fig1.savefig('plots/surface_forcing2%s.png' %suffix, bbox_inches='tight')
+        
+        
+    
+    
+    
+    ## Plot computed heat fluxes
+    fig2, axes = plt.subplots(3,1, sharex=True, figsize=(7.5,9))
+    axes = axes.flatten()
+    ## plot atmosphere ocean flux
+    axes[0].plot(tvec, pwp_out['q_lw_ao'], label='$Q_{lw}^{ocn}$')
+    axes[0].plot(tvec, pwp_out['q_lat_ao'], label='$Q_{lat}^{ocn}$')
+    axes[0].plot(tvec, pwp_out['q_sens_ao'], label='$Q_{sens}^{ocn}$')
+    axes[0].plot(tvec, (1-pwp_out['alpha_true'])*forcing['sw'], label='$Q_{sw}^{ocn}$')
+    axes[0].hlines(0, tvec[0], pwp_out['time'][-1], linestyle='-', color='0.3')
+    axes[0].plot(tvec, pwp_out['q_net_ao'], ls='-', lw=2, color='k', label='$Q_{net}^{ocn}$')
+    axes[0].set_ylabel('Heat flux (W/m2)')
+    axes[0].set_title('Computed Atmosphere-ocean heat flux')
+    axes[0].grid(True)
+    #axes[0].set_ylim(-500,300)
+
+    axes[0].legend(loc=0, ncol=2, fontsize='medium')
+
+    ## plot atmosphere ice flux
+    axes[1].plot(tvec, pwp_out['q_lw_ai'], label='$Q_{lw}^{ice}$')
+    axes[1].plot(tvec, pwp_out['q_lat_ai'], label='$Q_{lat}^{ice}$')
+    axes[1].plot(tvec, pwp_out['q_sens_ai'], label='$Q_{sens}^{ice}$')
+    axes[1].plot(tvec, pwp_out['alpha_true']*forcing['sw'], label='$Q_{sw}^{ice}$')
+    axes[1].hlines(0, tvec[0], pwp_out['time'][-1], linestyle='-', color='0.3')
+    axes[1].plot(tvec, pwp_out['q_net_ai'], ls='-', lw=2, color='k', label='$Q_{net}^{ice}$')
+    axes[1].set_ylabel('Heat flux (W/m2)')
+    axes[1].set_title('Computed atmosphere-ice heat flux')
+    axes[1].grid(True)
+    #axes[0].set_ylim(-500,300)
+
+    axes[1].legend(loc=0, ncol=2, fontsize='medium')
+    
+    ## plot atmosphere ice flux
+    axes[2].plot(tvec, pwp_out['q_lw_ai']+pwp_out['q_lw_ao'], label='$Q_{lw}$')
+    axes[2].plot(tvec, pwp_out['q_lat_ai']+pwp_out['q_lat_ao'], label='$Q_{lat}$')
+    axes[2].plot(tvec, pwp_out['q_sens_ai']+pwp_out['q_sens_ao'], label='$Q_{sens}$')
+    axes[2].plot(tvec, forcing['sw'], label='$Q_{sw}$')
+    axes[2].hlines(0, tvec[0], pwp_out['time'][-1], linestyle='-', color='0.3')
+    axes[2].plot(tvec, pwp_out['q_net_ai'] + pwp_out['q_net_ai'], ls='-', lw=2, color='k', label='$Q_{net}$')
+    axes[2].set_ylabel('Heat flux (W/m2)')
+    axes[2].set_title('Total surface heat flux')
+    axes[2].grid(True)
+    #axes[0].set_ylim(-500,300)
+
+    axes[2].legend(loc=0, ncol=2, fontsize='medium')
     
     
     #plot summary of ML evolution
+    
+    #get a smoothed MLD time series
+    from scipy.signal import savgol_filter
+    dt = tvec[1]-tvec[0]
+    mld_exact2 = pwp_out['mld_exact2'].copy()
+    mld_exact2_sm = savgol_filter(mld_exact2, window_length=(30*(1./dt)+1), polyorder=1, mode='nearest')
+    
+    
     ##plot temp and sal change over time
     fig, axes = plt.subplots(2,1, sharex=True, figsize=(8,8))
     vble = ['temp', 'sal']
@@ -472,11 +533,11 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
         ax = axes[i]
         clvls = np.linspace(clim[i][0], clim[i][1], 21)
         im = ax.contourf(pwp_out['time'], pwp_out['z'], pwp_out[vble[i]], clvls, cmap=cmap[i], extend='both')
-        ax.plot(tvec[1:], pwp_out['mld_exact2'][1:], '-k')
+        ax.plot(tvec[1:], mld_exact2_sm[1:], '-k')
         ax.set_ylabel('Depth (m)')
         ax.set_title('Evolution of ocean %s (%s)' %(vble[i], units[i]))
         ax.invert_yaxis()   
-        cb = plt.colorbar(im, ax=ax, format='%.1f')
+        cb = plt.colorbar(im, ax=ax, format='%.2f')
      
     ax.set_xlabel('Days') 
     
@@ -529,7 +590,7 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
         
         
     ## plot ice growth and ice temp
-    fig, axes = plt.subplots(2,1, sharex=True)
+    fig, axes = plt.subplots(2,1, figsize=(7.5,6))
     axes[0].plot(tvec, pwp_out['ice_thickness'], '-')
     axes[0].set_ylabel('Ice thickness (m)')
     #axes[0].xlabel('Time (days)')
@@ -544,13 +605,24 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
     
     if save_plots:     
         plt.savefig('plots/ice_temp_thickness%s.png' %suffix, bbox_inches='tight')
+     
+    plt.figure(figsize=(6,6.5))
+    ax = plt.gca()   
+    im = ax.scatter(pwp_out['ice_thickness'], pwp_out['surf_ice_temp'], s=10, c=tvec, cmap=plt.cm.rainbow, lw=0)
+    ax.set_ylabel('Temperature (C)')
+    ax.set_xlabel('Ice thickness (m)')
+    ax.set_title('Ice surface temperature')
+    cb = plt.colorbar(im)
+    cb.set_label('Time (days)')
+    ax.grid(True)
+    
         
     ## plot OCEAN-ICE heat flux and ATM-ICE heat flux
     plt.figure()
     plt.subplot(111)
-    plt.plot(tvec, pwp_out['F_atm'], '-', label='Ocean-Atmosphere heat flux', ms=2)
-    plt.plot(tvec, pwp_out['F_i'], '-', label='Ice-Atmosphere flux', ms=2)
-    plt.plot(tvec, pwp_out['F_ocean_ice'], '-', label='Ocean-ice heat flux', ms=2)
+    plt.plot(tvec, pwp_out['F_ai'], '-', label='$F_{ai}$', ms=2)
+    plt.plot(tvec, pwp_out['F_i'], '-', label='$F_i$', ms=2)
+    plt.plot(tvec, pwp_out['F_oi'], '-', label='$F_{oi}$', ms=2)
     plt.hlines(0, tvec[0], tvec[-1])
     plt.ylim(-100, 100)
     #plt.ylim(-1.5*np.abs(pwp_out['F_atm'].max()), 1.5*np.abs(pwp_out['F_atm'].max()))
@@ -598,7 +670,7 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
     axes[2].set_xlabel('Time (days)')
     axes[2].set_title('MLT - T_fz')
     axes[2].grid(True) 
-        
+    
         
     
     #plot temperature evolution    
@@ -614,8 +686,8 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
     ax1.grid(True)
     
     #plot ocean
-    im = ax2.pcolormesh(tvec, pwp_out['z'], pwp_out['temp']-pwp_out['temp'][:,:1], vmin=-1.0, vmax=1.0, cmap=plt.cm.coolwarm)
-    ax2.plot(tvec, pwp_out['mld_exact2'], 'k')
+    im = ax2.pcolormesh(tvec, pwp_out['z'], pwp_out['temp'] -pwp_out['temp'][:,:1], vmin=-1.0, vmax=1.0, cmap=plt.cm.coolwarm)
+    ax2.plot(tvec, mld_exact2_sm, 'k')
     # plt.plot(tvec, pwp_out['mld_approx'], 'w')
     ax2.invert_yaxis() 
     ax2.set_ylabel('Depth (m)', fontsize=12)
@@ -646,7 +718,7 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
     
     #plot ocean
     im = ax2.pcolormesh(tvec, pwp_out['z'], pwp_out['sal']-pwp_out['sal'][:,:1], vmin=-0.5, vmax=0.5, cmap=plt.cm.RdYlGn_r)
-    ax2.plot(tvec, pwp_out['mld_exact2'], 'k')
+    ax2.plot(tvec, mld_exact2_sm, 'k')
     # plt.plot(tvec, pwp_out['mld_approx'], 'w')
     #ax2.set_ylim(0,250)
     ax2.invert_yaxis() 
@@ -667,7 +739,6 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
     
     
     plt.show()
-    
 
 def custom_div_cmap(numcolors=11, name='custom_div_cmap', mincol='blue', midcol='white', maxcol='red'):
                     
