@@ -160,7 +160,7 @@ def run(met_data, prof_data, param_kwds=None, overwrite=True, diagnostics=True, 
     ## run the model
     pwp_out = pwpgo(forcing, params, pwp_out, diagnostics)
     
-    
+    debug_here()
     #check timer
     tnow = timeit.default_timer()
     t_elapsed  = (tnow - t0)  
@@ -264,16 +264,28 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
     params['dz'] = dz
     
     #create output variable for ocean and atmospheric heat flux
-    pwp_out['F_ocean_ice'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan
-    pwp_out['F_atm'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan
-    pwp_out['F_i'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan
+    pwp_out['F_oi'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan #ocean-ice heat flux
+    pwp_out['F_ao'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan #atmosphere-ocean heat flux
+    pwp_out['F_ai'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan #atmosphere-ice heat flux
+    pwp_out['F_i'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan #heat flux through the ice
     pwp_out['F_ent'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan
+    
+    pwp_out['q_sens_ao'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan
+    pwp_out['q_lat_ao'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan
+    pwp_out['q_lw_ao'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan
+    pwp_out['q_net_ao'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan
+    
+    pwp_out['q_sens_ai'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan
+    pwp_out['q_lat_ai'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan
+    pwp_out['q_lw_ai'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan
+    pwp_out['q_net_ai'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan
+    
     pwp_out['mld_exact'] = np.zeros(len(pwp_out['mld']))*np.nan
     pwp_out['mld_exact2'] = np.zeros(len(pwp_out['mld']))*np.nan
     pwp_out['mlt'] = np.zeros(len(pwp_out['mld']))*np.nan
     pwp_out['mls'] = np.zeros(len(pwp_out['mld']))*np.nan
     pwp_out['mlt_elev'] = np.zeros(len(pwp_out['mld']))*np.nan
-    pwp_out['alpha_true'] = np.zeros(len(pwp_out['mld']))*np.nan
+    pwp_out['alpha_true'] = np.zeros(len(pwp_out['mld']))
     
     #initialize ice thickness:
     pwp_out['ice_thickness'][0] = params['h_i0']
@@ -284,7 +296,7 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
     # pwp_out['surf_ice_temp'][0] = -2
     
     
-    debug_here()
+    #debug_here()
     print "Number of time steps: %s" %tlen
     
     for n in xrange(1,tlen):
@@ -325,21 +337,39 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
             #set alpha (ice fraction) to 0.0:
             alpha_n = 0.0
             
-            #update layer 1 temp and sal
-            temp[0] = temp[0] + (q_in[n-1]*absrb[0]-*q_out[n-1])*dt/(dz*dens[0]*cpw)
-            sal[0] = sal[0]/(1-emp[n-1]*dt/dz)
-            #Hmm. I would assume sal change is given by: sal[0] = sal[0] + sal[0]*emp[n-1]*dt/dz
+            if params['csf'] == True:
+                #computes atmosphere-ocean fluxes - everything but shortwave
+                q_lw_ao, q_sens_ao, q_lat_ao = get_atm_ocean_HF(temp[0], forcing, alpha_n, n)
+                q_in_ao = (1-alpha_n)*q_in[n-1]
+                q_out_ao = -(q_lw_ao+q_sens_ao+q_lat_ao) #fluxes were defined as positive down. ice fraction already accoutned for
+                q_net_ao = q_in_ao-q_out_ao
+                
+                pwp_out['q_sens_ao'][n] = q_sens_ao
+                pwp_out['q_lat_ao'][n] = q_lat_ao
+                pwp_out['q_lw_ao'][n] = q_lw_ao
+                pwp_out['q_net_ao'][n] = q_net_ao
+                
+            else:
+                q_in_ao = q_in[n-1]
+                q_out_ao = q_out[n-1]
+                q_net_ao = q_net[n-1]
+                
+            # debug_here()
+            pwp_out['F_ao'][n] = q_net_ao
             
+            #update layer 1 temp and sal
+            temp[0] = temp[0] + (q_in_ao*absrb[0]-q_out_ao)*dt/(dz*dens[0]*cpw)
+            sal[0] + sal[0]*emp[n-1]*dt/dz
+           
             ### Absorb rad. at depth ### 
-            #TODO: check if it matters whether this comes before or after the following block
-            temp[1:] = temp[1:] + (1-alpha_n)*q_in[n-1]*absrb[1:]*dt/(dz*dens[1:]*cpw)
+            temp[1:] = temp[1:] + q_in_ao*absrb[1:]*dt/(dz*dens[1:]*cpw)
             
             #check if temp is less than freezing point
             T_fz = sw.fp(sal[0], p=dz) #why use sal_old? Need to recheck
             if temp[0] < T_fz: 
                 
                 if params['ice_ON']:          
-                    #generate sea ice
+                    #generate sea ice (aka frazil ice)
                     h_ice, temp_ice_surf, temp, sal = PWP_ice.create_initial_ice(h_ice, temp_ice_surf, temp, sal, dens, params)   
                     pwp_out['surf_ice_temp'][n] = temp_ice_surf
                     pwp_out['ice_thickness'][n] = h_ice
@@ -372,27 +402,62 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
             
             if params['ice_ON']:
                 
-                 
+                if params['csf'] == True:
+                    
+                    #computes everything but shortwave
+                    q_lw_ao, q_sens_ao, q_lat_ao = get_atm_ocean_HF(temp[0], forcing, alpha_n, n)
+                    q_in_ao = (1-alpha_n)*q_in[n-1]
+                    q_out_ao = -(q_lw_ao+q_sens_ao+q_lat_ao) #fluxes were defined as positive down. ice fraction already accoutned for
+                    q_net_ao = q_in_ao-q_out_ao
+                    
+                    pwp_out['q_sens_ao'][n] = q_sens_ao
+                    pwp_out['q_lat_ao'][n] = q_lat_ao
+                    pwp_out['q_lw_ao'][n] = q_lw_ao
+                    pwp_out['q_net_ao'][n] = q_net_ao
+                
+                    q_lw_ai, q_sens_ai, q_lat_ai = get_atm_ice_HF(skt_n, forcing, alpha_n, n)
+                    q_in_ai = alpha_n*q_in[n-1]
+                    q_out_ai = -(q_lw_ai+q_sens_ai+q_lat_ai) #fluxes were defined as positive down. ice fraction already accoutned for
+                    q_net_ai = q_in_ai - q_out_ai
+                    F_ai = q_net_ai
+                    
+                    pwp_out['q_sens_ai'][n] = q_sens_ai
+                    pwp_out['q_lat_ai'][n] = q_lat_ai
+                    pwp_out['q_lw_ai'][n] = q_lw_ai
+                    pwp_out['q_net_ai'][n] = q_net_ai
+                    
+                else:
+                    q_in_ao = (1-alpha_n)*q_in[n-1]
+                    q_out_ao = (1-alpha_n)*q_out[n-1]
+                    q_net_ao = q_in_ao - q_out_ao
+                    
+                    q_in_ai = alpha_n*q_in[n-1]
+                    q_out_ai = alpha_n*q_in[n-1]
+                    q_net_ai = q_in_ai - q_out_ai
+                    F_ai = q_net_ai
+
+                print "F_ao: %.2f" %q_net_ao
+                
                 #compute ocean->ice heat flux 
-                F_ocean = PWP_ice.get_ocean_ice_heat_flux(temp, sal, dens, params) 
+                F_oi = PWP_ice.get_ocean_ice_heat_flux(temp, sal, dens, params) 
             
                 #modify existing sea ice 
                 #h_ice, temp_ice_surf, temp, sal = PWP_ice.modify_existing_ice(temp_ice_surf, h_ice, temp, sal, dens, F_atm, F_ocean, alpha_n, skt_n, params)
-                h_ice, temp_ice_surf, temp, sal, F_i = PWP_ice.ice_model_v3(h_ice, skt_n, temp, sal, dens, F_atm, F_ocean, alpha_n, params)
-                
+                h_ice, temp_ice_surf, temp, sal, F_i = PWP_ice.ice_model_v3(h_ice, skt_n, temp, sal, dens, F_ai, F_oi, alpha_n, params)
+
                 
                 # apply E-P flux through leads
-                #sal[0] = sal[0]/(1-(1-alpha_n)*emp[n-1]*dt/dz)
-                sal[0] = sal[0] + sal[0]*(1-alpha_n)*emp[n-1]*dt/dz
-                #TODO: keep track of rain/snow on top of ice
+                sal[0] = sal[0] + sal[0]*(1-alpha_n)*emp[n-1]*dt/dz #TODO: keep track of rain/snow on top of ice (big task)
                 
                 # apply heat flux through leads
-                temp = temp + (1-alpha_n)*(q_in[n-1]*absrb)*dt/(dz*dens*cpw) #incoming solar
-                temp[:mld_idx_pre] = temp[:mld_idx_pre] - (1-alpha_n)*q_out[n-1]*dt/(mld_pre*dens[:mld_idx_pre]*cpw) #outgoing radiation from ML
+                temp = temp + q_in_ao*absrb*dt/(dz*dens*cpw) #incoming solar
+                temp[0] = temp[0] - q_out_ao*dt/(mld_pre*dens[0]*cpw)
                 
-                if n==2:
-                    F_oa = (1-alpha_n)*F_atm
-                    print "F_atm: %.2f" %F_oa
+                #temp[:mld_idx_pre] = temp[:mld_idx_pre] - (1-alpha_n)*q_out[n-1]*dt/(mld_pre*dens[:mld_idx_pre]*cpw) #outgoing radiation from ML
+                
+                # if n==2:
+                #     F_ao = (1-alpha_n)*F_atm
+                #     print "F_atm: %.2f" %F_ao
                 
                 #check if temp is less than freezing point 
                 T_fz = sw.fp(sal_old, p=dz) #here it might be better to use sal_old rather than what is essentially brine water
@@ -720,6 +785,181 @@ def getMLD(dens, z, params):
 
     return mld, mld_idx 
 
+def get_atm_ocean_HF(sst, forcing, alpha, n):
+    
+    """
+    Function to compute ocean atmosphere heat fluxes in the presence of sea ice.
+    
+    flux sign convention: postive-down
+    
+    This is loosely based on Large and Yeager 2004
+    Q = f_i*Q_io + f_o*Q_ao
+    """
+    
+    def psi(zeta):
+        
+        X_o = (1-16*zeta)**(0.25)
+        
+        if zeta>=0:
+            #stable
+            psi_m = -5*zeta
+            psi_h = -5*zeta
+        else:
+            #unstable
+            psi_m = 2*np.log((1.+X_o)/2.) + np.log((1.+X_o**2)/2.) - 2*np.arctan(X_o) + np.pi/2
+            psi_h = 2*np.log((1.+X_o**2)/2.)
+            
+        return psi_m, psi_h
+        
+    
+    sst_K = sst+273.13
+    
+    #define params
+    f_i = alpha
+    f_o = 1-f_i
+    q1_ocn = 0.98*640380. #kg/m3 (Large and Yeager 2004 pg. 7)
+    q2_ocn = -5107.4 #K
+    rho_air = 1.22 #kg/m3
+    c_p_air = 1000.5 #J/kg/K (specific heat of air)
+    L_v = 2.5e6 #J/kg (Latent heat of evaporation)
+    kappa = 0.4 #von karman constant
+    g = 9.81 #acc due to gracity
+    r = 287 #J/kg/K ideal gas constant
+    
+    #get key atmospheric forcing variables
+    q_2m = forcing['shum2m'][n-1]
+    atemp2m = forcing['atemp2m'][n-1]
+    u10m = forcing['u10m'][n-1]
+    v10m = forcing['v10m'][n-1]
+    tx = forcing['tx'][n-1]
+    ty = forcing['ty'][n-1]
+    
+    Un_10m_init = np.sqrt(u10m**2 + v10m**2) #10m wind speed
+    q_sat_ocn = (1./rho_air)*q1_ocn*np.e**(q2_ocn/sst_K) #saturation specific humidity
+    theta_2m = atemp2m*(1000./1002.)**(r/c_p_air) #potential air temp
+    theta_v_2m = theta_2m*(1. + 0.608*q_2m) #virtual potential air temp
+    
+    #define turbulent heat transfer coefficients (assuming unstable atmosphere)
+    C_d = (1e-3)*(2.7/Un_10m_init + 0.142 + Un_10m_init/13.09)
+    C_e = (1e-3)*34.6*np.sqrt(C_d)
+    C_h = (1e-3)*32.7*np.sqrt(C_d)
+    
+    # the next series of steps are from Large and Yeager (2004) pg.8-9
+    # the goal is to shift the air temp and spec. humidity from 2m to 10m
+    
+    #define a few more parameters
+    # u_star = np.sqrt(np.sqrt(tx**2 + ty**2)/rho_air)
+    u_star = np.sqrt(C_d)*Un_10m_init
+    # theta_star_2m_ocn = theta_2m - sst_K
+    # q_star_2m_ocn = q_2m - q_sat_ocn
+    t_star_2m_ocn = (C_h/np.sqrt(C_d))*(theta_2m - sst_K)
+    q_star_2m_ocn = (C_e/np.sqrt(C_d))*(q_2m - q_sat_ocn)
+    
+    
+    #compute initial sensible and latent heat fluxes
+    q_sens_ao_init = f_o*rho_air*c_p_air*C_h*(theta_2m - sst_K)*Un_10m_init
+    q_lat_ao_init = f_o*L_v*rho_air*C_e*(q_2m - q_sat_ocn)*Un_10m_init
+    
+    #get monin-obukhov length scale
+    # L_mo_ocn = -rho_air*c_p_air*theta_v_2m*u_star**3/(kappa*g*qsens_ao_init)
+
+    #compute stability parameters
+    z_t = 2.
+    z_q = 2.
+    z_u = 10.
+    zeta_2m = (kappa*g*z_t/u_star**2)*(t_star_2m_ocn/theta_v_2m + q_star_2m_ocn/(q_2m + 1./0.608))
+    zeta_10m = (kappa*g*z_u/u_star**2)*(t_star_2m_ocn/theta_v_2m + q_star_2m_ocn/(q_2m + 1./0.608))
+    
+    psi_m_2m, psi_h_2m  = psi(zeta_2m)
+    psi_m_10m, psi_h_10m  = psi(zeta_10m)
+
+    #shift wind speed to 10m and neutral stability, and temp and hum to the wind height
+    Un_10m = Un_10m_init*(1 + (np.sqrt(C_d)/kappa)*(np.log(z_u/z_u) - psi_m_10m))**(-1)
+    theta_10m = theta_2m - (t_star_2m_ocn/kappa)*(np.log(z_t/z_u) + psi_h_10m - psi_h_2m) #paper says t_star instead of q_star???
+    q_10m = q_2m - (q_star_2m_ocn/kappa)*(np.log(z_t/z_u) + psi_h_10m - psi_h_2m)
+    
+    #update intial transfer coefficients
+    C_d_new = C_d*(1+ (np.sqrt(C_d)/kappa)*(np.log(z_u/z_u) - psi_m_10m) )**(-2.)
+    C_h_new = C_h*np.sqrt(C_d_new/C_d)*(1+ (C_h/(kappa*np.sqrt(C_d)) )*(np.log(z_u/z_u) - psi_h_10m))**(-1.)
+    C_e_new = C_e*np.sqrt(C_d_new/C_d)*(1+ (C_e/(kappa*np.sqrt(C_d)) )*(np.log(z_u/z_u) - psi_h_10m))**(-1.)
+    
+    #recompute qsens and qlat
+    # theta_star_10m_ocn = theta_10m - sst_K
+    # q_star_10m_ocn = q_10m - q_sat_ocn
+    
+    q_sens_ao = f_o*rho_air*c_p_air*C_h_new*(theta_10m - sst_K)*Un_10m
+    q_lat_ao = f_o*L_v*rho_air*C_e_new*(q_10m - q_sat_ocn)*Un_10m
+
+    
+    #get longwave over the ocean
+    sigma = 5.67e-8 #W/m2/K4 (step-boltzmann constant)
+    eps = 1.0 #emissivity
+    q_lw_ao = f_o*(forcing['dlw'][n-1] - eps*sigma*sst_K**4)
+    
+    # theta_v_10m = theta_10m*(1. + 0.608*q_10m)
+    # t_star_10m_ocn = (C_h/np.sqrt(C_d))*theta_star_10m_ocn
+    # q_star_10m_ocn = (C_e/np.sqrt(C_d))*q_star_10m_ocn
+    
+    print "q_sens_ao = %.2f, q_lat_ao = %.2f, q_lw_ao = %.2f W/m2" %(q_sens_ao, q_lat_ao, q_lw_ao)
+    #
+    # if n%500==0 and n<=1500:
+    #     debug_here()
+    
+    return q_lw_ao, q_sens_ao, q_lat_ao
+    
+    
+def get_atm_ice_HF(surf_temp, forcing, alpha, n):
+
+    """
+    Like get_ocean_atm_HF() but for ice-atmosphere fluxes.
+    
+    Don't really need this if we are prescribing the surface temp of the sea ice
+    
+    TODO: combine the two functions
+    """
+
+    surf_temp_K = surf_temp+273.13
+    
+    
+    #define params
+    f_i = alpha
+    f_o = 1-f_i
+    q1 = 11637800 #kg/m3 (Large and Yeager 2004 pg. 16)
+    q2 = -5897.8 #K
+    rho_air = 1.22 #kg/m3
+    c_p_air = 1000.5 #J/kg/K (specific heat of air)
+    L_v = 2.5e6 #J/kg
+    L_f = 2.839e6 #J/kg (Latent heat of sublimation)
+    kappa = 0.4 #von karman constant
+    g = 9.81 #acc due to gracity
+    r = 287 #J/kg/K ideal gas constant
+    C_e,C_h,C_d = 1.63e-3, 1.63e-3, 1.63e-3
+    
+    #get key atmospheric forcing variables
+    q_2m = forcing['shum2m'][n-1]
+    atemp2m = forcing['atemp2m'][n-1]
+    u10m = forcing['u10m'][n-1]
+    v10m = forcing['v10m'][n-1]
+    tx = forcing['tx'][n-1]
+    ty = forcing['ty'][n-1]
+    
+    U_10m = np.sqrt(u10m**2 + v10m**2) #10m wind speed
+    q_sat_ice = (1/rho_air)*q1*np.e**(q2/surf_temp_K) #saturation specific humidity
+    theta_2m = atemp2m*(1000./1002.)**(r/c_p_air) #potential air temp
+    theta_v_2m = theta_2m*(1. + 0.608*q_2m) #virtual potential air temp
+
+    #compute latent and sens heat fluxes over ice
+    q_lat_ai = f_i*L_f*rho_air*C_e*(q_2m-q_sat_ice)*U_10m
+    q_sens_ai = f_i*rho_air*C_h*(theta_2m-surf_temp_K)*U_10m
+    
+    #compute lw radiation over ice
+    sigma = 5.67e-8 #W/m2/K4 (step-boltzmann constant)
+    eps = 0.95 #emissivity
+    q_lw_ai = f_i*eps*(forcing['dlw'][n-1] - sigma*surf_temp_K**4)
+
+    #debug_here()
+
+    return q_lw_ai, q_sens_ai, q_lat_ai
 
 if __name__ == "__main__":
     
