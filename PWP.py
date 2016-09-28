@@ -24,10 +24,10 @@ import os
 from datetime import datetime
 import PWP_helper as phf
 import PWP_ice
+import imp
 
-
-reload(phf)
-reload(PWP_ice)
+imp.reload(phf)
+imp.reload(PWP_ice)
 
 debug_here = Tracer()
 
@@ -164,7 +164,7 @@ def run(met_data, prof_data, param_kwds=None, overwrite=True, diagnostics=True, 
     #check timer
     tnow = timeit.default_timer()
     t_elapsed  = (tnow - t0)  
-    print "Time elapsed: %i minutes and %i seconds" %(np.floor(t_elapsed/60), t_elapsed%60)
+    print("Time elapsed: %i minutes and %i seconds" %(np.floor(t_elapsed/60), t_elapsed%60))
          
     ## write output to disk
     if overwrite:
@@ -277,20 +277,20 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
     #initialize ice thickness:
     pwp_out['ice_thickness'][0] = params['h_i0']
     if params['h_i0'] > 0.0:
-        print "Initializing ice model with %sm slab of ice." %params['h_i0']
+        print("Initializing ice model with %sm slab of ice." %params['h_i0'])
     #TESTING
     # pwp_out['ice_thickness'][0] = 0.2
     # pwp_out['surf_ice_temp'][0] = -2
     
     
     #debug_here()
-    print "Number of time steps: %s" %tlen
+    print("Number of time steps: %s" %tlen)
     
-    for n in xrange(1,tlen):
+    for n in range(1,tlen):
         #print '-------------------------------'
-        print '===================================='
+        print('====================================')
         percent_comp = 100*n/float(tlen)
-        print 'Loop iter. %s (%.1f %%). Day: %.2f' %(n, percent_comp, pwp_out['time'][n])
+        print('Loop iter. %s (%.1f %%). Day: %.2f' %(n, percent_comp, pwp_out['time'][n]))
         #print '===================================='
         
         #select previous profile data
@@ -366,7 +366,7 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
                 else: 
                     temp[0] = T_fz
                     if print_ice_warning:
-                        print "surface has reached freezing temp. However, ice creation is either turned off or ice_conc is set to zero."
+                        print("surface has reached freezing temp. However, ice creation is either turned off or ice_conc is set to zero.")
                         print_ice_warning = False
                
             #TODO: update layer 1 of passive scalar
@@ -428,7 +428,7 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
                     q_net_ai = q_in_ai - q_out_ai
                     F_ai = q_net_ai
 
-                print "F_ao: %.2f" %q_net_ao
+                print("F_ao: %.2f" %q_net_ao)
                 
                 #compute ocean->ice heat flux 
                 F_oi = PWP_ice.get_ocean_ice_heat_flux(temp, sal, dens, params) 
@@ -455,7 +455,7 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
                 if dT<0:
                     temp[:mld_idx_pre] = T_fz
                     
-                    print "Creating frazil ice in leads."
+                    print("Creating frazil ice in leads.")
                     
                     #generate sea ice (aka frazil ice)
                     h_ice, temp_ice_surf, temp, sal = PWP_ice.create_initial_ice(h_ice, temp_ice_surf, temp, sal, dens, params)   
@@ -477,8 +477,8 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
                 
             else:
                 
-                print "Whoops! This is unexpected. "
-                print "Need to turn on ice physics."
+                print("Whoops! This is unexpected. ")
+                print("Need to turn on ice physics.")
                 debug_here()
           
         
@@ -649,7 +649,7 @@ def bulk_mix(t, s, d, u, v, ps, dz, g, rb, nz, z, ml_idx):
     
     rvc = rb #critical rich number??
     
-    for j in xrange(ml_idx, nz):
+    for j in range(ml_idx, nz):
     	h 	= z[j]
     	dd 	= (d[j]-d[0])/d[0]
     	dv 	= (u[j]-u[0])**2+(v[j]-v[0])**2
@@ -661,8 +661,9 @@ def bulk_mix(t, s, d, u, v, ps, dz, g, rb, nz, z, ml_idx):
 
     	if rv > rvc:
     		break
+            
     	else:
-    		t, s, d, u, v, ps = mix5(t, s, d, u, v, ps j)
+    		t, s, d, u, v, ps = mix5(t, s, d, u, v, ps, j)
             
     return t, s, d, u, v, ps
 
@@ -917,7 +918,7 @@ def get_atm_ocean_HF(sst, forcing, alpha, n):
     # t_star_10m_ocn = (C_h/np.sqrt(C_d))*theta_star_10m_ocn
     # q_star_10m_ocn = (C_e/np.sqrt(C_d))*q_star_10m_ocn
     
-    print "q_sens_ao = %.2f, q_lat_ao = %.2f, q_lw_ao = %.2f W/m2" %(q_sens_ao, q_lat_ao, q_lw_ao)
+    print("q_sens_ao = %.2f, q_lat_ao = %.2f, q_lw_ao = %.2f W/m2" %(q_sens_ao, q_lat_ao, q_lw_ao))
     #
     # if n%500==0 and n<=1500:
     #     debug_here()
@@ -980,7 +981,7 @@ def get_atm_ice_HF(surf_temp, forcing, alpha, n):
 
 if __name__ == "__main__":
     
-    print "Running default test case using data from Beaufort gyre..."
+    print("Running default test case using data from Beaufort gyre...")
     
     forcing_fname = 'beaufort_met.nc'
     prof_fname = 'beaufort_profile.nc'

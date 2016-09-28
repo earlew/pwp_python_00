@@ -128,7 +128,7 @@ def melt_ice(h_ice_i, temp_ice_surf, temp_sw, sal_sw, rho_sw, q_net, dz, dt, sou
 
     #check if heat flux can completely melt current ice 
     if ice_melt_potential >= h_ice_i:
-        print "%s heat flux has melted all ice..." %source
+        print("%s heat flux has melted all ice..." %source)
         #reset ice thickness and temperature
         temp_ice_surf = np.nan
         h_ice_f = 0.
@@ -155,7 +155,7 @@ def melt_ice(h_ice_i, temp_ice_surf, temp_sw, sal_sw, rho_sw, q_net, dz, dt, sou
         if ice_melt_potential < h_ice_i:
             assert np.abs(temp_sw[0]-temp_swfz)<0.001, "Something went wrong. Ocean surface not at freezing temp after incomplete ice melt."
             
-        print "F_sw: %.2f, h_i: %.2f, dh: -%.4f" %(q_net/dt, h_ice_i, h_ice_melt)
+        print("F_sw: %.2f, h_i: %.2f, dh: -%.4f" %(q_net/dt, h_ice_i, h_ice_melt))
         
     elif source == 'atm' and q_net>q_ice:
         
@@ -164,7 +164,7 @@ def melt_ice(h_ice_i, temp_ice_surf, temp_sw, sal_sw, rho_sw, q_net, dz, dt, sou
         dT_surf = qnet_rem/(dz*rho_sw0*c_sw)
         temp_sw[0] = temp_sw[0]-dT_surf #shouldn't this be positive temp_sw[0]+dT_surf ???
         
-        print "F_atm: %.2f, h_i: %.2f, dh: -%.4f" %(q_net/dt, h_ice_i, h_ice_melt)
+        print("F_atm: %.2f, h_i: %.2f, dh: -%.4f" %(q_net/dt, h_ice_i, h_ice_melt))
     
     
     return h_ice_f, temp_ice_surf, temp_sw, sal_sw
@@ -181,7 +181,7 @@ def create_initial_ice(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, params
     temp_swfz = sw.fp(sal_sw[0], p=1) #freezing point of seawater at given salinity
     rho_sw0 = rho_sw[0] #density of seawater in model layer 1 (kg/m3)
     
-    print "initiating ice growth..."
+    print("initiating ice growth...")
     ##create ice according to Hyatt 2006
     #first, create a thin layer of sea ice (eqn. 5.11, Hyatt 2006)
     h_ice_f = h_ice_i + rho_sw0*c_sw*dz*(temp_swfz-temp_sw[0])/(rho_ice*L_ice)
@@ -236,7 +236,7 @@ def modify_thin_ice(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_o
         
         if total_available_heat<= warming_heat_sink:
             
-            print "warming ice..."
+            print("warming ice...")
             
             #use heat warm the ice
             temp_ice_surf_f = temp_ice_surf_i + 2*total_available_heat/(alpha*c_ice*h_ice_i*rho_ice)
@@ -252,7 +252,7 @@ def modify_thin_ice(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_o
             Hence, use heat left over from warming to melt the ice and possibly warm the ocean.
             """
             
-            print "melting ice..."
+            print("melting ice...")
             
             available_heat_for_melt = total_available_heat-warming_heat_sink
             
@@ -291,7 +291,7 @@ def modify_thin_ice(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_o
                 #set ice surface temp to freezing
                 temp_ice_surf_f = np.nan #since there is no ice
                 
-                print "Ice has completely melted."
+                print("Ice has completely melted.")
                 
         
     elif total_available_heat <=0 and alpha>0:
@@ -342,7 +342,7 @@ def modify_thin_ice(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_o
             
     else:
         
-        print "Something went very wrong..."
+        print("Something went very wrong...")
         debug_here()
         #under construction do not enter.
         
@@ -382,7 +382,7 @@ def modify_thin_ice(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_o
     #
     # sal_sw[0] = sal_sw[0]+dsal_sw
     
-    print "F_ai: %.2f, F_oi: %.2f, h_i=%.4f, dh: %.4f" %(F_ai, F_oi, h_ice_i, dh_ice)
+    print("F_ai: %.2f, F_oi: %.2f, h_i=%.4f, dh: %.4f" %(F_ai, F_oi, h_ice_i, dh_ice))
     
     #debug_here()
     return h_ice_f, temp_ice_surf_f, temp_sw, sal_sw
@@ -431,7 +431,7 @@ def modify_existing_ice(temp_ice_surf_i, h_ice_i, temp_sw, sal_sw, rho_sw, F_atm
     
     if alpha==0:
         
-        print "ice-frac = 0. reseting ice thickness and ice surface temp..."
+        print("ice-frac = 0. reseting ice thickness and ice surface temp...")
         h_ice_i = 0.0
         temp_ice_surf_i = np.nan
         # h_ice_f, temp_ice_surf_f, temp_sw, sal_sw  = create_initial_ice(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, params)
@@ -472,7 +472,7 @@ def modify_existing_ice(temp_ice_surf_i, h_ice_i, temp_sw, sal_sw, rho_sw, F_atm
             
         else:
         
-            print "running thick ice algorithm..."
+            print("running thick ice algorithm...")
         
             #if the ice is "thick", we can treat is using the Thorndike algorithm
             
@@ -522,7 +522,7 @@ def modify_existing_ice(temp_ice_surf_i, h_ice_i, temp_sw, sal_sw, rho_sw, F_atm
                 h_ice = ode.y[1]
             
                 if temp_ice >=temp_swfz or h_ice<=thin_ice:
-                    print "ice has become too thin or warm. May become numerically unstable. Switching to thin ice algorithm..."
+                    print("ice has become too thin or warm. May become numerically unstable. Switching to thin ice algorithm...")
                     switch_algorithm=True
 
                     #abort and switch to thin ice algorithm.??
@@ -535,7 +535,7 @@ def modify_existing_ice(temp_ice_surf_i, h_ice_i, temp_sw, sal_sw, rho_sw, F_atm
                             ode.y[0] = skt
                             
                             if print_ice_temp_warning:
-                                print "enforcing lower limit on ice temp"
+                                print("enforcing lower limit on ice temp")
                                 print_ice_temp_warning = False
                     
                     ts.append(ode.t)
@@ -565,7 +565,7 @@ def modify_existing_ice(temp_ice_surf_i, h_ice_i, temp_sw, sal_sw, rho_sw, F_atm
             dh_ice = h_ice_f - h_ice_i
             dtemp_ice_surf = temp_ice_surf_f - temp_ice_surf_i
 
-            print "F_atm: %.2f, F_ocean: %.2f, h_i=%.2f, dh: %.4f" %(F_atm, F_ocean, h_ice_i, dh_ice)
+            print("F_atm: %.2f, F_ocean: %.2f, h_i=%.2f, dh: %.4f" %(F_atm, F_ocean, h_ice_i, dh_ice))
 
             #check if all ice has melted
             assert h_ice_f >= 0, "Something weird has happened. Negative ice thickness..."
@@ -627,7 +627,7 @@ def ice_model_v3(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, 
     if temp_ice_surf_i < -2 and F_ai<0:
         
         #print "running sea ice algorithm..."
-        print "running ice model with specified surface temperatures..."
+        print("running ice model with specified surface temperatures...")
         
         #define initial conditions and time step for ice growth model
         y_init = np.array([h_ice_i])
@@ -656,7 +656,7 @@ def ice_model_v3(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, 
             #debug_here()
             ti = len(ys)-1
             if h_ice<=thin_ice and ti>0 and ys[ti]<ys[ti-1]:
-                print "ice is melting and has become too thin. Switching to thin ice algorithm..."
+                print("ice is melting and has become too thin. Switching to thin ice algorithm...")
                 switch_algorithm=True
 
                 #abort and switch to thin ice algorithm.??
@@ -682,7 +682,7 @@ def ice_model_v3(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, 
         h_ice_mean = h_ice_f.mean()
         F_i = -k_ice*(temp_ice_surf_i-temp_swfz)/h_ice_mean
         
-        print "F_i: %.2f, F_ocean: %.2f, h_i=%.2f, dh: %.4f" %(F_i, F_oi, h_ice_i, dh_ice)
+        print("F_i: %.2f, F_ocean: %.2f, h_i=%.2f, dh: %.4f" %(F_i, F_oi, h_ice_i, dh_ice))
 
     else:
         
