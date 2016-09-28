@@ -250,7 +250,7 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
     params['dt'] = dt
     params['dz'] = dz
     
-    #create output variable for ocean and atmospheric heat flux
+    #create output variable for ocean and atmospheric heat flux (TODO: move to PWP_helper???)
     pwp_out['F_oi'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan #ocean-ice heat flux
     pwp_out['F_ao'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan #atmosphere-ocean heat flux
     pwp_out['F_ai'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan #atmosphere-ice heat flux
@@ -299,6 +299,8 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         dens = pwp_out['dens'][:, n-1].copy()
         uvel = pwp_out['uvel'][:, n-1].copy()
         vvel = pwp_out['vvel'][:, n-1].copy()
+        ps = pwp_out['ps'][:, n-1].copy()
+        
         h_ice = pwp_out['ice_thickness'][n-1].copy()
         temp_ice_surf = pwp_out['surf_ice_temp'][n-1].copy()
         
@@ -367,8 +369,11 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
                         print "surface has reached freezing temp. However, ice creation is either turned off or ice_conc is set to zero."
                         print_ice_warning = False
                
+            #TODO: update layer 1 of passive scalar
             
         else:
+            
+            ## get ice concentration
             
             #need to implement a smooth transition in ice-fraction from open water to non-zero ice percentage
             #without this, ice frac can abruptly transition from open ocean to >50% ice cover
@@ -440,11 +445,8 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
                 temp = temp + q_in_ao*absrb*dt/(dz*dens*cpw) #incoming solar
                 temp[0] = temp[0] - q_out_ao*dt/(mld_pre*dens[0]*cpw)
                 
-                #temp[:mld_idx_pre] = temp[:mld_idx_pre] - (1-alpha_n)*q_out[n-1]*dt/(mld_pre*dens[:mld_idx_pre]*cpw) #outgoing radiation from ML
+                #TODO: apply passive scalar flux through leads
                 
-                # if n==2:
-                #     F_ao = (1-alpha_n)*F_atm
-                #     print "F_atm: %.2f" %F_ao
                 
                 #check if temp is less than freezing point 
                 T_fz = sw.fp(sal_old, p=dz) #here it might be better to use sal_old rather than what is essentially brine water
@@ -475,7 +477,8 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
                 
             else:
                 
-                print "Whoops! This is unexpected. You need to turn ice growth back on add something here."
+                print "Whoops! This is unexpected. "
+                print "Need to turn on ice physics."
                 debug_here()
           
         
@@ -488,7 +491,7 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         temp_pre = temp.copy()
         
         ### relieve static instability ###
-        temp, sal, dens, uvel, vvel = remove_si(temp, sal, dens, uvel, vvel)
+        temp, sal, dens, uvel, vvel, ps = remove_si(temp, sal, dens, uvel, vvel, ps)
         
         #compute mlt and mls after entrainment
         mld_post_ent, mld_idx_post_ent = getMLD(dens, z, params)
@@ -524,11 +527,11 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         # debug_here()
         ### Apply Bulk Richardson number instability form of mixing (as in PWP) ###
         if rb > 1e-5:
-            temp, sal, dens, uvel, vvel = bulk_mix(temp, sal, dens, uvel, vvel, dz, g, rb, zlen, z, mld_idx)
+            temp, sal, dens, uvel, vvel, ps = bulk_mix(temp, sal, dens, uvel, vvel, ps, dz, g, rb, zlen, z, mld_idx)
     
         ### Do the gradient Richardson number instability form of mixing ###
         if rg > 0:
-            temp, sal, dens, uvel, vvel = grad_mix(temp, sal, dens, uvel, vvel, dz, g, rg, zlen)
+            temp, sal, dens, uvel, vvel, ps = grad_mix(temp, sal, dens, uvel, vvel, ps, dz, g, rg, zlen)
             
         
         ### Apply diffusion ###
@@ -538,6 +541,7 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
             dens = sw.dens0(sal, temp)
             uvel = diffus(params['dstab'], zlen, uvel)
             vvel = diffus(params['dstab'], zlen, vvel)
+            ps = diffus(params['dstab'], zlen, ps)
         
         # find MLD again, after all mixing processes complete
         mld_idx = np.flatnonzero(dens-dens[0]>params['mld_thresh'])[0] #finds the first index that exceed ML threshold
@@ -563,6 +567,7 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         pwp_out['dens'][:, n] = dens
         pwp_out['uvel'][:, n] = uvel
         pwp_out['vvel'][:, n] = vvel
+        pwp_out['ps'][:, n] = ps
         pwp_out['mld'][n] = mld_post_mix
         pwp_out['mlt'][n] = MLT_post
         pwp_out['mls'][n] = MLS_post
@@ -581,7 +586,7 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
     return pwp_out
     
     
-def remove_si(t, s, d, u, v):
+def remove_si(t, s, d, u, v, ps):
     
     # Find and relieve static instability that may occur in the
     # density array 'd'. This simulates free convection.
@@ -596,7 +601,7 @@ def remove_si(t, s, d, u, v):
             stat_unstable=True
             first_inst_idx = np.flatnonzero(d_diff<0)[0]+1 #+1 because of diff function
             #d0 = d
-            (t, s, d, u, v) = mix5(t, s, d, u, v, first_inst_idx)
+            (t, s, d, u, v, ps) = mix5(t, s, d, u, v, ps, first_inst_idx)
             
             #plot density 
             # plt.figure(num=86)
@@ -613,10 +618,10 @@ def remove_si(t, s, d, u, v):
         else:
             stat_unstable = False
             
-    return t, s, d, u, v
+    return t, s, d, u, v, ps
     
     
-def mix5(t, s, d, u, v, j):
+def mix5(t, s, d, u, v, ps, j):
     
     #This subroutine mixes the arrays t, s, u, v down to level j (level where there is instability).
     j = j+1 #so that the j-th layer is included in the mixing
@@ -626,8 +631,9 @@ def mix5(t, s, d, u, v, j):
     #d[:j] = np.mean(d[:j]) #doing ignores the non-linearities in the eqn of state
     u[:j] = np.mean(u[:j])
     v[:j] = np.mean(v[:j])
+    ps[:j] = np.mean(ps[:j])
     
-    return t, s, d, u, v
+    return t, s, d, u, v, ps
             
 def rot(u, v, ang):
     
@@ -638,7 +644,7 @@ def rot(u, v, ang):
     
     return u, v   
     
-def bulk_mix(t, s, d, u, v, dz, g, rb, nz, z, ml_idx):
+def bulk_mix(t, s, d, u, v, ps, dz, g, rb, nz, z, ml_idx):
     #sub-routine to do bulk richardson mixing
     
     rvc = rb #critical rich number??
@@ -656,11 +662,11 @@ def bulk_mix(t, s, d, u, v, dz, g, rb, nz, z, ml_idx):
     	if rv > rvc:
     		break
     	else:
-    		t, s, d, u, v = mix5(t, s, d, u, v, j)
+    		t, s, d, u, v, ps = mix5(t, s, d, u, v, ps j)
             
-    return t, s, d, u, v
+    return t, s, d, u, v, ps
 
-def grad_mix(t, s, d, u, v, dz, g, rg, nz):
+def grad_mix(t, s, d, u, v, ps, dz, g, rg, nz):
     
     #copied from source script:
     # %  This function performs the gradeint Richardson Number relaxation
@@ -703,7 +709,7 @@ def grad_mix(t, s, d, u, v, dz, g, rg, nz):
             break
             
         #Mix the cells j_min_idx and j_min_idx+1 that had the smallest Richardson Number
-        t, s, d, u, v = stir(t, s, d, u, v, rc, r_min, j_min_idx)
+        t, s, d, u, v, ps = stir(t, s, d, u, v, ps, rc, r_min, j_min_idx)
         
         #recompute the rich number over the part of the profile that has changed
     	j1 = j_min_idx-2
@@ -716,9 +722,9 @@ def grad_mix(t, s, d, u, v, dz, g, rg, nz):
              
         i+=1
                      
-    return t, s, d, u, v
+    return t, s, d, u, v, ps
                 
-def stir(t, s, d, u, v, rc, r, j):
+def stir(t, s, d, u, v, ps, rc, r, j):
     
     #copied from source script:
     
@@ -749,11 +755,17 @@ def stir(t, s, d, u, v, rc, r, j):
     s[j+1] = s[j+1]-ds
     s[j] = s[j]+ds
     
+    #mix passive scalar
+    d_ps = (ps[j+1]-ps[j])*f/2.
+    ps[j+1] = ps[j+1]-d_ps
+    ps[j] = ps[j]+d_ps
+    
     #recompute density 
     #d[j:j+1] = sw.dens0(s[j:j+1], t[j:j+1]) 
     #have to be careful here. x[j:j+1] in python is not the same as x[[j,j+1]]. We want the latter
     d[[j,j+1]] = sw.dens0(s[[j,j+1]], t[[j,j+1]])
     
+    #mix velocities
     du = (u[j+1]-u[j])*f/2
     u[j+1] = u[j+1]-du
     u[j] = u[j]+du

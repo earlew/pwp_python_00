@@ -41,7 +41,8 @@ def run_demo2():
     forcing, pwp_out = PWP.run(met_data=forcing_fname, prof_data=prof_fname, suffix='demo2_1e6diff', save_plots=True, param_kwds=p)
     
 
-def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1., rb=0.65, rg=0.25, rkz=0., beta1=0.6, beta2=20.0, alpha=0., h_i0=0.0, qnet_offset=0., csf=False, ice_ON=False, winds_ON=True, emp_ON=True):
+def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1., rb=0.65, rg=0.25, rkz=0., beta1=0.6, beta2=20.0, alpha=0., h_i0=0.0, qnet_offset=0., 
+csf=False, ice_ON=False, winds_ON=True, emp_ON=True):
     
     """
     This function sets the main paramaters/constants used in the model.
@@ -128,11 +129,13 @@ def prep_data(met_dset, prof_dset, params):
     
             
     prof_data: dictionary-like object with initial profile data. Fields should include:
-            ['z', 't', 's', 'lat']. These represent 1-D vertical profiles of temperature,
-            salinity and density. 
+            ['z', 't', 's', 'lat'], where 't' and 's' represent 1-D vertical profiles of temperature,
+            salinity. 
     
             NOTE: Code now accepts two column arrays. Second column will be treated as observed
             profile at the end of run.
+    
+            update: code now accepts a 'ps' vector which represents a 1-D passive scalar
             
     params: dictionary-like object with fields defined by set_params function
     
@@ -167,11 +170,11 @@ def prep_data(met_dset, prof_dset, params):
         
     #arbitrarily adjust (tune) fluxes
     # forcing['qsens'][:] = 0.0
-    forcing['sw'] = 0.75*forcing['sw']
-    # forcing['lw'] = 1.2*forcing['lw']
-    # forcing['qlat'] = 1.2*forcing['qlat']
-    forcing['precip'] = 0.5*forcing['precip']
-    print "WARNING: fluxes were adjusted!!!"
+    # forcing['sw'] = 0.75*forcing['sw']
+    # # forcing['lw'] = 1.2*forcing['lw']
+    # # forcing['qlat'] = 1.2*forcing['qlat']
+    # forcing['precip'] = 0.5*forcing['precip']
+    # print "WARNING: fluxes were adjusted!!!"
             
         
     #interpolate E-P to dt resolution (not sure why this has to be done separately)
@@ -267,7 +270,13 @@ def prep_data(met_dset, prof_dset, params):
     #get profile variables
     temp0 = init_prof['t'] #initial profile temperature
     sal0 = init_prof['s'] #intial profile salinity
-    dens0 = sw.dens0(sal0, temp0) #intial profile density       
+    dens0 = sw.dens0(sal0, temp0) #intial profile density    
+    
+    #get passive scalar if any
+    if 'ps' in prof_dset:
+        ps0 = init_prof['ps'] #initial profile temperature of passive scalar
+    else:
+        ps0 = np.zeros(temp0.shape)
     
     #initialize variables for output
     pwp_out = {}
@@ -284,18 +293,19 @@ def prep_data(met_dset, prof_dset, params):
     pwp_out['dens'] = np.zeros(arr_sz)
     pwp_out['uvel'] = np.zeros(arr_sz)
     pwp_out['vvel'] = np.zeros(arr_sz)
+    pwp_out['ps'] = np.zeros(arr_sz)
     pwp_out['mld'] = np.zeros((tlen,))*np.nan
     
-    #use temp, sal and dens profile data for the first time step
+    #use temp, sal, dens and passive tracer profile data for the first time step
     pwp_out['sal'][:,0] = sal0
     pwp_out['temp'][:,0] = temp0
     pwp_out['dens'][:,0] = dens0
+    pwp_out['ps'][:,0] = p0
     
     #find initial ml index
     mld_idx = np.flatnonzero(dens0-dens0[0]>params['mld_thresh'])[0]
     pwp_out['mld'][0] = pwp_out['z'][mld_idx] 
     
-    #debug_here()
     
     #if final observed profile is available, save it
     if prof_dset['t'].ndim == 2:
@@ -757,8 +767,6 @@ def custom_div_cmap(numcolors=11, name='custom_div_cmap', mincol='blue', midcol=
                                              colors =[mincol, midcol, maxcol],
                                              N=numcolors)
     return cmap   
-    
-    
     
 def save2nc(data_dict, fpath, type='out'):
     
