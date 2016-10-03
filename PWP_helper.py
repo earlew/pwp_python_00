@@ -370,23 +370,32 @@ def livePlots(pwp_out, n):
     ax1.grid(True)
     ax1.legend(loc=3)    
 
-    ax2 = plt.subplot2grid((1,4), (0, 2), colspan=1)
+    ax2 = plt.subplot2grid((1,5), (0, 2), colspan=1)
     ax2.plot(temp[:,n], z, 'b')
     ax2.grid(True)
     ax2.set_xlabel('Temp.')
     ax2.invert_yaxis()
     xlims = ax2.get_xlim()
-    xticks = np.round(np.linspace(xlims[0], xlims[1], 4), 1)
+    xticks = np.round(np.linspace(xlims[0], xlims[1], 3), 1)
     ax2.set_xticks(xticks)
 
-    ax3 = plt.subplot2grid((1,4), (0, 3), colspan=1)
+    ax3 = plt.subplot2grid((1,5), (0, 3), colspan=1)
     ax3.plot(sal[:,n], z, 'b')
     ax3.set_xlabel('Salinity')
     ax3.grid(True)
     ax3.invert_yaxis()
     xlims = ax3.get_xlim()
-    xticks = np.round(np.linspace(xlims[0], xlims[1], 4), 1)
+    xticks = np.round(np.linspace(xlims[0], xlims[1], 3), 1)
     ax3.set_xticks(xticks)
+    
+    ax4 = plt.subplot2grid((1,5), (0, 4), colspan=1)
+    ax4.plot(ps[:,n], z, 'b')
+    ax4.set_xlabel('Passive Scalar')
+    ax4.grid(True)
+    ax4.invert_yaxis()
+    xlims = ax4.get_xlim()
+    xticks = np.round(np.linspace(xlims[0], xlims[1], 3), 0)
+    ax4.set_xticks(xticks)
 
     plt.subplots_adjust(wspace=0.4)
     plt.pause(0.05)
@@ -533,17 +542,18 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
     from scipy.signal import savgol_filter
     dt = tvec[1]-tvec[0]
     mld_exact2 = pwp_out['mld_exact2'].copy()
-    mld_exact2_sm = savgol_filter(mld_exact2, window_length=(30*(1./dt)+1), polyorder=1, mode='nearest')
-    
+    mld_exact2_sm = np.zeros(len(mld_exact2))*np.nan
+    nan_i = np.isnan(mld_exact2)
+    mld_exact2_sm[~nan_i] = savgol_filter(mld_exact2[~nan_i], window_length=(5*(1./dt)+1), polyorder=1, mode='nearest')
     
     ##plot temp and sal change over time
-    fig, axes = plt.subplots(2,1, sharex=True, figsize=(8,8))
-    vble = ['temp', 'sal']
-    units = ['$^{\circ}$C', 'PSU']
+    fig, axes = plt.subplots(3,1, sharex=True, figsize=(8,8))
+    vble = ['temp', 'sal', 'ps']
+    units = ['$^{\circ}$C', 'PSU', '$\mu$mol/kg']
     #cmap = custom_div_cmap(numcolors=17)
-    clim = ([-1.5, 2.5], [33.75, 34.75])
-    cmap = [plt.cm.coolwarm, plt.cm.RdYlGn_r]
-    for i in range(2):
+    clim = ([-1.5, 2.0], [33.75, 34.75], [200, 325])
+    cmap = [plt.cm.coolwarm, plt.cm.RdYlGn_r, plt.cm.rainbow]
+    for i in range(3):
         ax = axes[i]
         clvls = np.linspace(clim[i][0], clim[i][1], 21)
         im = ax.contourf(pwp_out['time'], pwp_out['z'], pwp_out[vble[i]], clvls, cmap=cmap[i], extend='both')
@@ -556,7 +566,7 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
     ax.set_xlabel('Days') 
     
     if save_plots:     
-        plt.savefig('plots/sal_temp_ztseries_%s.png' %suffix, bbox_inches='tight')  
+        plt.savefig('plots/sal_temp_ztseries_%s.png' %suffix, bbox_inches='tight') 
     
     
     ## plot initial and final T-S profiles (TODO: add actual T,S profiles)
@@ -620,23 +630,26 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
     if save_plots:     
         plt.savefig('plots/ice_temp_thickness%s.png' %suffix, bbox_inches='tight')
      
-    plt.figure(figsize=(6,6.5))
-    ax = plt.gca()   
-    im = ax.scatter(pwp_out['ice_thickness'], pwp_out['surf_ice_temp'], s=10, c=tvec, cmap=plt.cm.rainbow, lw=0)
-    ax.set_ylabel('Temperature (C)')
-    ax.set_xlabel('Ice thickness (m)')
-    ax.set_title('Ice surface temperature')
-    cb = plt.colorbar(im)
-    cb.set_label('Time (days)')
-    ax.grid(True)
+    # plt.figure(figsize=(6,6.5))
+    # ax = plt.gca()
+    # im = ax.scatter(pwp_out['ice_thickness'], pwp_out['surf_ice_temp'], s=10, c=tvec, cmap=plt.cm.rainbow, lw=0)
+    # ax.set_ylabel('Temperature (C)')
+    # ax.set_xlabel('Ice thickness (m)')
+    # ax.set_title('Ice surface temperature')
+    # cb = plt.colorbar(im)
+    # cb.set_label('Time (days)')
+    # ax.grid(True)
     
         
     ## plot OCEAN-ICE heat flux and ATM-ICE heat flux
+    F_oi = np.ma.masked_invalid(pwp_out['F_oi'])
+    F_oi_arr = np.ma.filled(F_oi, 0)
     plt.figure()
     plt.subplot(111)
     plt.plot(tvec, pwp_out['F_ai'], '-', label='$F_{ai}$', ms=2)
     plt.plot(tvec, pwp_out['F_i'], '-', label='$F_i$', ms=2)
     plt.plot(tvec, pwp_out['F_oi'], '-', label='$F_{oi}$', ms=2)
+    plt.plot(tvec, -F_oi_arr+pwp_out['F_ao'], label='$F_{oi}$ + $F_{ao}$', ms=2)
     plt.hlines(0, tvec[0], tvec[-1])
     plt.ylim(-100, 100)
     #plt.ylim(-1.5*np.abs(pwp_out['F_atm'].max()), 1.5*np.abs(pwp_out['F_atm'].max()))
@@ -687,68 +700,80 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
     
         
     
-    #plot temperature evolution    
-    fig = plt.figure(figsize=(7,9))
-    ax1 = plt.subplot2grid((4,1), (0,0), colspan=1)
-    ax2 = plt.subplot2grid((4,1), (1,0), rowspan=4)
+    #plot upper ocean temp, sal, oxy evolution 
     
-    #plot Ice
-    ax1.plot(tvec, 100*pwp_out['ice_thickness'], '-b')
-    ax1.set_title('Ice thickness (cm)', fontsize=12)
-    ax1.set_ylabel('Thickness (cm)', fontsize=12)
-    ax1.get_xaxis().set_visible(False)
-    ax1.grid(True)
+    vble = ['temp', 'sal', 'ps']
+    units = ['$^{\circ}$C', 'PSU', '$\mu$mol/kg']
+    # clim = ([-1.5, 2.5], [34.0, 34.75], [200, 325])
+    cmap = [plt.cm.coolwarm, plt.cm.RdYlGn_r, plt.cm.coolwarm]
     
-    #plot ocean
-    im = ax2.pcolormesh(tvec, pwp_out['z'], pwp_out['temp'] -pwp_out['temp'][:,:1], vmin=-1.0, vmax=1.0, cmap=plt.cm.coolwarm)
-    ax2.plot(tvec, mld_exact2_sm, 'k')
-    # plt.plot(tvec, pwp_out['mld_approx'], 'w')
-    ax2.invert_yaxis() 
-    ax2.set_ylabel('Depth (m)', fontsize=12)
-    ax2.set_xlabel('Time (days)', fontsize=12)
-    ax2.set_title('Temperature ($^{\circ}$C) and MLD evolution', fontsize=12)
+    for i in range(3):
+        fig = plt.figure(figsize=(7,9))
+        ax1 = plt.subplot2grid((4,1), (0,0), colspan=1)
+        ax2 = plt.subplot2grid((4,1), (1,0), rowspan=4)
     
-    cbar_ax = fig.add_axes([0.83, 0.10, 0.025, 0.58]) #make a new axes for the colorbar
-    fig.subplots_adjust(right=0.8) #adjust sublot to make colorbar fit
-    fig.subplots_adjust(hspace=0.3) 
-    fig.colorbar(im, ax=ax2, cax=cbar_ax)
+        #plot Ice
+        ax1.plot(tvec, 100*pwp_out['ice_thickness'], '-b')
+        ax1.set_title('Ice thickness (cm)', fontsize=12)
+        ax1.set_ylabel('Thickness (cm)', fontsize=12)
+        ax1.get_xaxis().set_visible(False)
+        ax1.grid(True)
     
-    if save_plots:
-        #pass
-        plt.savefig('plots/MLD_temp_evolution_%s.png' %suffix, bbox_inches='tight')
+        #plot ocean
+        # im = ax2.pcolormesh(tvec, pwp_out['z'], pwp_out['temp'] -pwp_out['temp'][:,:1], vmin=-1.0, vmax=1.0, cmap=cmap[i])
+        vble_anom = pwp_out[vble[i]]-pwp_out[vble[i]][:,:1]
+        #ann_mean = pwp_out[vble[i]].mean(axis=1)
+        #vble_anom = pwp_out[vble[i]]-ann_mean[:, np.newaxis]
+        vmin, vmax =  -4*np.std(vble_anom), 4*np.std(vble_anom)
+        #debug_here()
+        im = ax2.pcolormesh(tvec, pwp_out['z'], vble_anom, vmin=vmin, vmax=vmax, cmap=cmap[i])
+        ax2.plot(tvec, mld_exact2_sm, 'k')
+        ax2.invert_yaxis() 
+        ax2.set_ylabel('Depth (m)', fontsize=12)
+        ax2.set_xlabel('Time (days)', fontsize=12)
+        ax2.set_title('%s (%s) and MLD evolution' %(vble[i], units[i]), fontsize=12)
+    
+        cbar_ax = fig.add_axes([0.83, 0.10, 0.025, 0.58]) #make a new axes for the colorbar
+        fig.subplots_adjust(right=0.8) #adjust sublot to make colorbar fit
+        fig.subplots_adjust(hspace=0.3) 
+        fig.colorbar(im, ax=ax2, cax=cbar_ax)
+    
+        if save_plots:
+            #pass
+            plt.savefig('plots/MLD_%s_evolution_%s.png' %(vble[i], suffix), bbox_inches='tight')
         
         
-    #plot salinity evolution    
-    fig = plt.figure(figsize=(7,9))
-    ax1 = plt.subplot2grid((4,1), (0,0), colspan=1)
-    ax2 = plt.subplot2grid((4,1), (1,0), rowspan=4)
-    
-    #plot Ice
-    ax1.plot(tvec, 100*pwp_out['ice_thickness'], '-b')
-    ax1.set_title('Ice thickness (cm)', fontsize=12)
-    ax1.set_ylabel('Thickness (cm)', fontsize=12)
-    ax1.get_xaxis().set_visible(False)
-    ax1.grid(True)
-    
-    #plot ocean
-    im = ax2.pcolormesh(tvec, pwp_out['z'], pwp_out['sal']-pwp_out['sal'][:,:1], vmin=-0.5, vmax=0.5, cmap=plt.cm.RdYlGn_r)
-    ax2.plot(tvec, mld_exact2_sm, 'k')
-    # plt.plot(tvec, pwp_out['mld_approx'], 'w')
-    #ax2.set_ylim(0,250)
-    ax2.invert_yaxis() 
-    ax2.set_ylabel('Depth (m)', fontsize=12)
-    ax2.set_xlabel('Time (days)', fontsize=12)
-    ax2.set_title('Salinity and MLD evolution', fontsize=12)
-    
-    cbar_ax = fig.add_axes([0.83, 0.10, 0.025, 0.58]) #make a new axes for the colorbar
-    fig.subplots_adjust(right=0.8) #adjust sublot to make colorbar fit
-    fig.subplots_adjust(hspace=0.3) 
-    fig.colorbar(im, ax=ax2, cax=cbar_ax)
-    
-    
-    if save_plots:
-        #pass
-        plt.savefig('plots/MLD_sal_evolution_%s.png' %suffix, bbox_inches='tight')
+    # #plot salinity evolution
+    # fig = plt.figure(figsize=(7,9))
+    # ax1 = plt.subplot2grid((4,1), (0,0), colspan=1)
+    # ax2 = plt.subplot2grid((4,1), (1,0), rowspan=4)
+    #
+    # #plot Ice
+    # ax1.plot(tvec, 100*pwp_out['ice_thickness'], '-b')
+    # ax1.set_title('Ice thickness (cm)', fontsize=12)
+    # ax1.set_ylabel('Thickness (cm)', fontsize=12)
+    # ax1.get_xaxis().set_visible(False)
+    # ax1.grid(True)
+    #
+    # #plot ocean
+    # im = ax2.pcolormesh(tvec, pwp_out['z'], pwp_out['sal']-pwp_out['sal'][:,:1], vmin=-0.5, vmax=0.5, cmap=plt.cm.RdYlGn_r)
+    # ax2.plot(tvec, mld_exact2_sm, 'k')
+    # # plt.plot(tvec, pwp_out['mld_approx'], 'w')
+    # #ax2.set_ylim(0,250)
+    # ax2.invert_yaxis()
+    # ax2.set_ylabel('Depth (m)', fontsize=12)
+    # ax2.set_xlabel('Time (days)', fontsize=12)
+    # ax2.set_title('Salinity and MLD evolution', fontsize=12)
+    #
+    # cbar_ax = fig.add_axes([0.83, 0.10, 0.025, 0.58]) #make a new axes for the colorbar
+    # fig.subplots_adjust(right=0.8) #adjust sublot to make colorbar fit
+    # fig.subplots_adjust(hspace=0.3)
+    # fig.colorbar(im, ax=ax2, cax=cbar_ax)
+    #
+    #
+    # if save_plots:
+    #     #pass
+    #     plt.savefig('plots/MLD_sal_evolution_%s.png' %suffix, bbox_inches='tight')
     
     
     
