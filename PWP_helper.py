@@ -333,32 +333,33 @@ def livePlots(pwp_out, n):
     temp = pwp_out['temp']
     sal = pwp_out['sal']
     dens = pwp_out['dens']
+    ps = pwp_out['ps']
     z = pwp_out['z']
 
 
     #plot depth int. KE and momentum
-    plt.figure(num=101)
+    # plt.figure(num=101)
+    #
+    # plt.subplot(211)
+    # plt.plot(time[n]-time[0], np.trapz(0.5*dens[:,n]*(uvel[:,n]**2+vvel[:,n]**2)), 'b.')
+    # plt.grid(True)
+    # if n==1:
+    #     plt.title('Depth integrated KE')
+    #
+    # plt.subplot(212)
+    # plt.plot(time[n]-time[0], np.trapz(dens[:,n]*np.sqrt(uvel[:,n]**2+vvel[:,n]**2)), 'b.')
+    # plt.grid(True)
+    # plt.pause(0.05)
+    # plt.subplots_adjust(hspace=0.35)
 
-    plt.subplot(211)
-    plt.plot(time[n]-time[0], np.trapz(0.5*dens[:,n]*(uvel[:,n]**2+vvel[:,n]**2)), 'b.')
-    plt.grid(True)
-    if n==1:
-        plt.title('Depth integrated KE')
-
-    plt.subplot(212)
-    plt.plot(time[n]-time[0], np.trapz(dens[:,n]*np.sqrt(uvel[:,n]**2+vvel[:,n]**2)), 'b.')
-    plt.grid(True)
-    plt.pause(0.05)
-    plt.subplots_adjust(hspace=0.35)
-
-    #debug_here()
-    if n==1:
-        plt.title('Depth integrated Mom.')
-        #plt.get_current_fig_manager().window.wm_geometry("400x600+20+40")
+    # #debug_here()
+    # if n==1:
+    #     plt.title('Depth integrated Mom.')
+    #     #plt.get_current_fig_manager().window.wm_geometry("400x600+20+40")
     
     #plot T,S and U,V
-    plt.figure(num=102, figsize=(12,6))
-    ax1 = plt.subplot2grid((1,4), (0, 0), colspan=2)
+    plt.figure(num=102, figsize=(12.5,7))
+    ax1 = plt.subplot2grid((1,5), (0, 0), colspan=2)
     ax1.plot(uvel[:,n], z, 'b', label='uvel')
     ax1.plot(vvel[:,n], z, 'r', label='vvel')
     ax1.invert_yaxis()
