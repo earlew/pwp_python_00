@@ -22,7 +22,7 @@ def run_demo1():
     forcing_fname = 'beaufort_met.nc'
     prof_fname = 'beaufort_profile.nc' 
     print("Running Test Case 1 with data from Beaufort gyre...")
-    forcing, pwp_out = PWP.run(met_data=forcing_fname, prof_data=prof_fname, suffix='demo1_nodiff', save_plots=True)
+    forcing, pwp_out = PWP.run(met_data=forcing_fname, prof_data=prof_fname, diagnostics=False, suffix='demo1_nodiff', save_plots=True)
 
 def run_demo2():
     
@@ -40,9 +40,10 @@ def run_demo2():
     p['max_depth'] = 500.0 
     forcing, pwp_out = PWP.run(met_data=forcing_fname, prof_data=prof_fname, suffix='demo2_1e6diff', save_plots=True, param_kwds=p)
     
+    debug_here()
+    
 
-def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1., rb=0.65, rg=0.25, rkz=0., beta1=0.6, beta2=20.0, alpha=0., h_i0=0.0, qnet_offset=0., 
-csf=False, ice_ON=False, winds_ON=True, emp_ON=True):
+def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1., rb=0.65, rg=0.25, rkz=0., beta1=0.6, beta2=20.0, alpha=0., h_i0=0.0, qnet_offset=0., csf=False, ice_ON=False, winds_ON=True, emp_ON=True):
     
     """
     This function sets the main paramaters/constants used in the model.
@@ -165,8 +166,16 @@ def prep_data(met_dset, prof_dset, params):
     if 'skt' in list(forcing.keys()):
         #if met_dset['skt'].attrs['units'] == 'degK':
         forcing['skt'] = forcing['skt'] - 273.15
-        forcing['skt'] = 0.75*forcing['skt']
+        #forcing['skt'] = 0.75*forcing['skt']
         # forcing['skt'].attrs['units'] = 'degC'
+    else:
+        forcing['skt'] = np.zeros(len(forcing['sw']))*np.nan
+        
+        
+    #if icec doesn't exit, add it as dummy variable
+    if 'icec' not in list(forcing.keys()):
+        forcing['icec'] = np.zeros(len(forcing['sw']))*np.nan
+        
         
     #arbitrarily adjust (tune) fluxes
     # forcing['qsens'][:] = 0.0
@@ -261,11 +270,16 @@ def prep_data(met_dset, prof_dset, params):
             
             #first strip nans
             not_nan = np.logical_not(np.isnan(vble[:,0]))
-            indices = np.arange(len(vble[:,0]))
-            #p_intp = interp1d(prof_dset['z'], prof_dset[vname], axis=0, kind='linear', bounds_error=False)
-            #interp1d doesn't work here because it doesn't extrapolate. Can't have Nans in interpolated profile
-            p_intp = InterpolatedUnivariateSpline(prof_dset['z'][not_nan], vble[not_nan, 0], k=1)
-            init_prof[vname] = p_intp(init_prof['z'])    
+            if vname=='ps' and np.all(np.isnan(vble[:,0])):
+                init_prof[vname] = np.zeros(init_prof['z'].shape)
+            
+            else:
+                
+                #indices = np.arange(len(vble[:,0]))
+                #p_intp = interp1d(prof_dset['z'], prof_dset[vname], axis=0, kind='linear', bounds_error=False)
+                #interp1d doesn't work here because it doesn't extrapolate. Can't have Nans in interpolated profile
+                p_intp = InterpolatedUnivariateSpline(prof_dset['z'][not_nan], vble[not_nan, 0], k=1)
+                init_prof[vname] = p_intp(init_prof['z'])    
         
     #get profile variables
     temp0 = init_prof['t'] #initial profile temperature
@@ -300,7 +314,7 @@ def prep_data(met_dset, prof_dset, params):
     pwp_out['sal'][:,0] = sal0
     pwp_out['temp'][:,0] = temp0
     pwp_out['dens'][:,0] = dens0
-    pwp_out['ps'][:,0] = p0
+    pwp_out['ps'][:,0] = ps0
     
     #find initial ml index
     mld_idx = np.flatnonzero(dens0-dens0[0]>params['mld_thresh'])[0]
@@ -402,7 +416,7 @@ def livePlots(pwp_out, n):
 
     plt.show()
 
-def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', justForcing=False):
+def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', justForcing=False, showPlots=False):
     
     """
     TODO: add doc file
@@ -776,8 +790,10 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
     #     plt.savefig('plots/MLD_sal_evolution_%s.png' %suffix, bbox_inches='tight')
     
     
+    if showPlots:
+        plt.show()
     
-    plt.show()
+    
 
 def custom_div_cmap(numcolors=11, name='custom_div_cmap', mincol='blue', midcol='white', maxcol='red'):
                     
