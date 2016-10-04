@@ -31,7 +31,7 @@ imp.reload(PWP_ice)
 
 debug_here = Tracer()
 
-def run(met_data, prof_data, param_kwds=None, overwrite=True, diagnostics=True, suffix='', save_plots=False):
+def run(met_data, prof_data, param_kwds=None, overwrite=True, diagnostics=False, suffix='', save_plots=False):
     
     """
     This is the main controller function for the model. The flow of the algorithm
@@ -80,7 +80,7 @@ def run(met_data, prof_data, param_kwds=None, overwrite=True, diagnostics=True, 
                 to the file name. Default is True.
     
     diagnostics - if True, the code will generate live plots of mixed layer properties at
-                each time step.
+                each time step (makes the code run a lot SLOWER). Default is False
     
     suffix - string to add to the end of filenames. e.g. suffix = 'nodiff' leads to 'pwp_out_nodiff.nc.
             default is an empty string ''.
