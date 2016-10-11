@@ -483,7 +483,13 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
                 print("Need to turn on ice physics.")
                 debug_here()
         
-        
+        #make sure ocean temp change is consistent with applied
+        col_mean_dQ = np.mean(temp-pwp_out['temp'][:, n-1])*dens_ref*cpw*502/dt
+        F_net = pwp_out['F_ao'][n-1]-pwp_out['F_oi'][n-1]
+        if np.abs(col_mean_dQ-F_net)>0.01:
+            print("Warning: Error tolerance exceeded.")
+            debug_here()
+            
         pwp_out['alpha_true'][n-1] = alpha_n
         
         ### compute new density ###
