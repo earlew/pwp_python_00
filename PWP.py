@@ -180,14 +180,14 @@ def run(met_data, prof_data, param_kwds=None, overwrite=True, diagnostics=False,
     output_fpath = "output/pwp_output%s%s.nc" %(suffix, time_stamp)
     forcing_fpath = "output/forcing%s%s.nc" %(suffix, time_stamp)
     
-    phf.save2nc(pwp_out, output_fpath)
-    phf.save2nc(forcing, forcing_fpath, type='forc')
+    pwp_out2 = phf.save2nc(pwp_out, output_fpath, dt_save=params['dt_save'])
+    forcing2 = phf.save2nc(forcing, forcing_fpath, dt_save=params['dt_save'], type='forc')
     
-    debug_here()
+    #debug_here()
     ## do analysis of the results
-    phf.makeSomePlots(forcing, pwp_out, suffix=suffix, save_plots=save_plots)
+    phf.makeSomePlots(forcing2, pwp_out2, suffix=suffix, save_plots=save_plots)
     
-    return forcing, pwp_out
+    return forcing2, pwp_out2
 
 def absorb(beta1, beta2, zlen, dz):
     
