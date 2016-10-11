@@ -74,7 +74,7 @@ def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1., r
     params['dt'] = 3600.0*dt
     params['dt_d'] = params['dt']/86400.
     params['dz'] = dz
-    params['dt_save'] = dt_save
+    params['dt_save'] = int(dt_save)
     params['lat'] = lat
     params['rb'] = rb
     params['rg'] = rg
@@ -294,6 +294,7 @@ def prep_data(met_dset, prof_dset, params):
         ps0 = np.zeros(temp0.shape)
     
     #initialize variables for output
+    #Todo: set time resolution of output file
     pwp_out = {}
     pwp_out['time'] = time_vec
     pwp_out['dt'] = params['dt']
@@ -301,14 +302,14 @@ def prep_data(met_dset, prof_dset, params):
     pwp_out['lat'] = params['lat']
     pwp_out['z'] = init_prof['z']
     
-    tlen = int(np.floor(tlen/params['dt_save']))
+    #tlen = int(np.floor(tlen/params['dt_save']))
     arr_sz = (zlen, tlen)
-    pwp_out['temp'] = np.zeros(arr_sz)
-    pwp_out['sal'] = np.zeros(arr_sz)
-    pwp_out['dens'] = np.zeros(arr_sz)
+    pwp_out['temp'] = np.zeros(arr_sz)*np.nan
+    pwp_out['sal'] = np.zeros(arr_sz)*np.nan
+    pwp_out['dens'] = np.zeros(arr_sz)*np.nan
     pwp_out['uvel'] = np.zeros(arr_sz)
     pwp_out['vvel'] = np.zeros(arr_sz)
-    pwp_out['ps'] = np.zeros(arr_sz)
+    pwp_out['ps'] = np.zeros(arr_sz)*np.nan
     pwp_out['mld'] = np.zeros((tlen,))*np.nan
     
     #use temp, sal, dens and passive tracer profile data for the first time step
@@ -320,7 +321,6 @@ def prep_data(met_dset, prof_dset, params):
     #find initial ml index
     mld_idx = np.flatnonzero(dens0-dens0[0]>params['mld_thresh'])[0]
     pwp_out['mld'][0] = pwp_out['z'][mld_idx] 
-    
     
     #if final observed profile is available, save it
     if prof_dset['t'].ndim == 2:
@@ -417,7 +417,7 @@ def livePlots(pwp_out, n):
 
     plt.show()
 
-def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', justForcing=False, showPlots=False):
+def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', justForcing=False, showPlots=True):
     
     """
     TODO: add doc file
@@ -498,11 +498,10 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
     axes[0].legend(loc=0, fontsize='medium')
     
     if save_plots:     
-        fig0.savefig('plots/surface_forcing%s.png' %suffix, bbox_inches='tight')
-        fig1.savefig('plots/surface_forcing2%s.png' %suffix, bbox_inches='tight')
+        fig0.savefig('plots/surface_forcing%s.pdf' %suffix, bbox_inches='tight')
+        fig1.savefig('plots/surface_forcing2%s.pdf' %suffix, bbox_inches='tight')
         
-        
-    
+        plt.close('all')
     
     
     ## Plot computed heat fluxes
@@ -559,7 +558,9 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
     mld_exact2 = pwp_out['mld_exact2'].copy()
     mld_exact2_sm = np.zeros(len(mld_exact2))*np.nan
     nan_i = np.isnan(mld_exact2)
-    mld_exact2_sm[~nan_i] = savgol_filter(mld_exact2[~nan_i], window_length=(5*(1./dt)+1), polyorder=1, mode='nearest')
+    wlen = (5*(1./dt)+1)
+    if wlen%2==0: wlen+=1
+    mld_exact2_sm[~nan_i] = savgol_filter(mld_exact2[~nan_i], window_length=wlen, polyorder=1, mode='nearest')
     
     ##plot temp and sal change over time
     fig, axes = plt.subplots(3,1, sharex=True, figsize=(8,8))
@@ -582,6 +583,7 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
     
     if save_plots:     
         plt.savefig('plots/sal_temp_ztseries_%s.png' %suffix, bbox_inches='tight') 
+        plt.close()
     
     
     ## plot initial and final T-S profiles (TODO: add actual T,S profiles)
@@ -625,8 +627,7 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
     
     if save_plots:     
         plt.savefig('plots/initial_final_TS_profiles%s.png' %suffix, bbox_inches='tight')
-        
-        
+        plt.close()    
         
     ## plot ice growth and ice temp
     fig, axes = plt.subplots(2,1, figsize=(7.5,6))
@@ -643,7 +644,8 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
     axes[1].grid(True)
     
     if save_plots:     
-        plt.savefig('plots/ice_temp_thickness%s.png' %suffix, bbox_inches='tight')
+        plt.savefig('plots/ice_temp_thickness%s.pdf' %suffix, bbox_inches='tight')
+        plt.close()
      
     # plt.figure(figsize=(6,6.5))
     # ax = plt.gca()
@@ -659,12 +661,13 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
     ## plot OCEAN-ICE heat flux and ATM-ICE heat flux
     F_oi = np.ma.masked_invalid(pwp_out['F_oi'])
     F_oi_arr = np.ma.filled(F_oi, 0)
+    F_ocean_net = -F_oi_arr+np.ma.masked_invalid(pwp_out['F_ao'])
     plt.figure()
     plt.subplot(111)
     plt.plot(tvec, pwp_out['F_ai'], '-', label='$F_{ai}$', ms=2)
     plt.plot(tvec, pwp_out['F_i'], '-', label='$F_i$', ms=2)
     plt.plot(tvec, pwp_out['F_oi'], '-', label='$F_{oi}$', ms=2)
-    plt.plot(tvec, -F_oi_arr+pwp_out['F_ao'], label='$F_{oi}$ + $F_{ao}$', ms=2)
+    plt.plot(tvec,  F_ocean_net, label='$F_{ao}$ - $F_{oi}$', ms=2)
     plt.hlines(0, tvec[0], tvec[-1])
     plt.ylim(-100, 100)
     #plt.ylim(-1.5*np.abs(pwp_out['F_atm'].max()), 1.5*np.abs(pwp_out['F_atm'].max()))
@@ -673,9 +676,12 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
     plt.legend(loc=0)
     plt.grid(True)
     
+    print("Net ocean warming: %.5f" %F_ocean_net.mean())
+    
     if save_plots:     
-        plt.savefig('plots/ice_ocean_fluxes%s.png' %suffix, bbox_inches='tight')
-      
+        plt.savefig('plots/ice_ocean_fluxes%s.pdf' %suffix, bbox_inches='tight')
+        plt.close()
+        
     #plot change in MLD  
     plt.figure()
     plt.subplot(111)
@@ -692,7 +698,8 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
     plt.grid(True)
     
     if save_plots:     
-        plt.savefig('plots/MLD_evolution_%s.png' %suffix, bbox_inches='tight')
+        plt.savefig('plots/MLD_evolution_%s.pdf' %suffix, bbox_inches='tight')
+        plt.close()
         
         
     #plot change in MLT, MLS and MLT elevation
@@ -713,6 +720,9 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
     axes[2].set_title('MLT - T_fz')
     axes[2].grid(True) 
     
+    if save_plots:     
+        plt.savefig('plots/MLT_MLS_%s.pdf' %suffix, bbox_inches='tight')
+        plt.close()
         
     
     #plot upper ocean temp, sal, oxy evolution 
@@ -756,6 +766,7 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
         if save_plots:
             #pass
             plt.savefig('plots/MLD_%s_evolution_%s.png' %(vble[i], suffix), bbox_inches='tight')
+            plt.close()
         
         
     # #plot salinity evolution
@@ -798,7 +809,8 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
 
 def custom_div_cmap(numcolors=11, name='custom_div_cmap', mincol='blue', midcol='white', maxcol='red'):
                     
-    """ Create a custom diverging colormap with three colors
+    """ 
+    Create a custom diverging colormap with three colors
     
     Default is blue to white to red with 11 colors.  Colors can be specified
     in any way understandable by matplotlib.colors.ColorConverter.to_rgb()
