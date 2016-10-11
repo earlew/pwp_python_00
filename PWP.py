@@ -256,28 +256,28 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
     params['dz'] = dz
     
     #create output variable for ocean and atmospheric heat flux (TODO: move to PWP_helper???)
-    pwp_out['F_oi'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan #ocean-ice heat flux
-    pwp_out['F_ao'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan #atmosphere-ocean heat flux
-    pwp_out['F_ai'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan #atmosphere-ice heat flux
-    pwp_out['F_i'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan #heat flux through the ice
-    pwp_out['F_ent'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan
+    pwp_out['F_oi'] = np.zeros(len(pwp_out['ice_thickness'])) #ocean-ice heat flux
+    pwp_out['F_ao'] = np.zeros(len(pwp_out['ice_thickness'])) #atmosphere-ocean heat flux
+    pwp_out['F_ai'] = np.zeros(len(pwp_out['ice_thickness'])) #atmosphere-ice heat flux
+    pwp_out['F_i'] = np.zeros(len(pwp_out['ice_thickness'])) #heat flux through the ice
+    pwp_out['F_ent'] = np.zeros(len(pwp_out['ice_thickness']))
     
-    pwp_out['q_sens_ao'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan
-    pwp_out['q_lat_ao'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan
-    pwp_out['q_lw_ao'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan
-    pwp_out['q_net_ao'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan
+    pwp_out['q_sens_ao'] = np.ma.masked_all(len(pwp_out['ice_thickness']))
+    pwp_out['q_lat_ao'] = np.ma.masked_all(len(pwp_out['ice_thickness']))
+    pwp_out['q_lw_ao'] = np.ma.masked_all(len(pwp_out['ice_thickness']))
+    pwp_out['q_net_ao'] = np.ma.masked_all(len(pwp_out['ice_thickness']))
     
-    pwp_out['q_sens_ai'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan
-    pwp_out['q_lat_ai'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan
-    pwp_out['q_lw_ai'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan
-    pwp_out['q_net_ai'] = np.zeros(len(pwp_out['ice_thickness']))*np.nan
+    pwp_out['q_sens_ai'] = np.ma.masked_all(len(pwp_out['ice_thickness']))
+    pwp_out['q_lat_ai'] = np.ma.masked_all(len(pwp_out['ice_thickness']))
+    pwp_out['q_lw_ai'] = np.ma.masked_all(len(pwp_out['ice_thickness']))
+    pwp_out['q_net_ai'] = np.ma.masked_all(len(pwp_out['ice_thickness']))
     
-    pwp_out['mld_exact'] = np.zeros(len(pwp_out['mld']))*np.nan
-    pwp_out['mld_exact2'] = np.zeros(len(pwp_out['mld']))*np.nan
-    pwp_out['mlt'] = np.zeros(len(pwp_out['mld']))*np.nan
-    pwp_out['mls'] = np.zeros(len(pwp_out['mld']))*np.nan
-    pwp_out['mlt_elev'] = np.zeros(len(pwp_out['mld']))*np.nan
-    pwp_out['alpha_true'] = np.zeros(len(pwp_out['mld']))
+    pwp_out['mld_exact'] = np.ma.masked_all(len(pwp_out['mld']))
+    pwp_out['mld_exact2'] = np.ma.masked_all(len(pwp_out['mld']))
+    pwp_out['mlt'] = np.ma.masked_all(len(pwp_out['mld']))
+    pwp_out['mls'] = np.ma.masked_all(len(pwp_out['mld']))
+    pwp_out['mlt_elev'] = np.ma.masked_all(len(pwp_out['mld']))
+    pwp_out['alpha_true'] = np.ma.masked_all(len(pwp_out['mld']))
     pwp_out['ice_start'] = []
     
     #initialize ice thickness:
@@ -294,10 +294,10 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
     
     for n in range(1,tlen):
         #print '-------------------------------'
-        print('====================================')
+        print('==============================================')
         percent_comp = 100*n/float(tlen)
-        yr = np.floor(pwp_out['time'][n]/365); day =pwp_out['time'][n]%365
-        print('Loop iter. %s (%.1f %%). Year: %i,   Day: %.2f' %(n, percent_comp, yr, day))
+        yr = np.floor(pwp_out['time'][n]/365)+1; day =pwp_out['time'][n]%365
+        print('Loop iter. %s (%.1f %%). Year: %i, Day: %.2f' %(n, percent_comp, yr, day))
         #print '===================================='
         
         #select previous profile data
@@ -447,45 +447,45 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
                 
                 #modify existing sea ice
                 #h_ice, temp_ice_surf, temp, sal = PWP_ice.modify_existing_ice(temp_ice_surf, h_ice, temp, sal, dens, F_atm, F_ocean, alpha_n, skt_n, params)
-                h_ice, temp_ice_surf, temp, sal, F_i = PWP_ice.ice_model_v3(h_ice, skt_n, temp, sal, dens, F_ai, F_oi, alpha_n, params)
+                h_ice, temp_ice_surf, temp, sal, F_i, F_aio = PWP_ice.ice_model_v3(h_ice, skt_n, temp, sal, dens, F_ai, F_oi, alpha_n, params)
+                #h_ice, temp_ice_surf, temp, sal, F_i = PWP_ice.ice_model_v4(h_ice, pwp_out['surf_ice_temp'][n-1], temp, sal, dens, F_ai, F_oi, alpha_n, params)
                 
+                #debug_here()
                 
                 # apply E-P flux through leads
                 sal[0] = sal[0] + sal[0]*(1-alpha_n)*emp[n-1]*dt/dz #TODO: keep track of rain/snow on top of ice (big task)
                 
                 # apply heat flux through leads
-                temp = temp + q_in_ao*absrb*dt/(dz*dens*cpw) #incoming solar
-                temp[0] = temp[0] - q_out_ao*dt/(mld_pre*dens[0]*cpw)
+                temp = temp + q_in_ao*absrb*dt/(dz*dens_ref*cpw) #incoming solar
+                temp[0] = temp[0] - q_out_ao*dt/(dz*dens_ref*cpw) #outgoing heat
                 
                 #TODO: apply passive scalar flux through leads
                 
-                
+                #debug_here()
                 #check if temp is less than freezing point
-                T_fz = sw.fp(sal_old, p=dz) #here it might be better to use sal_old rather than what is essentially brine water
-                dT = temp[:mld_idx_pre].mean()-T_fz
-                
+                #T_fz = sw.fp(sal_ref, p=1) #here it might be better to use sal_old rather than what is essentially brine water
+                dT = temp[0]-T_fz
+                lead_ice_heating = 0.0
                 if dT<0:
-                    temp[:mld_idx_pre] = T_fz
-                    
                     print("Creating frazil ice in leads.")
-                    
+                    lead_ice_heating = -dT*dens_ref*cpw*dz/dt #artificial warming flux to compensate for ice growth
                     #generate sea ice (aka frazil ice)
-                    h_ice, temp_ice_surf, temp, sal = PWP_ice.create_initial_ice(h_ice, temp_ice_surf, temp, sal, dens, params)
-                    pwp_out['surf_ice_temp'][n] = temp_ice_surf
-                    pwp_out['ice_thickness'][n] = h_ice
+                    h_ice_lead, temp_ice_surf_lead, temp, sal = PWP_ice.create_initial_ice(0.0, np.nan, temp, sal, dens, (1-alpha_n), params)
+                    # pwp_out['surf_ice_temp'][n] = temp_ice_surf
+                    h_ice = h_ice+h_ice_lead*(1-alpha_n) #add lead ice on top of existing ice (to conserve salt/FW)
                     
                     
                     #debug_here()
-                
+                    
                 
                 #save ice related output
                 pwp_out['surf_ice_temp'][n] = temp_ice_surf
                 pwp_out['ice_thickness'][n] = h_ice
                 pwp_out['F_oi'][n-1] = F_oi
-                pwp_out['F_ai'][n-1] = F_ai
-                pwp_out['F_ao'][n-1] = q_net_ao
+                pwp_out['F_ai'][n-1] = F_ai-F_aio
+                pwp_out['F_ao'][n-1] = q_net_ao+F_aio+lead_ice_heating
                 pwp_out['F_i'][n-1] = F_i
-                pwp_out['alpha_true'][n-1] = alpha_n
+                pwp_out['alpha_true'][n] = alpha_n
             
             else:
                 
@@ -533,7 +533,6 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         uvel[:mld_idx] = uvel[:mld_idx]+du
         vvel[:mld_idx] = vvel[:mld_idx]+dv
 
-        
         ### Apply drag to current ###
         #Original comment: this is a horrible parameterization of inertial-internal wave dispersion
         if ucon > 1e-10:
@@ -542,7 +541,6 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         
         uvel, vvel = rot(uvel, vvel, ang)
         
-        # debug_here()
         ### Apply Bulk Richardson number instability form of mixing (as in PWP) ###
         if rb > 1e-5:
             temp, sal, dens, uvel, vvel, ps = bulk_mix(temp, sal, dens, uvel, vvel, ps, dz, g, rb, zlen, z, mld_idx)
@@ -632,7 +630,6 @@ def remove_si(t, s, d, u, v, ps):
             # plt.pause(0.05)
             # plt.show()
             
-            #debug_here()
         else:
             stat_unstable = False
     
