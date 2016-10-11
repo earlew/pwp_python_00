@@ -220,6 +220,10 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
     print_lead_warning = True
     transition_ice_frac = False
     
+    #define reference salinity and density (use these when computing heat fluxes)
+    sal_ref = 34.0
+    dens_ref = 1026.0
+    
     #unpack some of the variables (I could probably do this more elegantly)
     q_in = forcing['q_in']
     q_out = forcing['q_out']
@@ -228,6 +232,7 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
     tauy = forcing['ty']
     absrb = forcing['absrb']
     forcing['icec2'] = forcing['icec'].copy()
+    
     
     z = pwp_out['z']
     dz = pwp_out['dz']
@@ -320,6 +325,7 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         #save initial T,S (may not be necessary)
         # temp_old = pwp_out['temp'][0, n-1]
         sal_old = pwp_out['sal'][0, n-1]
+        T_fz = sw.fp(sal_ref, p=1)
         
         
         ### Absorb solar radiation and FWF in surf layer ###
@@ -345,31 +351,35 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
                 q_out_ao = q_out[n-1]
                 q_net_ao = q_net[n-1]
             
-            pwp_out['F_ao'][n] = q_net_ao
             
             #update layer 1 temp and sal
-            temp[0] = temp[0] + (q_in_ao*absrb[0]-q_out_ao)*dt/(dz*dens[0]*cpw)
-            sal[0] = sal[0] + sal[0]*emp[n-1]*dt/dz
+            temp[0] = temp[0] + (q_in_ao*absrb[0]-q_out_ao)*dt/(dz*dens_ref*cpw)
+            sal[0] = sal[0] + sal_ref*emp[n-1]*dt/dz
             
             ### Absorb rad. at depth ###
-            temp[1:] = temp[1:] + q_in_ao*absrb[1:]*dt/(dz*dens[1:]*cpw)
+            temp[1:] = temp[1:] + q_in_ao*absrb[1:]*dt/(dz*dens_ref*cpw)
             
             #check if temp is less than freezing point
-            T_fz = sw.fp(sal[0], p=dz) #why use sal_old? Need to recheck
+            #T_fz = sw.fp(sal[0], p=dz) #why use sal_old? Need to recheck
+            ice_heating = 0.0
             if temp[0] < T_fz:
-                
+                # debug_here()
+                ice_heating = (T_fz-temp[0])*dens_ref*cpw*dz/dt #need to add artificial warming flux to compensate for ice growth
                 if params['ice_ON']:
                     pwp_out['ice_start'].append(pwp_out['time'][n])
                     #generate sea ice (aka frazil ice)
-                    h_ice, temp_ice_surf, temp, sal = PWP_ice.create_initial_ice(h_ice, temp_ice_surf, temp, sal, dens, params)
+                    h_ice, temp_ice_surf, temp, sal = PWP_ice.create_initial_ice(h_ice, temp_ice_surf, temp, sal, dens, alpha_n, params)
                     pwp_out['surf_ice_temp'][n] = temp_ice_surf
                     pwp_out['ice_thickness'][n] = h_ice
-                
+
+                    # debug_here()
                 else:
                     temp[0] = T_fz
                     if print_ice_warning:
                         print("surface has reached freezing temp. However, ice creation is either turned off or ice_conc is set to zero.")
                         print_ice_warning = False
+            
+            pwp_out['F_ao'][n-1] = q_net_ao+ice_heating
             
             #TODO: update layer 1 of passive scalar
         
@@ -505,12 +515,12 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         mld_post_ent, mld_idx_post_ent = getMLD(dens, z, params)
         dMLD = mld_post_ent - mld_pre
         
-        if dMLD==0:
+        if dMLD<=0:
             F_ent = 0
         else:
             #compute change in heat content of entrained layer
             dT = np.abs(temp[mld_idx_pre:mld_idx_post_ent].mean() - temp_pre[mld_idx_pre:mld_idx_post_ent].mean())
-            F_ent = dMLD*1025*4180*dT/params['dt']
+            F_ent = dMLD*dens_ref*cpw*dT/params['dt']
         
         ### Compute MLD ###
         mld, mld_idx = getMLD(dens, z, params)
@@ -565,10 +575,9 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         #save MLT, MLS and MLT_elevation
         MLS_post = np.mean(sal[:mld_idx]);
         MLT_post = np.mean(temp[:mld_idx])
-        T_fz = sw.fp(MLS_post, 0)
+        #T_fz = sw.fp(MLS_post, 0)
         T_elev = MLT_post - T_fz
     
-        
         ### update output profile data ###
         pwp_out['temp'][:, n] = temp
         pwp_out['sal'][:, n] = sal

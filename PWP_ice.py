@@ -19,7 +19,7 @@ L_ice = 333e3 #Latent heat of fusion (J kg-1) - from Hyatt 2006
 rho_ice = 920. #density of ice (kg/m3) - from Hyatt 2006
 k_ice = 2. #thermal conductivity of sea ice (W m-1 K-1) - from Thorndike 1992
 c_ice = 2e6/rho_ice #heat capacity of sea ice (J kg-1 K-1) - from Thorndike 1992/Hyatt 2006
-c_sw = 4183. #heat capacity of seawater (J kg-1 K-1) - from Hyatt 2006
+c_sw = 4183.3 #heat capacity of seawater (J kg-1 K-1) - from Hyatt 2006
 sal_ice = 4. #salinity of sea ice (PSU) - from Hyatt 2006
 #alpha = 0.9 #ice fraction
 
@@ -27,6 +27,12 @@ melt_lyrs = 2 #TODO: play with this. PWP has issues with super thin, freshwater 
 bdry_lyr = 1
 thin_ice = 0.001 #m    
 T_fzi = 0.0 #freezing point of (pure) ice
+
+#Todo: move these to params
+sal_ref = 34.0
+dens_ref = 1026.0
+temp_swfz = sw.fp(sal_ref, p=1)
+
 override_alpha = False
 
 
@@ -90,7 +96,7 @@ def get_ocean_ice_heat_flux(temp_sw, sal_sw, rho_sw, params):
     #mcphee turbulent heat flux parameterization
     c_d = 0.0056
     u_star = 0.01
-    F_sw_dt = 4180*1025*c_d*u_star*dT_surf
+    F_sw_dt = c_sw*dens_ref*c_d*u_star*dT_surf
     
     if F_sw_dt<0:
         #F_sw can turn negative if there is a large enough salt flux event that increases the freezing point of water
@@ -691,7 +697,7 @@ def ice_model_v3(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, 
         dh_ice = h_ice_f - h_ice_i
 
     #cool surface temp according to F_oi
-    dT = F_oi*dt/(params['dz']*rho_sw0*c_sw)
+    dT = F_oi*dt/(params['dz']*dens_ref*c_sw)
     temp_sw[0] = temp_sw[0]-dT
       
     temp_ice_surf_f = temp_ice_surf_i
