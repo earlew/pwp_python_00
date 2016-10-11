@@ -88,6 +88,7 @@ def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1., r
     params['cpw'] = 4183.3
     params['ucon'] = (0.1*np.abs(params['f']))
     params['mld_thresh'] = mld_thresh
+    arams['diff_zlim'] = None
     
     params['ice_ON'] = ice_ON
     params['winds_ON'] = winds_ON

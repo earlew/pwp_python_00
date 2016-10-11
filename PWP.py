@@ -549,20 +549,28 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         if rg > 0:
             temp, sal, dens, uvel, vvel, ps = grad_mix(temp, sal, dens, uvel, vvel, ps, dz, g, rg, zlen)
         
-        
         ### Apply diffusion ###
         if params['rkz'] > 0:
-            temp = diffus(params['dstab'], zlen, temp)
-            sal = diffus(params['dstab'], zlen, sal)
+
+            if params['diff_zlim'] is None:
+                nz = zlen
+            else:
+                nz = len(z[z<=params['diff_zlim']])
+            
+            #TODO: Try limiting diffusion to upper ocean
+            temp = diffus(params['dstab'], nz, temp)
+            sal = diffus(params['dstab'], nz, sal)
             dens = sw.dens0(sal, temp)
-            uvel = diffus(params['dstab'], zlen, uvel)
-            vvel = diffus(params['dstab'], zlen, vvel)
-            ps = diffus(params['dstab'], zlen, ps)
+            uvel = diffus(params['dstab'], nz, uvel)
+            vvel = diffus(params['dstab'], nz, vvel)
+            ps = diffus(params['dstab'], nz, ps)
+            
+            
         
         # find MLD again, after all mixing processes complete
         mld_idx = np.flatnonzero(dens-dens[0]>params['mld_thresh'])[0] #finds the first index that exceed ML threshold
         mld_post_mix = z[mld_idx]
-        
+
         # find MLD by interpolating to the exact value
         mld_idx2 = np.flatnonzero(dens-dens[0]==0)[-1] #finds the last index of ML
         from scipy.interpolate import interp1d
