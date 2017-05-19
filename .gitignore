@@ -44,3 +44,6 @@ pwp_soccom.py
 personal_modules.py
 pwp_argo.py
 *.bak
+
+##directories
+plots/
