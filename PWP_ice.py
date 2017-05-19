@@ -65,7 +65,17 @@ def iceGrowthModel_ode_v2(t, y, temp_ice_surf, F_oi, temp_swfz, k_ice):
     dy0 = (F_i - F_oi)/(L_ice*rho_ice)
     
     return [dy0]
+
+def iceGrowthModel_ode_v3(t, y, F_ai, F_oi): 
     
+    """   
+    Like version 2, but with surface temp chosen so that F_i == -F_ai 
+    """
+    F_i = -F_ai
+    dy0 = (F_i - F_oi)/(L_ice*rho_ice)
+    
+    return [dy0]
+       
 
 def get_ocean_ice_heat_flux(temp_sw, sal_sw, rho_sw, params):    
     
@@ -325,7 +335,7 @@ def modify_thin_ice(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_o
     #debug_here()
     return h_ice_f, temp_ice_surf_f, temp_sw, sal_sw, F_aio
     
-def ice_model_v3(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, alpha, params):
+def ice_model_v3(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, alpha, params, ice_mod=3):
     
     """
     This ice model uses specified surface ice temperatures.
@@ -368,60 +378,74 @@ def ice_model_v3(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, 
         #print "running sea ice algorithm..."
         print("running ice model with specified surface temperatures...")
         
-        #define initial conditions and time step for ice growth model
-        y_init = np.array([h_ice_i])
-        t_end = dt
-        # t_ice_model = np.linspace(0, t_end, t_end+1) #make the time step 1 sec
-        # dt_ice_model = t_ice_model[1]-t_ice_model[0]
-        dt_ice_model = 5 #seconds 
-
-        #debug_here()
-        #load and intialize ice growth model
-        ode =  spi.ode(iceGrowthModel_ode_v2)
-        ode.set_integrator('lsoda')
-        ode.set_initial_value(y_init, 0)
-        ode.set_f_params(temp_ice_surf_i, F_oi*dt_ice_model, temp_swfz, k_ice*dt_ice_model)
-        ts = []
-        ys = []
-        
-        #run ice growth model
-        while ode.successful() and ode.t < t_end:
-            ode.integrate(ode.t + dt_ice_model)
-            h_ice = ode.y[0]
-            ts.append(ode.t)
-            ys.append(ode.y[0])
-            
-            
+        if ice_mod==3:
+            #assume -F_ai=F_i
+            h_ice_f = h_ice_i + dt*(-F_ai - F_oi)/(L_ice*rho_ice)  
+            temp_ice_surf_f = F_ai*h_ice_f/k_ice+temp_swfz 
             #debug_here()
-            ti = len(ys)-1
-            if h_ice<=thin_ice and ti>0 and ys[ti]<ys[ti-1]:
-                print("ice is melting and has become too thin. Switching to thin ice algorithm...")
-                switch_algorithm=True
+            
+        else: 
+        
+            #define initial conditions and time step for ice growth model
+            y_init = np.array([h_ice_i])
+            t_end = dt
+            # t_ice_model = np.linspace(0, t_end, t_end+1) #make the time step 1 sec
+            # dt_ice_model = t_ice_model[1]-t_ice_model[0]
 
-                #abort and switch to thin ice algorithm.??
-                break
+            #load and intialize ice growth model
+            # dt_ice_model = dt/6 #seconds
+            # ode =  spi.ode(iceGrowthModel_ode_v3)
+            # ode.set_f_params(F_ai*dt_ice_model, F_oi*dt_ice_model)
+        
+            dt_ice_model = 5 #seconds 
+            ode =  spi.ode(iceGrowthModel_ode_v2)
+            ode.set_f_params(temp_ice_surf_i, F_oi*dt_ice_model, temp_swfz, k_ice*dt_ice_model)
+        
+            ode.set_integrator('lsoda')
+            ode.set_initial_value(y_init, 0)
+        
+            ts = []
+            ys = []
+        
+            #run ice growth model
+            while ode.successful() and ode.t < t_end:
+                ode.integrate(ode.t + dt_ice_model)
+                h_ice = ode.y[0]
+                ts.append(ode.t)
+                ys.append(ode.y[0])
+            
+            
+                #debug_here()
+                ti = len(ys)-1
+                if h_ice<=thin_ice and ti>0 and ys[ti]<ys[ti-1]:
+                    print("ice is melting and has become too thin. Switching to thin ice algorithm...")
+                    switch_algorithm=True
+
+                    #abort and switch to thin ice algorithm.??
+                    break
 
         
-        if switch_algorithm:
-            #this restarts the ice growth/melt process
-            h_ice_f, temp_ice_surf_f, temp_sw, sal_sw, F_aio = modify_thin_ice(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, alpha, params)
+            if switch_algorithm:
+                #this restarts the ice growth/melt process
+                h_ice_f, temp_ice_surf_f, temp_sw, sal_sw, F_aio = modify_thin_ice(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, alpha, params)
             
-            #return h_ice_f, temp_ice_surf_f, temp_sw, sal_sw, F_i, F_aio
+                #return h_ice_f, temp_ice_surf_f, temp_sw, sal_sw, F_i, F_aio
             
-        else:
-            t = np.vstack(ts)
-            y = np.vstack(ys)
-            h_ice_f = y[-1,0]
+            else:
+                t = np.vstack(ts)
+                y = np.vstack(ys)
+                h_ice_f = y[-1,0]
         
+                temp_ice_surf_f = temp_ice_surf_i
+            
         #get change in ice thickness
         dh_ice = h_ice_f - h_ice_i
     
         #debug_here()
         #find mean heat flux through ice
-        h_ice_mean = h_ice_f.mean()
-        F_i = -k_ice*(temp_ice_surf_i-temp_swfz)/h_ice_mean
+        F_i = -k_ice*(temp_ice_surf_f-temp_swfz)/h_ice_f
         
-        print("F_i: %.2f, F_ocean: %.2f, h_i=%.2f, dh: %.4f" %(F_i, F_oi, h_ice_i, dh_ice))
+        print("F_i: %.2f, F_oi: %.2f, h_i=%.2f, dh: %.4f" %(F_i, F_oi, h_ice_i, dh_ice))
 
     else:
         
@@ -429,11 +453,10 @@ def ice_model_v3(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, 
         h_ice_f, temp_ice_surf_f, temp_sw, sal_sw, F_aio = modify_thin_ice(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, alpha, params)
         dh_ice = h_ice_f - h_ice_i
 
-    #cool surface temp according to F_oi
+    #cool ocean surface temp according to F_oi
     dT = F_oi*dt/(params['dz']*dens_ref*c_sw)
     temp_sw[0] = temp_sw[0]-dT
       
-    temp_ice_surf_f = temp_ice_surf_i
     
     #compute salinity change  
     dsal_sw = alpha*dh_ice*(sal_ref-sal_ice)/(dz*bdry_lyr)

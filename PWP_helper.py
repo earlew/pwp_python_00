@@ -6,11 +6,12 @@ PWP model.
 import numpy as np
 import seawater as sw
 import matplotlib.pyplot as plt
-from IPython.core.debugger import Tracer
 import PWP
 from datetime import datetime
 import xray
 
+import warnings
+from IPython.core.debugger import Tracer
 debug_here = Tracer()
 
 def run_demo1():
@@ -38,14 +39,17 @@ def run_demo2():
     p['rkz']=1e-6
     p['dz'] = 2.0 
     p['max_depth'] = 500.0 
+    warnings.simplefilter('error', UserWarning)
     forcing, pwp_out = PWP.run(met_data=forcing_fname, prof_data=prof_fname, suffix='demo2_1e6diff', save_plots=True, param_kwds=p)
     
     debug_here()
     
 
-def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1., rb=0.65, rg=0.25, rkz=0., beta1=0.6, beta2=20.0, alpha=0., h_i0=0.0, qnet_offset=0., csf=False, ice_ON=False, winds_ON=True, emp_ON=True):
+def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1, alpha=0., h_i0=0.0, rkz=0., diff_zlim=5000, plot_zlim=500, qnet_offset=0., csf=False, ice_ON=False, winds_ON=True, emp_ON=True):
     
     """
+    TODO: update doc
+    
     This function sets the main paramaters/constants used in the model.
     These values are packaged into a dictionary, which is returned as output.
     Definitions are listed below.
@@ -57,11 +61,10 @@ def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1., r
     max_depth: Max depth of vertical coordinate (meters). [100]
     mld_thresh: Density criterion for MLD (kg/m3). [1e-4] 
     dt_save: time-step increment for saving to file (multiples of dt). [1]
-    rb: critical bulk richardson number. [0.65]
-    rg: critical gradient richardson number. [0.25]
+    
+    
     rkz: background vertical diffusion (m**2/s). [0.]
-    beta1: longwave extinction coefficient (meters). [0.6] 
-    beta2: shortwave extinction coefficient (meters). [20] 
+    
     
     OUTPUT is dict with fields containing the above variables plus the following:
     dt_d: time increment (dt) in units of days
@@ -70,6 +73,12 @@ def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1., r
     f: coriolis term (rad/s). [sw.f(lat)]
     ucon: coefficient of inertial-internal wave dissipation (s^-1) [0.1*np.abs(f)]
     """
+    
+    rb=0.65 #rb: critical bulk richardson number. [0.65]
+    rg=0.25 #rg: critical gradient richardson number. [0.25]
+    beta1=0.6 #beta1: longwave extinction coefficient (meters). [0.6]
+    beta2=20.0 #beta2: shortwave extinction coefficient (meters). [20] 
+    
     params = {}
     params['dt'] = 3600.0*dt
     params['dt_d'] = params['dt']/86400.
@@ -88,7 +97,8 @@ def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1., r
     params['cpw'] = 4183.3
     params['ucon'] = (0.1*np.abs(params['f']))
     params['mld_thresh'] = mld_thresh
-    arams['diff_zlim'] = None
+    params['diff_zlim'] = diff_zlim
+    params['plot_zlim'] = plot_zlim
     
     params['ice_ON'] = ice_ON
     params['winds_ON'] = winds_ON
@@ -247,7 +257,8 @@ def prep_data(met_dset, prof_dset, params):
     prof_incr = np.diff(prof_dset['z'][prof_z<=max_z]).mean()
     if params['dz'] < prof_incr/5.:
         message = "Specified depth increment (%s m), is much smaller than mean profile resolution (%s m)." %(params['dz'], prof_incr)
-        warnings.warn(message)
+        #warnings.warn(message)
+        print(message)
         
         
         # inpt = input("Depth increment, dz, is much smaller than profile resolution. Is this okay? (Enter 'y'or 'n')")
@@ -417,7 +428,7 @@ def livePlots(pwp_out, n):
 
     plt.show()
 
-def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', justForcing=False, showPlots=True):
+def makeSomePlots(forcing, pwp_out, time_vec=None, zlim=500, save_plots=False, suffix='', justForcing=False, showPlots=True):
     
     """
     TODO: add doc file
@@ -575,6 +586,7 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
         im = ax.contourf(pwp_out['time'], pwp_out['z'], pwp_out[vble[i]], clvls, cmap=cmap[i], extend='both')
         ax.plot(tvec[1:], mld_exact2_sm[1:], '-k')
         ax.set_ylabel('Depth (m)')
+        ax.set_ylim(0,zlim)
         ax.set_title('Evolution of ocean %s (%s)' %(vble[i], units[i]))
         ax.invert_yaxis()   
         cb = plt.colorbar(im, ax=ax, format='%.2f')
@@ -753,6 +765,7 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
         #debug_here()
         im = ax2.pcolormesh(tvec, pwp_out['z'], vble_anom, vmin=vmin, vmax=vmax, cmap=cmap[i])
         ax2.plot(tvec, mld_exact2_sm, 'k')
+        ax2.set_ylim(0,zlim)
         ax2.invert_yaxis() 
         ax2.set_ylabel('Depth (m)', fontsize=12)
         ax2.set_xlabel('Time (days)', fontsize=12)
@@ -804,8 +817,7 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix='', 
     
     if showPlots:
         plt.show()
-    
-    
+     
 
 def custom_div_cmap(numcolors=11, name='custom_div_cmap', mincol='blue', midcol='white', maxcol='red'):
                     
@@ -840,7 +852,7 @@ def save2nc(data_dict, fpath, dt_save=1, type='out'):
     tvec = data_dict['time']
     # len_tvec_save = int(np.floor(len(tvec)/dt_save))
     tvec_save = tvec[::dt_save]
-    ti = range(0, len(tvec), 4)
+    ti = range(0, len(tvec), dt_save)
     
     assert len(ti)==len(tvec_save), "Error. dimension mismatch."
     

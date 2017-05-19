@@ -157,7 +157,6 @@ def run(met_data, prof_data, param_kwds=None, overwrite=True, diagnostics=False,
     phf.makeSomePlots(forcing, pwp_out, justForcing=True)
     plt.show()
     
-    debug_here()
     ## run the model
     pwp_out = pwpgo(forcing, params, pwp_out, diagnostics)
     
@@ -185,7 +184,7 @@ def run(met_data, prof_data, param_kwds=None, overwrite=True, diagnostics=False,
     
     #debug_here()
     ## do analysis of the results
-    phf.makeSomePlots(forcing2, pwp_out2, suffix=suffix, save_plots=save_plots)
+    phf.makeSomePlots(forcing2, pwp_out2, zlim=params['plot_zlim'], suffix=suffix, save_plots=save_plots)
     
     return forcing2, pwp_out2
 
@@ -496,7 +495,8 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         #make sure ocean temp change is consistent with applied
         col_mean_dQ = np.mean(temp-pwp_out['temp'][:, n-1])*dens_ref*cpw*502/dt
         F_net = pwp_out['F_ao'][n-1]-pwp_out['F_oi'][n-1]
-        if np.abs(col_mean_dQ-F_net)>0.01:
+        dT_error = np.abs(col_mean_dQ-F_net)
+        if dT_error>0.01:
             print("Warning: Error tolerance exceeded.")
             debug_here()
             
@@ -551,19 +551,26 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         
         ### Apply diffusion ###
         if params['rkz'] > 0:
-
-            if params['diff_zlim'] is None:
-                nz = zlen
-            else:
-                nz = len(z[z<=params['diff_zlim']])
             
-            #TODO: Try limiting diffusion to upper ocean
+            #By default, nz1=zlen 
+            nz1 = len(z[z<=params['diff_zlim']])
+            
+            #Limit diffusion to some upper level of ocean but no shallower than the maximum MLD
+            nz2 = mld_idx
+            if nz2>nz1:
+                print("WARNING: MLD (%.1fm) exceeds diffusion z-limit (%.1fm)." %(mld, params['diff_zlim']))
+                print("Resetting diffusion z-limit to %.1fm." %(z[nz2+2]))
+                nz=nz2+2
+            else:
+                nz=nz1
+    
             temp = diffus(params['dstab'], nz, temp)
             sal = diffus(params['dstab'], nz, sal)
             dens = sw.dens0(sal, temp)
             uvel = diffus(params['dstab'], nz, uvel)
             vvel = diffus(params['dstab'], nz, vvel)
             ps = diffus(params['dstab'], nz, ps)
+        
             
             
         
