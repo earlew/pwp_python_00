@@ -20,8 +20,9 @@ def run_demo1():
     
     forcing_fname = 'beaufort_met.nc'
     prof_fname = 'beaufort_profile.nc'
-    print "Running Test Case 1 with data from Beaufort gyre..."
-    forcing, pwp_out = PWP.run(met_data=forcing_fname, prof_data=prof_fname, suffix='demo1_nodiff', save_plots=True)
+    print("Running Test Case 1 with data from Beaufort gyre...")
+    forcing, pwp_out = PWP.run(met_data=forcing_fname, prof_data=prof_fname, suffix='demo1_nodiff', save_plots=True, diagnostics=False)
+    
 
 def run_demo2(winds_ON=True, emp_ON=True, heat_ON=True, drag_ON=True):
     
@@ -32,7 +33,7 @@ def run_demo2(winds_ON=True, emp_ON=True, heat_ON=True, drag_ON=True):
     
     forcing_fname = 'SO_met_30day.nc'
     prof_fname = 'SO_profile1.nc'
-    print "Running Test Case 2 with data from Southern Ocean..."
+    print("Running Test Case 2 with data from Southern Ocean...")
     p={}
     p['rkz']=1e-6
     p['dz'] = 2.0 
@@ -64,7 +65,7 @@ def run_demo2(winds_ON=True, emp_ON=True, heat_ON=True, drag_ON=True):
         
     suffix = 'demo2_1e6diff%s%s%s%s' %(winds_flag, emp_flag, heat_flag, drag_flag)
     forcing, pwp_out = PWP.run(met_data=forcing_fname, prof_data=prof_fname, suffix=suffix, save_plots=True, param_kwds=p)
-    
+     
 
 def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1., rb=0.65, rg=0.25, rkz=0., beta1=0.6, beta2=20.0, heat_ON=True, winds_ON=True, emp_ON=True, drag_ON=True):
     
@@ -122,6 +123,8 @@ def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1., r
     params['drag_ON'] = drag_ON
     
     return params
+    
+    
 
 def prep_data(met_dset, prof_dset, params):
     
@@ -188,11 +191,11 @@ def prep_data(met_dset, prof_dset, params):
     forcing['emp'] = emp  
     
     if params['emp_ON'] == False:
-        print "WARNING: E-P is turned OFF."
+        print("WARNING: E-P is turned OFF.")
         forcing['emp'][:] = 0.0
         
     if params['heat_ON'] == False:
-        print "WARNING: Surface heating is turned OFF."
+        print("WARNING: Surface heating is turned OFF.")
         forcing['sw'][:] = 0.0
         forcing['lw'][:] = 0.0
         forcing['qlat'][:] = 0.0
@@ -207,7 +210,7 @@ def prep_data(met_dset, prof_dset, params):
     forcing['time'] = time_vec
     
     if params['winds_ON'] == False:
-        print "Winds are set to OFF."
+        print("Winds are set to OFF.")
         forcing['tx'][:] = 0.0
         forcing['ty'][:] = 0.0
            
@@ -216,7 +219,7 @@ def prep_data(met_dset, prof_dset, params):
     zmax = max(prof_dset.z)
     if zmax < params['max_depth']:
         depth = zmax
-        print 'Profile input shorter than depth selected, truncating to %sm' %depth
+        print('Profile input shorter than depth selected, truncating to %sm' %depth)
         
     
     #define new z-coordinates
@@ -228,9 +231,9 @@ def prep_data(met_dset, prof_dset, params):
     absrb = PWP.absorb(params['beta1'], params['beta2'], zlen, params['dz']) #(units unclear)
     dstab = params['dt']*params['rkz']/params['dz']**2 #courant number  
     if dstab > 0.5:
-        print "WARNING: unstable CFL condition for diffusion! dt*rkz/dz**2 > 0.5."
-        print "To fix this, try to reduce the time step or increase the depth increment."
-        inpt = input("Proceed with simulation? Enter 'y'or 'n'. ")
+        print("WARNING: unstable CFL condition for diffusion! dt*rkz/dz**2 > 0.5.")
+        print("To fix this, try to reduce the time step or increase the depth increment.")
+        inpt = eval(input("Proceed with simulation? Enter 'y'or 'n'. "))
         if inpt is 'n':
             raise ValueError("Please restart PWP.m with a larger dz and/or smaller dt. Exiting...")
         
@@ -424,7 +427,7 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix=''):
     units = ['$^{\circ}$C', 'PSU']
     #cmap = custom_div_cmap(numcolors=17)
     cmap = plt.cm.rainbow
-    for i in xrange(2):
+    for i in range(2):
         ax = axes[i]
         im = ax.contourf(pwp_out['time'], pwp_out['z'], pwp_out[vble[i]], 15, cmap=cmap, extend='both')
         ax.set_ylabel('Depth (m)')

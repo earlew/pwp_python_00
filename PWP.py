@@ -23,13 +23,15 @@ import timeit
 import os
 from datetime import datetime
 import PWP_helper as phf
+import imp
 
 
-reload(phf)
+imp.reload(phf)
 debug_here = Tracer()
 
-def run(met_data, prof_data, param_kwds=None, overwrite=True, diagnostics=True, suffix='', save_plots=False):
+def run(met_data, prof_data, param_kwds=None, overwrite=True, diagnostics=False, suffix='', save_plots=False):
     
+    #TODO: move this to the helper file
     """
     This is the main controller function for the model. The flow of the algorithm
     is as follows:
@@ -150,7 +152,7 @@ def run(met_data, prof_data, param_kwds=None, overwrite=True, diagnostics=True, 
     #check timer
     tnow = timeit.default_timer()
     t_elapsed  = (tnow - t0)  
-    print "Time elapsed: %i minutes and %i seconds" %(np.floor(t_elapsed/60), t_elapsed%60)
+    print("Time elapsed: %i minutes and %i seconds" %(np.floor(t_elapsed/60), t_elapsed%60))
          
     ## write output to disk
     if overwrite:
@@ -178,28 +180,6 @@ def run(met_data, prof_data, param_kwds=None, overwrite=True, diagnostics=True, 
     phf.makeSomePlots(forcing, pwp_out, suffix=suffix, save_plots=save_plots)
     
     return forcing, pwp_out
-
-def absorb(beta1, beta2, zlen, dz):
-    
-    # Compute solar radiation absorption profile. This
-    # subroutine assumes two wavelengths, and a double
-    # exponential depth dependence for absorption.
-    # 
-    # Subscript 1 is for red, non-penetrating light, and
-    # 2 is for blue, penetrating light. rs1 is the fraction
-    # assumed to be red.
-    
-    rs1 = 0.6
-    rs2 = 1.0-rs1
-    z1 = np.arange(0,zlen)*dz
-    z2 = z1 + dz
-    z1b1 = z1/beta1
-    z2b1 = z2/beta1
-    z1b2 = z1/beta2
-    z2b2 = z2/beta2
-    absrb = rs1*(np.exp(-z1b1)-np.exp(-z2b1))+rs2*(np.exp(-z1b2)-np.exp(-z2b2))
-    
-    return absrb
 
 def pwpgo(forcing, params, pwp_out, diagnostics):
 
@@ -231,11 +211,11 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
     
     printDragWarning = True
     
-    print "Number of time steps: %s" %tlen
+    print("Number of time steps: %s" %tlen)
     
-    for n in xrange(1,tlen):
+    for n in range(1,tlen):
         percent_comp = 100*n/float(tlen)
-        print 'Loop iter. %s (%.1f %%)' %(n, percent_comp)
+        print('Loop iter. %s (%.1f %%)' %(n, percent_comp))
         
         #select for previous profile data
         temp = pwp_out['temp'][:, n-1]
@@ -296,7 +276,7 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
                 vvel = vvel*(1-dt*ucon)
         else:
             if printDragWarning:
-                print "Warning: Parameterization for inertial-internal wave dispersion is turned off."
+                print("Warning: Parameterization for inertial-internal wave dispersion is turned off.")
                 printDragWarning = False
 
         uvel, vvel = rot(uvel, vvel, ang)
@@ -332,6 +312,28 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         
     return pwp_out
     
+
+def absorb(beta1, beta2, zlen, dz):
+    
+    # Compute solar radiation absorption profile. This
+    # subroutine assumes two wavelengths, and a double
+    # exponential depth dependence for absorption.
+    # 
+    # Subscript 1 is for red, non-penetrating light, and
+    # 2 is for blue, penetrating light. rs1 is the fraction
+    # assumed to be red.
+    
+    rs1 = 0.6
+    rs2 = 1.0-rs1
+    z1 = np.arange(0,zlen)*dz
+    z2 = z1 + dz
+    z1b1 = z1/beta1
+    z2b1 = z2/beta1
+    z1b2 = z1/beta2
+    z2b2 = z2/beta2
+    absrb = rs1*(np.exp(-z1b1)-np.exp(-z2b1))+rs2*(np.exp(-z1b2)-np.exp(-z2b2))
+    
+    return absrb
     
 def remove_si(t, s, d, u, v):
     
@@ -394,20 +396,20 @@ def bulk_mix(t, s, d, u, v, g, rb, nz, z, mld_idx):
     
     rvc = rb #critical rich number??
     
-    for j in xrange(mld_idx, nz):
-    	h 	= z[j]
+    for j in range(mld_idx, nz):
+        h   = z[j]
         #it looks like density and velocity are mixed from the surface down to the ML depth
-    	dd 	= (d[j]-d[0])/d[0]
-    	dv 	= (u[j]-u[0])**2+(v[j]-v[0])**2
-    	if dv == 0:
-    		rv = np.inf
-    	else:
-    		rv = g*h*dd/dv
+        dd  = (d[j]-d[0])/d[0]
+        dv  = (u[j]-u[0])**2+(v[j]-v[0])**2
+        if dv == 0:
+            rv = np.inf
+        else:
+            rv = g*h*dd/dv
 
-    	if rv > rvc:
-    		break
-    	else:
-    		t, s, d, u, v = mix5(t, s, d, u, v, j)
+        if rv > rvc:
+            break
+        else:
+            t, s, d, u, v = mix5(t, s, d, u, v, j)
             
     return t, s, d, u, v
 
@@ -437,13 +439,13 @@ def grad_mix(t, s, d, u, v, dz, g, rg, nz):
         
         for j in j_range:
             
-    		dd = (d[j+1]-d[j])/d[j]
-    		dv = (u[j+1]-u[j])**2+(v[j+1]-v[j])**2
-    		if dv == 0:
-    			r[j] = np.inf
-    		else:
+            dd = (d[j+1]-d[j])/d[j]
+            dv = (u[j+1]-u[j])**2+(v[j+1]-v[j])**2
+            if dv == 0:
+                r[j] = np.inf
+            else:
                 #compute grad. rich. number
-    			r[j] = g*dz*dd/dv                
+                r[j] = g*dz*dd/dv                
                 
         #find the smallest value of r in the profile
         r_min = np.min(r)
@@ -457,13 +459,13 @@ def grad_mix(t, s, d, u, v, dz, g, rg, nz):
         t, s, d, u, v = stir(t, s, d, u, v, rc, r_min, j_min_idx)
         
         #recompute the rich number over the part of the profile that has changed
-    	j1 = j_min_idx-2
-    	if j1 < 1:
-    		 j1 = 0
-    	
-    	j2 = j_min_idx+2
-    	if j2 > nz-1:
-    		 j2 = nz-1
+        j1 = j_min_idx-2
+        if j1 < 1:
+             j1 = 0
+        
+        j2 = j_min_idx+2
+        if j2 > nz-1:
+             j2 = nz-1
              
         i+=1
                      
@@ -527,7 +529,7 @@ def diffus(dstab,nz,a):
 
 if __name__ == "__main__":
     
-    print "Running default test case using data from Beaufort gyre..."
+    print("Running default test case using data from Beaufort gyre...")
     
     forcing_fname = 'beaufort_met.nc'
     prof_fname = 'beaufort_profile.nc'
