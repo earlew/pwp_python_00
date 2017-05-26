@@ -13,18 +13,18 @@ The code presented here is functionally similar to its MATLAB equivalent (see *m
 **I did this re-write as a personal exercise and I am still experimenting with the code. I would recommend thoroughly examining this code before adopting it for your personal use.** 
 
 ## Required modules/libraries
-To run this code, you'll need Python 2.7 (some earlier versions might work) and the following libraries:
+To run this code, you'll need Python 3 and the following libraries:
 
 + Numpy
 + Scipy
 + Matplotlib
-+ [xray](http://xray.readthedocs.org/en/v0.5/why-xray.html)
++ xarray
 + seawater
 
 The first three modules are available with the popular python distributions such as [Anaconda](https://www.continuum.io/downloads) and [Canopy](https://store.enthought.com/downloads/#default). You can get the other two modules via the `pip install` command from the unix command line:
 
 ```
-pip install xray
+pip install xarray
 pip install seawater
 ```
 
@@ -32,6 +32,9 @@ Besides the python libraries listed here, this repository should have everything
 
 
 ## How the code works
+
+**Warning! This is outdated!!**
+**It also does not describe the sea-ice code**
 
 As mentioned earlier, the code is split into two files *PWP.py* and *PWP_helper.py*. Within *PWP.py*, the *run()* function is the main function that controls all the operations. The order of operations is as follows:
 
@@ -47,7 +50,7 @@ As mentioned earlier, the code is split into two files *PWP.py* and *PWP_helper.
 4. Save results to output file.
 5. Make simple plots to visualize the results.    
 
-To get a feel for how this code/model is organized, the `PWP.run()` function would be a good place to start. 
+To get a feel for how this code/model is organized, the `PWP_helper.pwp_run()` function would be a good place to start. 
 
 ## Input data
 
