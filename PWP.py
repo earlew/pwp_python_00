@@ -52,9 +52,12 @@ def absorb(beta1, beta2, zlen, dz):
     z2b2 = z2/beta2
     absrb = rs1*(np.exp(-z1b1)-np.exp(-z2b1))+rs2*(np.exp(-z1b2)-np.exp(-z2b2))
     
+    #assert np.sum(absrb)==1, "absorption profile doesn't sum to exactly 1.0"
+    #Potential issue: absrb doesn't sum to exactly 1.0 (this process leaks heat)
+    
     return absrb
 
-def pwpgo(forcing, params, pwp_out, diagnostics):
+def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
     
     """
     This is the main driver of the PWP module.
@@ -127,23 +130,26 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
     pwp_out['ice_thickness'][0] = params['h_i0']
     if params['h_i0'] > 0.0:
         print("Initializing ice model with %sm slab of ice." %params['h_i0'])
-    #TESTING
-    # pwp_out['ice_thickness'][0] = 0.2
-    # pwp_out['surf_ice_temp'][0] = -2
+
     
-    
-    #debug_here()
     print("Number of time steps: %s" %tlen)
     
+    if makeLivePlots:
+        #make plot of initial profile
+        phf.livePlots(pwp_out, 0)
+    
+    
     for n in range(1,tlen):
-        #print '-------------------------------'
+
         print('==============================================')
         percent_comp = 100*n/float(tlen)
         yr = np.floor(pwp_out['time'][n]/365)+1; day =pwp_out['time'][n]%365
         print('Loop iter. %s (%.1f %%). Year: %i, Day: %.2f' %(n, percent_comp, yr, day))
-        #print '===================================='
         
-        #select previous profile data
+        #note: n is one time step into the future, n-1 is the present
+
+        
+        #select profile data from last time step
         temp = pwp_out['temp'][:, n-1].copy()
         sal = pwp_out['sal'][:, n-1].copy()
         dens = pwp_out['dens'][:, n-1].copy()
@@ -177,7 +183,7 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
             #set alpha (ice fraction) to 0.0:
             alpha_n = 0.0
             
-            if params['csf'] == True:
+            if params['use_Bulk_Formula'] == True:
                 #computes atmosphere-ocean fluxes - everything but shortwave
                 q_lw_ao, q_sens_ao, q_lat_ao = get_atm_ocean_HF(temp[0], forcing, alpha_n, n)
                 q_in_ao = (1-alpha_n)*q_in[n-1]
@@ -215,7 +221,6 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
                     pwp_out['surf_ice_temp'][n] = temp_ice_surf
                     pwp_out['ice_thickness'][n] = h_ice
 
-                    # debug_here()
                 else:
                     temp[0] = T_fz
                     if print_ice_warning:
@@ -223,33 +228,30 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
                         print_ice_warning = False
             
             pwp_out['F_ao'][n-1] = q_net_ao+ice_heating
-            
-            #TODO: update layer 1 of passive scalar
         
         else:
             
-            ## get ice concentration
             
             #need to implement a smooth transition in ice-fraction from open water to non-zero ice percentage
             #without this, ice frac can abruptly transition from open ocean to >50% ice cover
             
-            if transition_ice_frac:
-                alpha_true = pwp_out['alpha_true'][n-1]
-                alpha_forc = alpha_n
-                d_alpha = alpha_true-alpha_forc
-                if np.abs(d_alpha)>0.05:
-                    t_adj = int(10*(1./params['dt_d'])) #give model 10 days to catch up to the ice frac forcing
-                    alpha_nt = forcing['icec2'][n-2+t_adj]
-                    alpha_adj = np.linspace(alpha_true, alpha_nt, t_adj)
-                    forcing['icec2'][n-2:n-2+t_adj] = pwp_out['alpha_true'][n-2:n-2+t_adj]+alpha_adj
-                    alpha_n = forcing['icec2'][n-1]
-                    transition_ice_frac = False
-                    
-                    #debug_here()
+            # if transition_ice_frac:
+            #     alpha_true = pwp_out['alpha_true'][n-1]
+            #     alpha_forc = alpha_n
+            #     d_alpha = alpha_true-alpha_forc
+            #     if np.abs(d_alpha)>0.05:
+            #         t_adj = int(10*(1./params['dt_d'])) #give model 10 days to catch up to the ice frac forcing
+            #         alpha_nt = forcing['icec2'][n-2+t_adj]
+            #         alpha_adj = np.linspace(alpha_true, alpha_nt, t_adj)
+            #         forcing['icec2'][n-2:n-2+t_adj] = pwp_out['alpha_true'][n-2:n-2+t_adj]+alpha_adj
+            #         alpha_n = forcing['icec2'][n-1]
+            #         transition_ice_frac = False
+            #
+            #         #debug_here()
             
             if params['ice_ON']:
                 
-                if params['csf'] == True:
+                if params['use_Bulk_Formula'] == True:
                     
                     #computes everything but shortwave
                     q_lw_ao, q_sens_ao, q_lat_ao = get_atm_ocean_HF(temp[0], forcing, alpha_n, n)
@@ -452,8 +454,9 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         pwp_out['F_ent'][n] = F_ent
         pwp_out['alpha_true'][n] = alpha_n
         
-        #do diagnostics
-        if diagnostics==1:
+        #show makeLivePlots
+        #debug_here()
+        if makeLivePlots:
             phf.livePlots(pwp_out, n)
         
     pwp_out['ice_start'] = np.array(pwp_out['ice_start'])
