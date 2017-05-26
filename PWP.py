@@ -164,17 +164,18 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
         #compute mlt and mls before applying surface fluxes
         mld_pre, mld_idx_pre = getMLD(dens, z, params)
         
-        #select previous forcing data
-        # F_atm = q_net[n-1]
-        #alpha_n = params['alpha']
-        alpha_n = forcing['icec2'][n-1]
+        
+        #select previous forcing data (TODO: implement switch for ice conc.)
+        if params['fix_alpha']:
+            alpha_n = params['alpha']
+        else:
+            alpha_n = forcing['icec2'][n-1]
+        
         skt_n = forcing['skt'][n-1]
         
         
         #save initial T,S (may not be necessary)
-        # temp_old = pwp_out['temp'][0, n-1]
-        sal_old = pwp_out['sal'][0, n-1]
-        T_fz = sw.fp(sal_ref, p=1)
+        # T_fz = sw.fp(sal_ref, p=dz)
         
         
         ### Absorb solar radiation and FWF in surf layer ###
@@ -209,10 +210,10 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
             temp[1:] = temp[1:] + q_in_ao*absrb[1:]*dt/(dz*dens_ref*cpw)
             
             #check if temp is less than freezing point
-            #T_fz = sw.fp(sal[0], p=dz) #why use sal_old? Need to recheck
+            T_fz = sw.fp(sal_ref, p=dz) 
             ice_heating = 0.0
             if temp[0] < T_fz:
-                # debug_here()
+
                 ice_heating = (T_fz-temp[0])*dens_ref*cpw*dz/dt #need to add artificial warming flux to compensate for ice growth
                 if params['ice_ON']:
                     pwp_out['ice_start'].append(pwp_out['time'][n])
@@ -295,10 +296,10 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
                 h_ice, temp_ice_surf, temp, sal, F_i, F_aio = PWP_ice.ice_model_v3(h_ice, skt_n, temp, sal, dens, F_ai, F_oi, alpha_n, params)
                 #h_ice, temp_ice_surf, temp, sal, F_i = PWP_ice.ice_model_v4(h_ice, pwp_out['surf_ice_temp'][n-1], temp, sal, dens, F_ai, F_oi, alpha_n, params)
                 
-                #debug_here()
+                print(temp[:15].mean())
                 
                 # apply E-P flux through leads
-                sal[0] = sal[0] + sal[0]*(1-alpha_n)*emp[n-1]*dt/dz #TODO: keep track of rain/snow on top of ice (big task)
+                sal[0] = sal[0] + sal_ref*(1-alpha_n)*emp[n-1]*dt/dz #TODO: keep track of rain/snow on top of ice (big task)
                 
                 # apply heat flux through leads
                 temp = temp + q_in_ao*absrb*dt/(dz*dens_ref*cpw) #incoming solar
@@ -308,7 +309,7 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
                 
                 #debug_here()
                 #check if temp is less than freezing point
-                #T_fz = sw.fp(sal_ref, p=1) #here it might be better to use sal_old rather than what is essentially brine water
+                T_fz = sw.fp(sal_ref, p=dz)  #is sal[0] appropriate here? This is essentially brine water
                 dT = temp[0]-T_fz
                 lead_ice_heating = 0.0
                 if dT<0:
@@ -318,9 +319,6 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
                     h_ice_lead, temp_ice_surf_lead, temp, sal = PWP_ice.create_initial_ice(0.0, np.nan, temp, sal, dens, (1-alpha_n), params)
                     # pwp_out['surf_ice_temp'][n] = temp_ice_surf
                     h_ice = h_ice+h_ice_lead*(1-alpha_n) #add lead ice on top of existing ice (to conserve salt/FW)
-                    
-                    
-                    #debug_here()
                     
                 
                 #save ice related output
