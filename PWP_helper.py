@@ -311,9 +311,12 @@ def run_PWP(met_data, prof_data, param_kwds=None, overwrite=True, makeLivePlots=
 
 
 
-def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1, alpha=0., h_i0=0.0, rkz=0., diff_zlim=5000, plot_zlim=500, qnet_offset=0., csf=False, ice_ON=False, winds_ON=True, emp_ON=True):
+def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1, alpha=0., h_i0=0.0, rkz=0., diff_zlim=5000, plot_zlim=500, 
+                qnet_offset=0., dopt='dens0', use_Bulk_Formula=False, fix_alpha=False, ice_ON=False, winds_ON=True, emp_ON=True):
+                
     
     """
+                
     TODO: update doc
     
     This function sets the main paramaters/constants used in the model.
@@ -338,6 +341,7 @@ def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1, al
     cpw: specific heat of water [4183.3 J/kgC]
     f: coriolis term (rad/s). [sw.f(lat)]
     ucon: coefficient of inertial-internal wave dissipation (s^-1) [0.1*np.abs(f)]
+                
     """
     
     rb=0.65 #rb: critical bulk richardson number. [0.65]
@@ -370,11 +374,26 @@ def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1, al
     params['winds_ON'] = winds_ON
     params['emp_ON'] = emp_ON
     
-    params['alpha'] = alpha #sea ice concentration (TODO: delete here and add to forcing)
+    params['alpha'] = alpha #sea ice concentration 
+    params['fix_alpha'] = fix_alpha #if fix_alpha=True, use params['alpha'] instead of ice conc. from forcing
     params['h_i0'] = h_i0 #initial ice thickness
     params['qnet_offset'] = qnet_offset #arbitrary offset to the net atmospheric heat flux.
     
-    params['csf'] = csf #compute surface fluxes using bulk formulae (True) or simply use what's provided (False)
+    params['dens_option'] = dopt # 'dens', 'dens0' or 'pdens' 
+    """
+    NOTES about density option:
+    default is dens0 because that was the original specification.
+    - 'dens0' calls dens0() from the seawater module which computes density assuming s(p=0) and t(p=0). Note that this is not potential density.
+    - 'pdens' calls pden() and computes potential density, i.e. density using potential temp with a surface reference
+    - 'dens' cals dens(), which uses the full density equation.
+
+    'dens0' is the simpliest/fastest option but can produce weak density inversions in weakly statified but otherwise stable water columns.
+    'pdens' uses 
+    
+    """
+    
+    
+    params['use_Bulk_Formula'] = use_Bulk_Formula #compute surface fluxes using bulk formulae (True) or simply use what's provided (False)
     
     return params
 
@@ -503,7 +522,7 @@ def prep_data(met_dset, prof_dset, params):
     init_prof['z'] = np.arange(0, params['max_depth']+params['dz'], params['dz'])
     zlen = len(init_prof['z'])
     
-    #compute absorption and incoming radiation (function defined in PWP_model.py)
+    #compute absorption and incoming radiation (function defined in PWP.py)
     absrb = PWP.absorb(params['beta1'], params['beta2'], zlen, params['dz']) #(units unclear)
     
     #check for numeric stability. This relates to the diffusion equation
@@ -622,6 +641,7 @@ def prep_data(met_dset, prof_dset, params):
     pwp_out['ice_thickness'] = np.zeros((tlen,))
     
     return forcing, pwp_out, params
+    
     
 def livePlots(pwp_out, n):
     
@@ -915,7 +935,7 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, zlim=500, save_plots=False, s
 
     
     if save_plots:     
-        plt.savefig('plots/initial_final_TS_profiles%s.png' %suffix, bbox_inches='tight')
+        plt.savefig('plots/initial_final_TS_profiles%s.pdf' %suffix, bbox_inches='tight')
         plt.close()    
         
     ## plot ice growth and ice temp
@@ -936,27 +956,48 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, zlim=500, save_plots=False, s
         plt.savefig('plots/ice_temp_thickness%s.pdf' %suffix, bbox_inches='tight')
         plt.close()
      
-    # plt.figure(figsize=(6,6.5))
-    # ax = plt.gca()
-    # im = ax.scatter(pwp_out['ice_thickness'], pwp_out['surf_ice_temp'], s=10, c=tvec, cmap=plt.cm.rainbow, lw=0)
-    # ax.set_ylabel('Temperature (C)')
-    # ax.set_xlabel('Ice thickness (m)')
-    # ax.set_title('Ice surface temperature')
-    # cb = plt.colorbar(im)
-    # cb.set_label('Time (days)')
-    # ax.grid(True)
+    plt.figure(figsize=(6,6.5))
+    ax = plt.gca()
+    im = ax.scatter(pwp_out['ice_thickness'], pwp_out['surf_ice_temp'], s=10, c=tvec, cmap=plt.cm.rainbow, lw=0)
+    ax.plot(pwp_out['ice_thickness'], pwp_out['surf_ice_temp'], '-', lw=0.5, c='0.5')
+    ax.set_ylabel('Temperature (C)')
+    ax.set_xlabel('Ice thickness (m)')
+    ax.set_title('Ice surface temperature')
+    cb = plt.colorbar(im)
+    cb.set_label('Time (days)')
+    ax.grid(True)
+    
+    if save_plots:     
+        plt.savefig('plots/ice_temp_thickness_v2%s.pdf' %suffix, bbox_inches='tight')
+        plt.close()
     
         
     ## plot OCEAN-ICE heat flux and ATM-ICE heat flux
     F_oi = np.ma.masked_invalid(pwp_out['F_oi'])
     F_oi_arr = np.ma.filled(F_oi, 0)
     F_ocean_net = -F_oi_arr+np.ma.masked_invalid(pwp_out['F_ao'])
+    
+    
+    F_ai_sm = savgol_filter(pwp_out['F_ai'], window_length=wlen, polyorder=1, mode='nearest')
+    F_i_sm = savgol_filter(pwp_out['F_i'], window_length=wlen, polyorder=1, mode='nearest')
+    F_oi_sm = savgol_filter(F_oi_arr, window_length=wlen, polyorder=1, mode='nearest')
+    F_ocean_net_sm = savgol_filter(F_ocean_net, window_length=wlen, polyorder=1, mode='nearest')
+    
+    
     plt.figure()
     plt.subplot(111)
-    plt.plot(tvec, pwp_out['F_ai'], '-', label='$F_{ai}$', ms=2)
-    plt.plot(tvec, pwp_out['F_i'], '-', label='$F_i$', ms=2)
-    plt.plot(tvec, pwp_out['F_oi'], '-', label='$F_{oi}$', ms=2)
-    plt.plot(tvec,  F_ocean_net, label='$F_{ao}$ - $F_{oi}$', ms=2)
+    plt.plot(tvec, pwp_out['F_ai'], lw=0.5, alpha=0.25, c='b')
+    plt.plot(tvec, F_ai_sm, '-', label='$F_{ai}$', lw=2, c='b')
+    
+    plt.plot(tvec, pwp_out['F_i'], lw=0.5, alpha=0.25, c='g')
+    plt.plot(tvec, F_i_sm, label='$F_i$', lw=2, c='g')
+    
+    plt.plot(tvec, pwp_out['F_oi'], lw=0.5, alpha=0.5, c='tomato')
+    plt.plot(tvec, F_oi_sm, label='$F_{oi}$', lw=2, c='tomato')
+
+    plt.plot(tvec,  F_ocean_net, lw=0.5, alpha=0.25, c='magenta')
+    plt.plot(tvec,  F_ocean_net_sm, label='$F_{ao}$ - $F_{oi}$', lw=2, c='magenta')
+    
     plt.hlines(0, tvec[0], tvec[-1])
     plt.ylim(-100, 100)
     #plt.ylim(-1.5*np.abs(pwp_out['F_atm'].max()), 1.5*np.abs(pwp_out['F_atm'].max()))
@@ -965,7 +1006,7 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, zlim=500, save_plots=False, s
     plt.legend(loc=0)
     plt.grid(True)
     
-    print("Net ocean warming: %.5f" %F_ocean_net.mean())
+    print("mean ocean warming: %.5f W/m2" %F_ocean_net.mean())
     
     if save_plots:     
         plt.savefig('plots/ice_ocean_fluxes%s.pdf' %suffix, bbox_inches='tight')
@@ -1020,6 +1061,7 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, zlim=500, save_plots=False, s
     units = ['$^{\circ}$C', 'PSU', '$\mu$mol/kg']
     # clim = ([-1.5, 2.5], [34.0, 34.75], [200, 325])
     cmap = [plt.cm.coolwarm, plt.cm.RdYlGn_r, plt.cm.coolwarm]
+    zlim = 250
     
     for i in range(3):
         fig = plt.figure(figsize=(7,9))
@@ -1112,6 +1154,8 @@ def custom_div_cmap(numcolors=11, name='custom_div_cmap', mincol='blue', midcol=
     return cmap   
     
 def save2nc(data_dict, fpath, dt_save=1, type='out'):
+    
+    #WARNING: This script is broken. Delete and re-do
     
     data_ds = xray.Dataset()
     data_dict_save = {}
