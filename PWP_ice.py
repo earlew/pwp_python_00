@@ -33,7 +33,7 @@ sal_ref = 34.0
 dens_ref = 1026.0
 temp_swfz = sw.fp(sal_ref, p=1)
 
-override_alpha = False
+#override_alpha = False
 
 
 def iceGrowthModel_ode_v1(t, y, F_ai, F_oi, temp_swfz, k_ice):
@@ -104,7 +104,7 @@ def get_ocean_ice_heat_flux(temp_sw, sal_sw, rho_sw, params):
 def create_initial_ice(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, alpha, params):
     
     #temp_ice_surf_i not necessary I suppose
-    if override_alpha:
+    if params['fix_alpha']:
         alpha = params['alpha']
         
     dz = params['dz']
@@ -141,7 +141,7 @@ def modify_thin_ice(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_o
     2. completely melt thick or thin ice if available heat flux is sufficient. ODE solver cannot handle this.
     
     """
-    if override_alpha:
+    if params['fix_alpha']:
         #NOTE: alpha should be required in this script.
         alpha = params['alpha']
         
@@ -354,7 +354,7 @@ def ice_model_v3(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, 
     switch_algorithm = False
     #temp_ice_surf_i = forcing['skt'] #experimenting...
 
-    if override_alpha:
+    if params['fix_alpha']:
         alpha = params['alpha']
 
     dz = params['dz']
