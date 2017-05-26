@@ -336,24 +336,30 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
                 print("Need to turn on ice physics.")
                 debug_here()
         
-        #make sure ocean temp change is consistent with applied
-        col_mean_dQ = np.mean(temp-pwp_out['temp'][:, n-1])*dens_ref*cpw*502/dt
-        F_net = pwp_out['F_ao'][n-1]-pwp_out['F_oi'][n-1]
-        dT_error = np.abs(col_mean_dQ-F_net)
-        if dT_error>0.01:
-            print("Warning: Error tolerance exceeded.")
-            debug_here()
+        #make sure ocean temp change is consistent with applied heating
+        # col_mean_dQ = np.mean(temp-pwp_out['temp'][:, n-1])*dens_ref*cpw*(z.max()+dz)/dt
+        # F_net = pwp_out['F_ao'][n-1]-pwp_out['F_oi'][n-1]
+        # dT_error = np.abs(col_mean_dQ-F_net)
+        # if dT_error>0.01:
+        #     print("Warning: heat applied is not exactly consistent with heat change in water column")
+        #     #debug_here()
             
         pwp_out['alpha_true'][n-1] = alpha_n
         
-        ### compute new density ###
-        dens = sw.dens0(sal, temp)
+        ### compute new density ###    
+        dens = getDensity(sal, temp, z, dopt=params['dens_option'])
+        
         
         #save pre-entrainment temp
         temp_pre = temp.copy()
+        sal_pre = sal.copy()
+        dens_pre = dens.copy()
         
         ### relieve static instability ###
-        temp, sal, dens, uvel, vvel, ps = remove_si(temp, sal, dens, uvel, vvel, ps)
+        temp, sal, dens, uvel, vvel, ps = remove_si(z, temp, sal, dens, uvel, vvel, ps, params)
+        
+        if np.any(np.diff(dens)<0):
+            debug_here()
         
         #compute mlt and mls after entrainment
         mld_post_ent, mld_idx_post_ent = getMLD(dens, z, params)
@@ -385,14 +391,27 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
         
         uvel, vvel = rot(uvel, vvel, ang)
         
+        dens1 = dens.copy()
+        if np.any(np.diff(dens1)<0):
+            debug_here()
+        
         ### Apply Bulk Richardson number instability form of mixing (as in PWP) ###
         if rb > 1e-5:
-            temp, sal, dens, uvel, vvel, ps = bulk_mix(temp, sal, dens, uvel, vvel, ps, dz, g, rb, zlen, z, mld_idx)
+            temp, sal, dens, uvel, vvel, ps = bulk_mix(z, temp, sal, dens, uvel, vvel, ps, dz, g, rb, zlen, mld_idx, params)
+         
+        dens2 = dens.copy()
+        if np.any(np.diff(dens2)<0):
+            debug_here()  
         
         ### Do the gradient Richardson number instability form of mixing ###
         if rg > 0:
-            temp, sal, dens, uvel, vvel, ps = grad_mix(temp, sal, dens, uvel, vvel, ps, dz, g, rg, zlen)
-        
+            #TODO: get rid off extra inputs that can be passed through params.
+            temp, sal, dens, uvel, vvel, ps = grad_mix(z, temp, sal, dens, uvel, vvel, ps, dz, g, rg, zlen, params, n)
+            
+        dens3 = dens.copy()
+        if np.any(np.diff(dens3)<0):
+            debug_here()
+            
         ### Apply diffusion ###
         if params['rkz'] > 0:
             
@@ -410,13 +429,15 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
     
             temp = diffus(params['dstab'], nz, temp)
             sal = diffus(params['dstab'], nz, sal)
-            dens = sw.dens0(sal, temp)
             uvel = diffus(params['dstab'], nz, uvel)
             vvel = diffus(params['dstab'], nz, vvel)
             ps = diffus(params['dstab'], nz, ps)
-        
             
+            ### compute new density ###    
+            dens = getDensity(sal, temp, z, dopt=params['dens_option'])
+                
             
+
         
         # find MLD again, after all mixing processes complete
         mld_idx = np.flatnonzero(dens-dens[0]>params['mld_thresh'])[0] #finds the first index that exceed ML threshold
@@ -462,7 +483,7 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
     return pwp_out
     
 
-def remove_si(t, s, d, u, v, ps):
+def remove_si(z, t, s, d, u, v, ps, params):
     
     # Find and relieve static instability that may occur in the
     # density array 'd'. This simulates free convection.
@@ -473,11 +494,13 @@ def remove_si(t, s, d, u, v, ps):
     while stat_unstable:
         
         d_diff = np.diff(d)
-        if np.any(d_diff<0):
+        if np.any(d_diff<0): #maybe use a small tolerance??
             stat_unstable=True
             first_inst_idx = np.flatnonzero(d_diff<0)[0]+1 #+1 because of diff function
             #d0 = d
-            (t, s, d, u, v, ps) = mix5(t, s, d, u, v, ps, first_inst_idx)
+            (t, s, d, u, v, ps) = mix5(z, t, s, d, u, v, ps, first_inst_idx, params)
+            
+            #debug_here()
             
             #plot density
             # plt.figure(num=86)
@@ -496,13 +519,16 @@ def remove_si(t, s, d, u, v, ps):
     return t, s, d, u, v, ps
     
 
-def mix5(t, s, d, u, v, ps, j):
+def mix5(z, t, s, d, u, v, ps, j, params):
     
     #This subroutine mixes the arrays t, s, u, v down to level j (level where there is instability).
     j = j+1 #so that the j-th layer is included in the mixing
     t[:j] = np.mean(t[:j])
     s[:j] = np.mean(s[:j])
-    d[:j] = sw.dens0(s[:j], t[:j])
+    
+    ### compute new density ###    
+    d[:j]  = getDensity(s[:j], t[:j], z[:j], dopt=params['dens_option'])
+
     #d[:j] = np.mean(d[:j]) #doing ignores the non-linearities in the eqn of state
     u[:j] = np.mean(u[:j])
     v[:j] = np.mean(v[:j])
@@ -519,7 +545,7 @@ def rot(u, v, ang):
     
     return u, v
 
-def bulk_mix(t, s, d, u, v, ps, dz, g, rb, nz, z, ml_idx):
+def bulk_mix(z, t, s, d, u, v, ps, dz, g, rb, nz, ml_idx, params):
     #sub-routine to do bulk richardson mixing
     
     rvc = rb #critical rich number??
@@ -538,11 +564,13 @@ def bulk_mix(t, s, d, u, v, ps, dz, g, rb, nz, z, ml_idx):
             break
         
         else:
-            t, s, d, u, v, ps = mix5(t, s, d, u, v, ps, j)
+            t, s, d, u, v, ps = mix5(z, t, s, d, u, v, ps, j, params)
     
     return t, s, d, u, v, ps
 
-def grad_mix(t, s, d, u, v, ps, dz, g, rg, nz):
+def grad_mix(z, t, s, d, u, v, ps, dz, g, rg, nz, params, n):
+    
+    #TODO: get rid off function arguments that are already in params
     
     #copied from source script:
     # %  This function performs the gradeint Richardson Number relaxation
@@ -554,7 +582,7 @@ def grad_mix(t, s, d, u, v, ps, dz, g, rg, nz):
     # %  effect the calculations (except that on some occasions they evidently have!)
     #print "entered grad mix"
     
-    rc = rg #critical rich. number
+    rc = params['rg'] #critical rich. number
     j1 = 0
     j2 = nz-1
     j_range = np.arange(j1, j2)
@@ -573,18 +601,23 @@ def grad_mix(t, s, d, u, v, ps, dz, g, rg, nz):
                 r[j] = np.inf
             else:
                 #compute grad. rich. number
-                r[j] = g*dz*dd/dv
+                r[j] = params['g']*params['dz']*dd/dv
+            
+            # if r[j]<0:
+            #     print("whoa there. negative richardson number")
+            #     print(r[j])
+            #     debug_here()
         
         #find the smallest value of r in the profile
         r_min = np.min(r)
         j_min_idx = np.argmin(r)
         
-        #Check to see whether the smallest r is critical or not.
+        #Check to see whether the smallest r is above critical or not.
         if r_min > rc:
             break
         
         #Mix the cells j_min_idx and j_min_idx+1 that had the smallest Richardson Number
-        t, s, d, u, v, ps = stir(t, s, d, u, v, ps, rc, r_min, j_min_idx)
+        t, s, d, u, v, ps = stir(z, t, s, d, u, v, ps, rc, r_min, j_min_idx, params, n)
         
         #recompute the rich number over the part of the profile that has changed
         j1 = j_min_idx-2
@@ -596,10 +629,12 @@ def grad_mix(t, s, d, u, v, ps, dz, g, rg, nz):
              j2 = nz-1
         
         i+=1
+        
+        
     
     return t, s, d, u, v, ps
 
-def stir(t, s, d, u, v, ps, rc, r, j):
+def stir(z, t, s, d, u, v, ps, rc, r, j, params, n):
     
     #copied from source script:
     
@@ -616,7 +651,7 @@ def stir(t, s, d, u, v, ps, rc, r, j):
     # %  aribtrary rc and to achieve faster convergence.
     
     #TODO: This needs better commenting
-    rcon = 0.02+(rc-r)/2
+    rcon = 0.02+(rc-r)/2.
     rnew = rc+rcon/5.
     f = 1-r/rnew
     
@@ -636,16 +671,18 @@ def stir(t, s, d, u, v, ps, rc, r, j):
     ps[j] = ps[j]+d_ps
     
     #recompute density
-    #d[j:j+1] = sw.dens0(s[j:j+1], t[j:j+1])
     #have to be careful here. x[j:j+1] in python is not the same as x[[j,j+1]]. We want the latter
-    d[[j,j+1]] = sw.dens0(s[[j,j+1]], t[[j,j+1]])
+    d[[j,j+1]] = getDensity(s[[j,j+1]], t[[j,j+1]], z[[j,j+1]], dopt=params['dens_option'])
+
+    # if n==512:
+    #     debug_here()
     
     #mix velocities
-    du = (u[j+1]-u[j])*f/2
+    du = (u[j+1]-u[j])*f/2.
     u[j+1] = u[j+1]-du
     u[j] = u[j]+du
     
-    dv = (v[j+1]-v[j])*f/2
+    dv = (v[j+1]-v[j])*f/2.
     v[j+1] = v[j+1]-dv
     v[j] = v[j]+dv
     
@@ -852,6 +889,25 @@ def get_atm_ice_HF(surf_temp, forcing, alpha, n):
     #debug_here()
     
     return q_lw_ai, q_sens_ai, q_lat_ai
+    
+
+def getDensity(s,t,z, dopt):
+    
+    
+ 
+    if dopt == 'dens0':
+        dens = sw.dens0(s, t)
+        
+    elif dopt == 'dens':
+        dens = sw.dens(s, t, z)
+        
+    elif dopt == 'pdens':
+        dens = sw.pden(s, t, z, pr=0)
+    else:
+        print("Error: set appropriate density option: 'dens0', 'pdens' or 'dens' ")
+        debug_here()
+    
+    return dens
 
 if __name__ == "__main__":
     

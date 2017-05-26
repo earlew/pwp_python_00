@@ -62,7 +62,7 @@ def demo3():
     p['winds_ON'] = True
     p['emp_ON'] = False
     p['alpha'] = 0.95
-    p['dopt'] = 'pdens'
+    p['dopt'] = 'dens0'
     p['fix_alpha'] = True
     p['mld_thresh'] = 0.01
     p['use_Bulk_Formula'] = True
@@ -562,13 +562,24 @@ def prep_data(met_dset, prof_dset, params):
     #get profile variables
     temp0 = init_prof['t'] #initial profile temperature
     sal0 = init_prof['s'] #intial profile salinity
-    dens0 = sw.dens0(sal0, temp0) #intial profile density    
     
     #get passive scalar if any
     if 'ps' in prof_dset:
         ps0 = init_prof['ps'] #initial profile temperature of passive scalar
     else:
         ps0 = np.zeros(temp0.shape)
+    
+    print("Using %s density option." %params['dens_option'])
+    
+    dens0 = PWP.getDensity(sal0, temp0, init_prof['z'], dopt=params['dens_option'])
+        
+    if any(np.diff(dens0)<0):
+        message = "Warning!!! Initial density profile has instabilities..."
+        # print(np.diff(dens0))
+        #warnings.warn(message)
+        print(message)
+        
+    sal0, temp0, ps0, dens0  = PWP.local_stir(init_prof['z'], sal0, temp0, ps0, params['dens_option'])
     
     #initialize variables for output
     #Todo: set time resolution of output file
