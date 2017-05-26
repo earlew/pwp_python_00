@@ -17,7 +17,7 @@ import numpy as np
 import seawater as sw
 import matplotlib.pyplot as plt
 from IPython.core.debugger import Tracer
-import xray
+import xarray as xr
 import pickle
 import timeit
 import os

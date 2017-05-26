@@ -8,7 +8,7 @@ import seawater as sw
 import matplotlib.pyplot as plt
 import PWP
 from datetime import datetime
-import xray
+import xarray as xr
 import timeit
 
 import warnings
@@ -25,6 +25,8 @@ def demo1():
     prof_fname = 'beaufort_profile.nc' 
     print("Running Test Case 1 with data from Beaufort gyre...")
     forcing, pwp_out = run_PWP(met_data=forcing_fname, prof_data=prof_fname, makeLivePlots=False, suffix='demo1_nodiff', save_plots=True)
+    
+    return forcing, pwp_out
 
 def demo2(dopt='dens0'):
     
@@ -45,6 +47,8 @@ def demo2(dopt='dens0'):
     warnings.simplefilter('error', UserWarning)
     forcing, pwp_out = run_PWP(met_data=forcing_fname, prof_data=prof_fname, suffix='demo2_1e6diff', save_plots=True, param_kwds=p)
     
+    return forcing, pwp_out
+    
 
 def demo3():
     
@@ -62,7 +66,7 @@ def demo3():
     p['winds_ON'] = True
     p['emp_ON'] = False
     p['alpha'] = 0.95
-    p['dopt'] = 'dens0'
+    p['dopt'] = 'pdens'
     p['fix_alpha'] = True
     p['mld_thresh'] = 0.01
     p['use_Bulk_Formula'] = True
@@ -98,53 +102,7 @@ def demo3():
     suffix = '%s_%sc%s%s%s%s_alpha%s' %(fnum, nump, ice_str, wind_str, emp_str, qflux_str, p['alpha'])
     forcing, pwp_out = run_PWP(met_data=met_data, prof_data=prof_data, param_kwds=p, suffix=suffix, save_plots=True)
     
-    return forcing, pwp_out
-    
-
-def demo4():
-    
-    """
-    Example script of how to run the PWP model.
-    This run is initialized with an early winter profile from Maud Rise and uses NCEP fluxes. 
-    """
-    
-    p={}
-    p['rkz']=1e-6
-    p['dz'] = 1
-    p['dt'] = 1.5
-    p['max_depth'] = 500
-    p['ice_ON'] = True
-    p['winds_ON'] = True
-    p['emp_ON'] = True
-    p['alpha'] = 0.95
-    p['fix_alpha'] = True
-    p['dopt'] = 'pdens'
-    # p['mld_thresh'] = 0.01
-
-    
-    if p['ice_ON']:
-        ice_str = '' 
-    else:
-        ice_str = '_noICE'
-        
-    if p['winds_ON']:
-        wind_str = ''
-    else:
-        wind_str = '_noWINDS'
-        
-    if p['emp_ON']:
-        emp_str = ''
-    else:
-        emp_str = '_noEMP'
-    
-    fnum = 9099#'0068' #9099 9094
-    p1 = 8#25 #10
-    p2 = 15#28 #12
-    nump = p2-p1
-    met_data = 'NCEP_forcing_for_f%s_p%s-%s.nc' %(fnum, p1, p2)
-    prof_data = 'float%s_%s_%s.nc' %(fnum, p1, p2)
-    suffix = '%s_%sc%s%s%s_alpha%s' %(fnum, nump, ice_str, wind_str, emp_str, p['alpha'])
-    forcing, pwp_out = run_PWP(met_data=met_data, prof_data=prof_data, param_kwds=p, suffix=suffix, makeLivePlots=False, save_plots=True)    
+    return forcing, pwp_out  
     
 
 def run_PWP(met_data, prof_data, param_kwds=None, overwrite=True, makeLivePlots=False, suffix='', save_plots=False):
@@ -245,8 +203,8 @@ def run_PWP(met_data, prof_data, param_kwds=None, overwrite=True, makeLivePlots=
     t0 = timeit.default_timer()
     
     ## Get surface forcing and profile data
-    met_dset = xray.open_dataset('input_data/%s' %met_data)
-    prof_dset = xray.open_dataset('input_data/%s' %prof_data)
+    met_dset = xr.open_dataset('input_data/%s' %met_data)
+    prof_dset = xr.open_dataset('input_data/%s' %prof_data)
     
     if 'start_date' in prof_dset.attrs and 'end_date' in prof_dset.attrs:
         print('=============================================')
