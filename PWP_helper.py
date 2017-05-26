@@ -261,7 +261,6 @@ def run_PWP(met_data, prof_data, param_kwds=None, overwrite=True, makeLivePlots=
     # pwp_out2 = phf.save2nc(pwp_out, output_fpath, dt_save=params['dt_save'])
     # forcing2 = phf.save2nc(forcing, forcing_fpath, dt_save=params['dt_save'], type='forc')
     
-    debug_here()
     ## do analysis of the results
     makeSomePlots(forcing, pwp_out, zlim=params['plot_zlim'], suffix=suffix, save_plots=save_plots)
     
