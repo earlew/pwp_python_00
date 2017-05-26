@@ -1,3 +1,10 @@
+**Warning! This is outdated!!**
+
+**It also does not describe the sea-ice code!!**
+
+**under construction!!**
+
+
 ## Description
 
 This is a Python implementation of the Price Weller Pinkel (PWP) ocean mixed layer model. This code is based on the MATLAB verision of the PWP model, originally written by [Peter Lazarevich and Scott Stoermer](http://www.po.gso.uri.edu/rafos/research/pwp/) (U. Rhode Island) and later modified by Byron Kilbourne (University of Washington) and Sarah Dewey (University of Washington).
@@ -32,9 +39,6 @@ Besides the python libraries listed here, this repository should have everything
 
 
 ## How the code works
-
-**Warning! This is outdated!!**
-**It also does not describe the sea-ice code**
 
 As mentioned earlier, the code is split into two files *PWP.py* and *PWP_helper.py*. Within *PWP.py*, the *run()* function is the main function that controls all the operations. The order of operations is as follows:
 
