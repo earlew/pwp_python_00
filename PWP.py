@@ -908,6 +908,96 @@ def getDensity(s,t,z, dopt):
         debug_here()
     
     return dens
+    
+
+def local_stir(z, s, t, ps, dopt):
+    
+    
+    s0 = s.copy()
+    t0 = t.copy()
+    ps0 = ps.copy()
+    d = getDensity(s,t,z, dopt)
+    d0 = d.copy()
+
+    dd = np.diff(d0)
+    mix_frac = 0.5
+    
+    print("Stabilizing profile")
+    i=0
+    while any(dd<0):
+        
+        i=i+1
+        
+        neg_idx = np.flatnonzero(dd<=0)
+        neg_idx_r = neg_idx[::-1] #mix from bottom up
+        
+        for idx in neg_idx_r:
+            
+            j = idx
+            
+            #mix temp
+            dt = (t[j+1]-t[j])*mix_frac/2.
+            t[j+1] = t[j+1]-dt
+            t[j] = t[j]+dt
+    
+            #mix sal
+            ds = (s[j+1]-s[j])*mix_frac/2.
+            s[j+1] = s[j+1]-ds
+            s[j] = s[j]+ds
+    
+            #mix passive scalar
+            d_ps = (ps[j+1]-ps[j])*mix_frac/2.
+            ps[j+1] = ps[j+1]-d_ps
+            ps[j] = ps[j]+d_ps
+            
+        
+            #recompute density
+            d[[j,j+1]] = getDensity(s[[j,j+1]], t[[j,j+1]], z[[j,j+1]], dopt=dopt)
+            dd = np.diff(d)
+        
+        if mix_frac<1:
+            mix_frac = mix_frac+0.01
+        else:
+            mix_frac=1
+        
+        if i>1e3:
+            print("Failed to stabilize profile after %i iterations :(" %i)
+            break
+        
+    print("Profile stabilized. %i iterations required." %i)
+        
+    #plot stablized profile
+    fig, axes = plt.subplots(1,3, figsize=(12,6), sharey=True)
+    axes[0].plot(t0, z, label='initial')
+    axes[0].plot(t, z, label='stabilized')
+    axes[0].grid(True)
+    axes[0].invert_yaxis()
+    axes[0].set_ylabel("Depth (m)")
+    axes[0].set_xlabel("Temperature (C)")
+    axes[0].legend(loc=0)
+    
+    axes[1].plot(s0, z, label='initial')
+    axes[1].plot(s, z, label='stabilized')
+    axes[1].grid(True)
+    axes[1].invert_yaxis()
+    axes[1].set_ylabel("Depth (m)")
+    axes[1].set_xlabel("Salinity (psu)")
+    axes[1].legend(loc=0)
+    
+    axes[2].plot(d0-1000, z, label='initial')
+    axes[2].plot(d-1000, z, label='stabilized')
+    axes[2].grid(True)
+    axes[2].invert_yaxis()
+    axes[2].set_ylabel("Depth (m)")
+    axes[2].set_xlabel("%s - 1000 (kg/m3)" %dopt)
+    axes[2].legend(loc=0)
+    
+    debug_here()
+    
+    return s, t, ps, d 
+        
+        
+    
 
 if __name__ == "__main__":
     
