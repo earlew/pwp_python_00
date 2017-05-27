@@ -27,18 +27,18 @@ sal_ice = 4. #salinity of sea ice (PSU) - from Hyatt 2006
 
 melt_lyrs = 1 #TODO: play with this. PWP has issues with super thin, freshwater lenses.
 bdry_lyr = 1
-thin_ice = 0 #m    
+thin_ice = 0 #m    #threshold for what is considered thin ice
 T_fzi = 0.0 #freezing point of (pure) ice
 
-#Todo: move these to params
+#TODO: move these to params
 sal_ref = 34.0
 dens_ref = 1026.0
-temp_swfz = sw.fp(sal_ref, p=1)
+temp_fz = sw.fp(sal_ref, p=1)
 
 #override_alpha = False
 
 
-def iceGrowthModel_ode_v1(t, y, F_ai, F_oi, temp_swfz, k_ice):
+def iceGrowthModel_ode_v1(t, y, F_ai, F_oi, temp_fz, k_ice):
     
     """   
     # dT/dt =  (F_atm + F_ocean)/(c_ice*rho_ice*h)   (1)
@@ -49,7 +49,7 @@ def iceGrowthModel_ode_v1(t, y, F_ai, F_oi, temp_swfz, k_ice):
     """
     
     dy0 = 2*(F_ai+F_oi)/(c_ice*y[1]*rho_ice)
-    dy1 = (-k_ice*(y[0]-temp_swfz)/y[1] - F_oi)/(L_ice*rho_ice)
+    dy1 = (-k_ice*(y[0]-temp_fz)/y[1] - F_oi)/(L_ice*rho_ice)
     
     #debug_here()
     
@@ -57,13 +57,13 @@ def iceGrowthModel_ode_v1(t, y, F_ai, F_oi, temp_swfz, k_ice):
     
 
 
-def iceGrowthModel_ode_v2(t, y, temp_ice_surf, F_oi, temp_swfz, k_ice):
+def iceGrowthModel_ode_v2(t, y, temp_ice_surf, F_oi, temp_fz, k_ice):
     
     """   
     In this version, the surface temperature is specified.
     """
     
-    F_i = -k_ice*(temp_ice_surf-temp_swfz)/y[0]
+    F_i = -k_ice*(temp_ice_surf-temp_fz)/y[0]
     dy0 = (F_i - F_oi)/(L_ice*rho_ice)
     
     return [dy0]
@@ -82,9 +82,9 @@ def iceGrowthModel_ode_v3(t, y, F_ai, F_oi):
 def get_ocean_ice_heat_flux(temp_sw, sal_sw, rho_sw, params):    
     
     rho_sw0 = rho_sw[0] #density of seawater in model layer 1 (kg/m3)
-    #temp_swfz = sw.fp(sal_sw[0], p=1) #freezing point of seawater at given salinity
+    #temp_fz = sw.fp(sal_sw[0], p=1) #freezing point of seawater at given salinity
     
-    dT_surf = temp_sw[:bdry_lyr].mean() - temp_swfz
+    dT_surf = temp_sw[:bdry_lyr].mean() - temp_fz
     # F_sw = dT_surf*params['dz']*rho_sw0*c_sw*bdry_lyr #J per m2 per time step
     # F_sw_dt = F_sw/params['dt'] #in W/m2
     
@@ -94,15 +94,14 @@ def get_ocean_ice_heat_flux(temp_sw, sal_sw, rho_sw, params):
     F_sw_dt = c_sw*dens_ref*c_d*u_star*dT_surf
     
     if F_sw_dt<0:
-        #F_sw can turn negative if there is a large enough salt flux that increases the freezing point of water
+        #F_sw can turn negative if there is a large enough salt flux to lower layer1 temp past temp_fz(S=S_ref)
+        #This is avoided if a constant reference salinity is used to compute temp_fz
         F_sw_dt=0.0
         
     
 
     return F_sw_dt
 
-        
-   
 def create_initial_ice(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, alpha, params):
     
     #temp_ice_surf_i not necessary I suppose
@@ -111,13 +110,13 @@ def create_initial_ice(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, alpha,
         
     dz = params['dz']
     
-    #temp_swfz = sw.fp(sal_sw[0], p=1) #freezing point of seawater at given salinity
+    #temp_fz = sw.fp(sal_sw[0], p=1) #freezing point of seawater at given salinity
     #rho_sw0 = rho_sw[0] #density of seawater in model layer 1 (kg/m3)
     
     print("initiating ice growth...")
     ##create ice according to Hyatt 2006
     #first, create a thin layer of sea ice (eqn. 5.11, Hyatt 2006)
-    h_ice_f = h_ice_i + dens_ref*c_sw*dz*(temp_swfz-temp_sw[0])/(rho_ice*L_ice)
+    h_ice_f = h_ice_i + dens_ref*c_sw*dz*(temp_fz-temp_sw[0])/(rho_ice*L_ice)
     
     #compute salinity change in top layer due to brine rejection (eqn. 5.12, Hyatt 2006)
     dh_ice = h_ice_f - h_ice_i
@@ -125,22 +124,19 @@ def create_initial_ice(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, alpha,
     sal_sw[0] = sal_sw[0]+dsal_sw
     
     #set ice to freezing temp of water
-    temp_ice_surf_f = temp_swfz
+    temp_ice_surf_f = temp_fz
     
     #set ocean surface to freezing temp
-    temp_sw[0] = temp_swfz
+    temp_sw[0] = temp_fz
     
     
     return h_ice_f, temp_ice_surf_f, temp_sw, sal_sw
     
     
-def modify_thin_ice(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, alpha, params):
+def melt_ice_v1(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, alpha, params):
     
     """
-    Use this method to:
-    
-    1. modify thin ice up to some threshold. 
-    2. completely melt thick or thin ice if available heat flux is sufficient. ODE solver cannot handle this.
+    Function to melt ice using when either F_ai>0 or when temp_ice_surf>T_fz
     
     """
     if params['fix_alpha']:
@@ -152,21 +148,25 @@ def modify_thin_ice(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_o
     print("running 'thin' ice algorithm...")
     
     #define surface density and freezing temp
-    #temp_swfz = sw.fp(sal_sw[0], p=1) #freezing point of seawater at given salinity
+    #temp_fz = sw.fp(sal_sw[0], p=1) #freezing point of seawater at given salinity
     #rho_sw0 = rho_sw[0] #density of seawater in model layer 1 (kg/m3)
   
     #available heat: heat available to warm/melt of cool/grow ice:
     total_available_heat = (F_ai+F_oi)*params['dt']  #J/m2
+    
     #warming_heat_sink: heat gain required to bring ice to freezing point (small compared to melting sink):
-    "NOTE to self: Should probably set this to zero if ice temps are specified"
-    if temp_ice_surf_i<temp_swfz:
-        warming_heat_sink = -(temp_ice_surf_i-temp_swfz)*c_ice*h_ice_i #J/m2
+    if temp_ice_surf_i<temp_fz:
+        warming_heat_sink = -(temp_ice_surf_i-temp_fz)*c_ice*h_ice_i #J/m2
     else:
         warming_heat_sink = 0.0
+        
     #melting_heat_sink: heat gain required to completely melt ice, after it has warmed to the freezing point:
     melting_heat_sink = h_ice_i*rho_ice*L_ice #J/m2
+    
     #total ice heat sink: warming_heat_sink + melting_heat_sink
     total_ice_heat_sink = warming_heat_sink + melting_heat_sink
+    
+    assert total_available_heat>0, "Something went wrong, heat available to warm/melt ice should be positive"
     
     if total_available_heat>0:
     
@@ -198,11 +198,9 @@ def modify_thin_ice(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_o
                 
                 #compute change in ice thickness
                 dh_ice = -available_heat_for_melt/(rho_ice*L_ice) #denom is J/m3. need to multiply by ice frac???
-                # #reset ocean surface temp: #NOT APPLICABLE WITH MCPHEE PARAM
-                # temp_sw[:bdry_lyr] = temp_swfz
                 
                 #set ice surface temp to freezing temp
-                temp_ice_surf_f = temp_swfz
+                temp_ice_surf_f = temp_fz
                 
             else:
                 
@@ -212,22 +210,7 @@ def modify_thin_ice(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_o
                 
                 
                 NOTE:
-                ice will completely melt in this iteration. Now it's just a matter of figuring out what to do 
-                with the extra heat.
-                
-                Here are the possibilities:
-                
-                Option 1: Apply F_ai first. If F_ai is more than enough to completely melt the ice, ignore F_oi and 
-                use excess heat to warm the ocean. If F_ai is insufficient, use some of F_oi to finish melting 
-                the ice and ignore the rest. In the first scenario, F_oi needs to be set to zero (in the main
-                ice script) and the excess F_ai needs to carried over to F_ao. In the second scenario, F_oi will
-                need to be adjusted to account for the partial melt.
-                
-                Option 2: Apply F_oi first then apply F_ai and use excess F_ai to warm the ocean. This is probably 
-                simpler to implement. In most scenarios, F_oi will be insufficient to completely melt the ice and 
-                F_ai will finish the melt and warm the ocean. 
-
-                I'm gonna go with 2.
+                ice will completely melt in this iteration. Extra heat will warm ocean
                 
                 """
                 
@@ -262,31 +245,15 @@ def modify_thin_ice(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_o
                 print("F_aio = %.2f" %F_aio)
                 
                 temp_ice_surf_f = np.nan #since there is no ice        
-                
-            
-                #!!!THIS HAS BEEN FIGURED OUT!! REMOVE NOTE IN THE FUTURE!!!#
-                #FIGURE OUT THESE QUESTIONS:
-                #WHAT HAPPENS TO AVAILABLE OCEAN HEAT???? 
-                # """
-                # The above code assumes that the available atm-ice heat flux is sufficient to completely melt the ice.
-                # If this is in fact true, then code does the right thing: i.e. ignore the ice-ocean heat flux. If the
-                # atm-ice heat flux is insufficient to melt ice, then some or all of the ocean-ice heat flux needs to be used.
-                # However, the code is not set up to do that. This is an edge case tho, so it's probably nothing to worry about.
-                # For now, there is an assertion warning.
-                # """
-                # #IS THIS ATM-OCEAN HEAT FLUX ACCOUNTED FOR???
-                # """
-                # This heat flux doesn't show up anywhere but here. Basically we have some portion of F_ai becoming F_ao.
-                # The variable "available_ATM_heat_for_ocean_warming" needs to be passed on to F_ao.
-                # Update: This has been fixed
-                # """
-                #debug_here()
+ 
+                debug_here()
                 
                 
                 
         
     else:
         
+        #TODO: move this to separate function
         """
         if available heat is negative, grow ice according to Hyatt 2006 (eqn. 5.11). 
         
@@ -303,24 +270,19 @@ def modify_thin_ice(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_o
         # warnings.warn(message)
         # debug_here()
 
-        print("growing thin ice...")
-
-
-        # #apply net heat flux through leads
-        # dT_surf1 = (1-alpha)*(F_atm)*params['dt']/(params['dz']*rho_sw0*c_sw)
-        # temp_sw0 = temp_sw[0]+dT_surf1
+        print("growing ice...")
 
         #compute ocean surface temp change due to heat loss through ice (combine with the above?)
         dT_surf = total_available_heat/(params['dz']*dens_ref*c_sw)
         temp_sw0 = temp_sw[0]+dT_surf
 
         #keep ice at the freezing point 
-        temp_ice_surf_f = temp_swfz
+        temp_ice_surf_f = temp_fz
 
         #if there is enough heat to cool the ocean surface past its freezing point, use the remaining heat flux to create ice
-        if temp_sw0 < temp_swfz:
-            dh_ice = dens_ref*c_sw*params['dz']*(temp_swfz-temp_sw0)/(rho_ice*L_ice)
-            temp_sw[0] = temp_swfz
+        if temp_sw0 < temp_fz:
+            dh_ice = dens_ref*c_sw*params['dz']*(temp_fz-temp_sw0)/(rho_ice*L_ice)
+            temp_sw[0] = temp_fz
         else:
             #this is the case where the heat loss is not enough to cool the ocean past the freezing point.
             dh_ice = 0
@@ -337,62 +299,53 @@ def modify_thin_ice(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_o
     #debug_here()
     return h_ice_f, temp_ice_surf_f, temp_sw, sal_sw, F_aio
     
-def ice_model_v3(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, alpha, params):
+def grow_ice_v3(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, alpha, params):
     
     """
     This ice model uses specified surface ice temperatures.
-    
-    UNDER CONSTRUCTION
     """
     from scipy.integrate import odeint
     import scipy.integrate as spi
     
     #derive/set additional parameters
     #rho_sw0 = rho_sw[0] #density of seawater in model layer 1 (kg/m3)
-    #temp_swfz = sw.fp(sal_sw[0], p=1) #freezing point of seawater at given salinity
-    temp_ice_base = temp_swfz
-    F_i = 0.0
-    F_aio = 0.0
-    switch_algorithm = False
-    #temp_ice_surf_i = forcing['skt'] #experimenting...
+    #temp_fz = sw.fp(sal_sw[0], p=1) #freezing point of seawater at given salinity
+    temp_ice_base = temp_fz
+    F_i = 0.0 #heat flux through ice
+    F_aio = 0.0 #heat flux from atmosphere left over after melting ice
+    # switch_algorithm = False
 
     if params['fix_alpha']:
+        #use fixed alpha
         alpha = params['alpha']
 
     dz = params['dz']
     dt = params['dt']
     # alpha = params['alpha']
     
-    assert h_ice_i >=0., "Error! negative ice thickness. Something went terribly wrong!"
+    assert h_ice_i >=0, "Error! negative ice thickness. Something went terribly wrong!"
     
-    
-    #warming_sink: heat gain required to bring ice to freezing point:
-    warming_heat_sink = -(temp_ice_surf_i-temp_swfz)*c_ice*h_ice_i*alpha 
-    #melting_heat_sink: heat gain required to completely melt ice of thickness, after it has warmed to the freezing point:
-    melting_heat_sink = alpha*h_ice_i*rho_ice*L_ice
-    #total ice heat sink: warming_heat_sink + melting_heat_sink
-    total_ice_heat_sink = warming_heat_sink + melting_heat_sink
+    #TODO: delete this stuff soon
+    # #warming_sink: heat gain required to bring ice to freezing point:
+    # warming_heat_sink = -(temp_ice_surf_i-temp_fz)*c_ice*h_ice_i*alpha
+    # #melting_heat_sink: heat gain required to completely melt ice of thickness, after it has warmed to the freezing point:
+    # melting_heat_sink = alpha*h_ice_i*rho_ice*L_ice
+    # #total ice heat sink: warming_heat_sink + melting_heat_sink
+    # total_ice_heat_sink = warming_heat_sink + melting_heat_sink
     
     
     ### Modify sea ice ###
-    #TODO: need to revisit this assumption.
-    if temp_ice_surf_i < temp_swfz and F_ai<0: 
-        print("running ice model with specified ice surface temperatures...")
+    if temp_ice_surf_i < temp_fz and F_ai<0: 
+        print("grow ice with specified ice surface temperatures...")
     
         #define initial conditions and time step for ice growth model
-        y_init = np.array([h_ice_i])
-        t_end = dt
-        # t_ice_model = np.linspace(0, t_end, t_end+1) #make the time step 1 sec
-        # dt_ice_model = t_ice_model[1]-t_ice_model[0]
+        y_init = np.array([h_ice_i]) #initial ice thickness
+        t_end = dt #end time (1 PWP time step)
 
         #load and intialize ice growth model
-        # dt_ice_model = dt/6 #seconds
-        # ode =  spi.ode(iceGrowthModel_ode_v3)
-        # ode.set_f_params(F_ai*dt_ice_model, F_oi*dt_ice_model)
-    
-        dt_ice_model = 5 #seconds 
+        dt_ice_model = 30 #seconds (sub-cycle PWP time step) #TODO: test sensitivity 
         ode =  spi.ode(iceGrowthModel_ode_v2)
-        ode.set_f_params(temp_ice_surf_i, F_oi*dt_ice_model, temp_swfz, k_ice*dt_ice_model)
+        ode.set_f_params(temp_ice_surf_i, F_oi*dt_ice_model, temp_fz, k_ice*dt_ice_model)
     
         ode.set_integrator('lsoda')
         ode.set_initial_value(y_init, 0)
@@ -409,41 +362,49 @@ def ice_model_v3(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, 
         
         
             #debug_here()
-            ti = len(ys)-1
-            if h_ice<=thin_ice and ti>0 and ys[ti]<ys[ti-1]:
-                print("ice is melting and has become too thin. Switching to thin ice algorithm...")
-                switch_algorithm=True
+            
+        #TODO: delete below soon. Not necessary for this version of the model    
+        #     ti = len(ys)-1
+        #     if h_ice<=thin_ice and ti>0 and ys[ti]<ys[ti-1]:
+        #         print("ice is melting and has become too thin. Switching to thin ice algorithm...")
+        #         switch_algorithm=True
+        #
+        #         #abort and switch to thin ice algorithm.??
+        #         break
+        #
+        #
+        # if switch_algorithm:
+        #     #this restarts the ice growth/melt process
+        #     h_ice_f, temp_ice_surf_f, temp_sw, sal_sw, F_aio = modify_thin_ice(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, alpha, params)
+        #
+        #     #return h_ice_f, temp_ice_surf_f, temp_sw, sal_sw, F_i, F_aio
+        #
+        # else:
+        #     t = np.vstack(ts)
+        #     y = np.vstack(ys)
+        #     h_ice_f = y[-1,0]
+        #
+        #     temp_ice_surf_f = temp_ice_surf_i
+            
+            
+        t = np.vstack(ts)
+        y = np.vstack(ys)
+        h_ice_f = y[-1,0]
 
-                #abort and switch to thin ice algorithm.??
-                break
-
-    
-        if switch_algorithm:
-            #this restarts the ice growth/melt process
-            h_ice_f, temp_ice_surf_f, temp_sw, sal_sw, F_aio = modify_thin_ice(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, alpha, params)
-        
-            #return h_ice_f, temp_ice_surf_f, temp_sw, sal_sw, F_i, F_aio
-        
-        else:
-            t = np.vstack(ts)
-            y = np.vstack(ys)
-            h_ice_f = y[-1,0]
-    
-            temp_ice_surf_f = temp_ice_surf_i
+        temp_ice_surf_f = temp_ice_surf_i
             
         #get change in ice thickness
         dh_ice = h_ice_f - h_ice_i
     
-        #debug_here()
         #find mean heat flux through ice
-        F_i = -k_ice*(temp_ice_surf_f-temp_swfz)/h_ice_f
+        F_i = -k_ice*(temp_ice_surf_f-temp_fz)/h_ice_f
         
         print("F_i: %.2f, F_oi: %.2f, h_i=%.2f, dh: %.4f" %(F_i, F_oi, h_ice_i, dh_ice))
 
     else:
         
-        #use thin ice algorithm
-        h_ice_f, temp_ice_surf_f, temp_sw, sal_sw, F_aio = modify_thin_ice(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, alpha, params)
+        #use melt ice algorithm
+        h_ice_f, temp_ice_surf_f, temp_sw, sal_sw, F_aio = melt_ice_v1(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, alpha, params)
         dh_ice = h_ice_f - h_ice_i
         
     
@@ -459,9 +420,6 @@ def ice_model_v3(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, 
     sal_sw[:bdry_lyr] = sal_sw[:bdry_lyr]+dsal_sw
     
     return h_ice_f, temp_ice_surf_f, temp_sw, sal_sw, F_i, F_aio
-            
-            
-    
 
 def ice_model_v4(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, alpha, params):
     
@@ -475,8 +433,8 @@ def ice_model_v4(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, 
     
     #derive/set additional parameters
     #rho_sw0 = rho_sw[0] #density of seawater in model layer 1 (kg/m3)
-    #temp_swfz = sw.fp(sal_sw[0], p=1) #freezing point of seawater at given salinity
-    temp_ice_base = temp_swfz
+    #temp_fz = sw.fp(sal_sw[0], p=1) #freezing point of seawater at given salinity
+    temp_ice_base = temp_fz
     F_i = 0.0
     F_aio = 0.0
     switch_algorithm = False
@@ -493,7 +451,7 @@ def ice_model_v4(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, 
     
     
     #warming_sink: heat gain required to bring ice to freezing point:
-    warming_heat_sink = -(temp_ice_surf_i-temp_swfz)*c_ice*h_ice_i*alpha 
+    warming_heat_sink = -(temp_ice_surf_i-temp_fz)*c_ice*h_ice_i*alpha 
     #melting_heat_sink: heat gain required to completely melt ice of thickness, after it has warmed to the freezing point:
     melting_heat_sink = alpha*h_ice_i*rho_ice*L_ice
     #total ice heat sink: warming_heat_sink + melting_heat_sink
@@ -508,7 +466,7 @@ def ice_model_v4(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, 
         
         print("running ice model with specified ice-atmosphere fluxes..")
         h_ice_f = h_ice_i + dt*(-F_ai - F_oi)/(L_ice*rho_ice)  
-        temp_ice_surf_f = F_ai*h_ice_f/k_ice+temp_swfz 
+        temp_ice_surf_f = F_ai*h_ice_f/k_ice+temp_fz 
         
         
         #get change in ice thickness
@@ -516,7 +474,7 @@ def ice_model_v4(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, 
     
         #debug_here()
         #find mean heat flux through ice
-        F_i = -k_ice*(temp_ice_surf_f-temp_swfz)/h_ice_f
+        F_i = -k_ice*(temp_ice_surf_f-temp_fz)/h_ice_f
         
         print("F_i: %.2f, F_oi: %.2f, h_i=%.2f, dh: %.4f" %(F_i, F_oi, h_ice_i, dh_ice))
         
