@@ -28,7 +28,7 @@ def demo1():
     
     return forcing, pwp_out
 
-def demo2(dopt='dens0'):
+def demo2(dopt='pdens'):
     
     """
     Example script of how to run the PWP model.
@@ -118,7 +118,7 @@ def run_PWP(met_data, prof_data, param_kwds=None, overwrite=True, makeLivePlots=
             3.2) Interpolate profile data to prescribed depth increments.
             3.3) Initialize model output variables.
         4) Iterate the PWP model specified time interval:
-            4.1) apply heat and salt fluxes
+            4.1) apply winds, heat and salt fluxes
             4.2) rotate, adjust to wind, rotate
             4.3) apply bulk Richardson number mixing
             4.4) apply gradient Richardson number mixing
@@ -267,9 +267,7 @@ def run_PWP(met_data, prof_data, param_kwds=None, overwrite=True, makeLivePlots=
     return forcing, pwp_out   
 
 
-
-def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1, alpha=0., h_i0=0.0, rkz=0., diff_zlim=5000, plot_zlim=500, 
-                qnet_offset=0., dopt='dens0', use_Bulk_Formula=False, fix_alpha=False, ice_ON=False, winds_ON=True, emp_ON=True):
+def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1, alpha=0., h_i0=0.0, rkz=0., diff_zlim=5000, plot_zlim=500, qnet_offset=0., dopt='dens0', use_Bulk_Formula=False, fix_alpha=False, ice_ON=False, winds_ON=True, emp_ON=True):
                 
     
     """
@@ -451,12 +449,12 @@ def prep_data(met_dset, prof_dset, params):
         forcing['emp'][:] = 0.0
           
     
-    #define q_in and q_out 
+    #define F_in and F_out 
     #for sw, lw, qlat and qsens and positive values should mean ocean warming
-    #for the purpose of the PWP code, we flip the sign of q_out
+    #for the purpose of the PWP code, we flip the sign of F_out
     
-    forcing['q_in'] = forcing['sw'] #heat flux into ocean
-    forcing['q_out'] = -(forcing['lw'] + forcing['qlat'] + forcing['qsens']) 
+    forcing['F_in'] = forcing['sw'] #heat flux into ocean
+    forcing['F_out'] = -(forcing['lw'] + forcing['qlat'] + forcing['qsens']) 
     
     #add time_vec to forcing
     forcing['time'] = time_vec
@@ -709,7 +707,7 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, zlim=500, save_plots=False, s
     axes[0].plot(tvec, forcing['qsens'], label='$Q_{sens}$')
     axes[0].plot(tvec, forcing['sw'], label='$Q_{sw}$')
     axes[0].hlines(0, tvec[0], pwp_out['time'][-1], linestyle='-', color='0.3')
-    axes[0].plot(tvec, forcing['q_in']-forcing['q_out'], ls='-', lw=2, color='k', label='$Q_{net}$')   
+    axes[0].plot(tvec, forcing['F_in']-forcing['F_out'], ls='-', lw=2, color='k', label='$Q_{net}$')   
     axes[0].set_ylabel('Heat flux (W/m2)')
     axes[0].set_title('Heat flux into ocean')
     axes[0].grid(True)
@@ -773,12 +771,12 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, zlim=500, save_plots=False, s
     fig2, axes = plt.subplots(3,1, sharex=True, figsize=(7.5,9))
     axes = axes.flatten()
     ## plot atmosphere ocean flux
-    axes[0].plot(tvec, pwp_out['q_lw_ao'], label='$Q_{lw}^{ocn}$')
-    axes[0].plot(tvec, pwp_out['q_lat_ao'], label='$Q_{lat}^{ocn}$')
-    axes[0].plot(tvec, pwp_out['q_sens_ao'], label='$Q_{sens}^{ocn}$')
+    axes[0].plot(tvec, pwp_out['F_lw_ao'], label='$Q_{lw}^{ocn}$')
+    axes[0].plot(tvec, pwp_out['F_lat_ao'], label='$Q_{lat}^{ocn}$')
+    axes[0].plot(tvec, pwp_out['F_sens_ao'], label='$Q_{sens}^{ocn}$')
     axes[0].plot(tvec, (1-pwp_out['alpha_true'])*forcing['sw'], label='$Q_{sw}^{ocn}$')
     axes[0].hlines(0, tvec[0], pwp_out['time'][-1], linestyle='-', color='0.3')
-    axes[0].plot(tvec, pwp_out['q_net_ao'], ls='-', lw=2, color='k', label='$Q_{net}^{ocn}$')
+    axes[0].plot(tvec, pwp_out['F_net_ao'], ls='-', lw=2, color='k', label='$Q_{net}^{ocn}$')
     axes[0].set_ylabel('Heat flux (W/m2)')
     axes[0].set_title('Computed Atmosphere-ocean heat flux')
     axes[0].grid(True)
@@ -787,12 +785,12 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, zlim=500, save_plots=False, s
     axes[0].legend(loc=0, ncol=2, fontsize='medium')
 
     ## plot atmosphere ice flux
-    axes[1].plot(tvec, pwp_out['q_lw_ai'], label='$Q_{lw}^{ice}$')
-    axes[1].plot(tvec, pwp_out['q_lat_ai'], label='$Q_{lat}^{ice}$')
-    axes[1].plot(tvec, pwp_out['q_sens_ai'], label='$Q_{sens}^{ice}$')
+    axes[1].plot(tvec, pwp_out['F_lw_ai'], label='$Q_{lw}^{ice}$')
+    axes[1].plot(tvec, pwp_out['F_lat_ai'], label='$Q_{lat}^{ice}$')
+    axes[1].plot(tvec, pwp_out['F_sens_ai'], label='$Q_{sens}^{ice}$')
     axes[1].plot(tvec, pwp_out['alpha_true']*forcing['sw'], label='$Q_{sw}^{ice}$')
     axes[1].hlines(0, tvec[0], pwp_out['time'][-1], linestyle='-', color='0.3')
-    axes[1].plot(tvec, pwp_out['q_net_ai'], ls='-', lw=2, color='k', label='$Q_{net}^{ice}$')
+    axes[1].plot(tvec, pwp_out['F_net_ai'], ls='-', lw=2, color='k', label='$Q_{net}^{ice}$')
     axes[1].set_ylabel('Heat flux (W/m2)')
     axes[1].set_title('Computed atmosphere-ice heat flux')
     axes[1].grid(True)
@@ -801,12 +799,12 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, zlim=500, save_plots=False, s
     axes[1].legend(loc=0, ncol=2, fontsize='medium')
     
     ## plot atmosphere ice flux
-    axes[2].plot(tvec, pwp_out['q_lw_ai']+pwp_out['q_lw_ao'], label='$Q_{lw}$')
-    axes[2].plot(tvec, pwp_out['q_lat_ai']+pwp_out['q_lat_ao'], label='$Q_{lat}$')
-    axes[2].plot(tvec, pwp_out['q_sens_ai']+pwp_out['q_sens_ao'], label='$Q_{sens}$')
+    axes[2].plot(tvec, pwp_out['F_lw_ai']+pwp_out['F_lw_ao'], label='$Q_{lw}$')
+    axes[2].plot(tvec, pwp_out['F_lat_ai']+pwp_out['F_lat_ao'], label='$Q_{lat}$')
+    axes[2].plot(tvec, pwp_out['F_sens_ai']+pwp_out['F_sens_ao'], label='$Q_{sens}$')
     axes[2].plot(tvec, forcing['sw'], label='$Q_{sw}$')
     axes[2].hlines(0, tvec[0], pwp_out['time'][-1], linestyle='-', color='0.3')
-    axes[2].plot(tvec, pwp_out['q_net_ai'] + pwp_out['q_net_ai'], ls='-', lw=2, color='k', label='$Q_{net}$')
+    axes[2].plot(tvec, pwp_out['F_net_ai'] + pwp_out['F_net_ai'], ls='-', lw=2, color='k', label='$Q_{net}$')
     axes[2].set_ylabel('Heat flux (W/m2)')
     axes[2].set_title('Total surface heat flux')
     axes[2].grid(True)
@@ -956,7 +954,7 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, zlim=500, save_plots=False, s
     plt.plot(tvec,  F_ocean_net_sm, label='$F_{ao}$ - $F_{oi}$', lw=2, c='magenta')
     
     plt.hlines(0, tvec[0], tvec[-1])
-    plt.ylim(-100, 100)
+    # plt.ylim(-100, 100)
     #plt.ylim(-1.5*np.abs(pwp_out['F_atm'].max()), 1.5*np.abs(pwp_out['F_atm'].max()))
     plt.xlabel('Time (days)')
     plt.ylabel('Heat flux (W/m2)')
@@ -1114,7 +1112,7 @@ def save2nc(data_dict, fpath, dt_save=1, type='out'):
     
     #WARNING: This script is broken. Delete and re-do
     
-    data_ds = xray.Dataset()
+    data_ds = xr.Dataset()
     data_dict_save = {}
     # zt_vars = ['temp', 'sal', 'uvel', 'vvel', 'dens']
     # t_vars = ['mld', 'F_atm', 'F_i', 'F_ocean_ice', 'ice_thickness', 'surf_ice_temp', 'mld_exact', 'mld_exact2']

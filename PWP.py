@@ -71,8 +71,8 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
     dens_ref = 1026.0
     
     #unpack some of the variables (I could probably do this more elegantly)
-    q_in = forcing['q_in']
-    q_out = forcing['q_out']
+    F_in = forcing['F_in']
+    F_out = forcing['F_out']
     emp = forcing['emp']
     taux = forcing['tx']
     tauy = forcing['ty']
@@ -94,29 +94,30 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
     ucon = params['ucon']
     # alpha = params['alpha']
     
-    q_net = q_in-q_out
-    q_net = q_net+params['qnet_offset']
+    F_net = F_in-F_out
+    F_net = F_net+params['qnet_offset']
     
     #add dz and dt to params
     params['dt'] = dt
     params['dz'] = dz
     
-    #create output variable for ocean and atmospheric heat flux (TODO: move to PWP_helper???)
+    #create output variable for ocean and atmospheric heat flux 
+    #TODO: use consistent naming convention for heat fluxes - pick either F or q
     pwp_out['F_oi'] = np.zeros(len(pwp_out['ice_thickness'])) #ocean-ice heat flux
     pwp_out['F_ao'] = np.zeros(len(pwp_out['ice_thickness'])) #atmosphere-ocean heat flux
     pwp_out['F_ai'] = np.zeros(len(pwp_out['ice_thickness'])) #atmosphere-ice heat flux
     pwp_out['F_i'] = np.zeros(len(pwp_out['ice_thickness'])) #heat flux through the ice
     pwp_out['F_ent'] = np.zeros(len(pwp_out['ice_thickness']))
     
-    pwp_out['q_sens_ao'] = np.ma.masked_all(len(pwp_out['ice_thickness']))
-    pwp_out['q_lat_ao'] = np.ma.masked_all(len(pwp_out['ice_thickness']))
-    pwp_out['q_lw_ao'] = np.ma.masked_all(len(pwp_out['ice_thickness']))
-    pwp_out['q_net_ao'] = np.ma.masked_all(len(pwp_out['ice_thickness']))
+    pwp_out['F_sens_ao'] = np.ma.masked_all(len(pwp_out['ice_thickness']))
+    pwp_out['F_lat_ao'] = np.ma.masked_all(len(pwp_out['ice_thickness']))
+    pwp_out['F_lw_ao'] = np.ma.masked_all(len(pwp_out['ice_thickness']))
+    pwp_out['F_net_ao'] = np.ma.masked_all(len(pwp_out['ice_thickness']))
     
-    pwp_out['q_sens_ai'] = np.ma.masked_all(len(pwp_out['ice_thickness']))
-    pwp_out['q_lat_ai'] = np.ma.masked_all(len(pwp_out['ice_thickness']))
-    pwp_out['q_lw_ai'] = np.ma.masked_all(len(pwp_out['ice_thickness']))
-    pwp_out['q_net_ai'] = np.ma.masked_all(len(pwp_out['ice_thickness']))
+    pwp_out['F_sens_ai'] = np.ma.masked_all(len(pwp_out['ice_thickness']))
+    pwp_out['F_lat_ai'] = np.ma.masked_all(len(pwp_out['ice_thickness']))
+    pwp_out['F_lw_ai'] = np.ma.masked_all(len(pwp_out['ice_thickness']))
+    pwp_out['F_net_ai'] = np.ma.masked_all(len(pwp_out['ice_thickness']))
     
     pwp_out['mld_exact'] = np.ma.masked_all(len(pwp_out['mld']))
     pwp_out['mld_exact2'] = np.ma.masked_all(len(pwp_out['mld']))
@@ -174,10 +175,6 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
         skt_n = forcing['skt'][n-1]
         
         
-        #save initial T,S (may not be necessary)
-        # T_fz = sw.fp(sal_ref, p=dz)
-        
-        
         ### Absorb solar radiation and FWF in surf layer ###
         if h_ice==0:
             
@@ -186,28 +183,28 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
             
             if params['use_Bulk_Formula'] == True:
                 #computes atmosphere-ocean fluxes - everything but shortwave
-                q_lw_ao, q_sens_ao, q_lat_ao = get_atm_ocean_HF(temp[0], forcing, alpha_n, n)
-                q_in_ao = (1-alpha_n)*q_in[n-1]
-                q_out_ao = -(q_lw_ao+q_sens_ao+q_lat_ao) #fluxes were defined as positive down. ice fraction already accoutned for
-                q_net_ao = q_in_ao-q_out_ao
+                F_lw_ao, F_sens_ao, F_lat_ao = get_atm_ocean_HF(temp[0], forcing, alpha_n, n)
+                F_in_ao = (1-alpha_n)*F_in[n-1]
+                F_out_ao = -(F_lw_ao+F_sens_ao+F_lat_ao) #fluxes were defined as positive down. ice fraction already accoutned for
+                F_net_ao = F_in_ao-F_out_ao
                 
-                pwp_out['q_sens_ao'][n-1] = q_sens_ao
-                pwp_out['q_lat_ao'][n-1] = q_lat_ao
-                pwp_out['q_lw_ao'][n-1] = q_lw_ao
-                pwp_out['q_net_ao'][n-1] = q_net_ao
+                pwp_out['F_sens_ao'][n-1] = F_sens_ao
+                pwp_out['F_lat_ao'][n-1] = F_lat_ao
+                pwp_out['F_lw_ao'][n-1] = F_lw_ao
+                pwp_out['F_net_ao'][n-1] = F_net_ao
             
             else:
-                q_in_ao = q_in[n-1]
-                q_out_ao = q_out[n-1]
-                q_net_ao = q_net[n-1]
+                F_in_ao = F_in[n-1]
+                F_out_ao = F_out[n-1]
+                F_net_ao = F_net[n-1]
             
             
             #update layer 1 temp and sal
-            temp[0] = temp[0] + (q_in_ao*absrb[0]-q_out_ao)*dt/(dz*dens_ref*cpw)
+            temp[0] = temp[0] + (F_in_ao*absrb[0]-F_out_ao)*dt/(dz*dens_ref*cpw)
             sal[0] = sal[0] + sal_ref*emp[n-1]*dt/dz
             
             ### Absorb rad. at depth ###
-            temp[1:] = temp[1:] + q_in_ao*absrb[1:]*dt/(dz*dens_ref*cpw)
+            temp[1:] = temp[1:] + F_in_ao*absrb[1:]*dt/(dz*dens_ref*cpw)
             
             #check if temp is less than freezing point
             T_fz = sw.fp(sal_ref, p=dz) 
@@ -228,7 +225,7 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
                         print("surface has reached freezing temp. However, ice creation is either turned off or ice_conc is set to zero.")
                         print_ice_warning = False
             
-            pwp_out['F_ao'][n-1] = q_net_ao+ice_heating
+            pwp_out['F_ao'][n-1] = F_net_ao+ice_heating
         
         else:
             
@@ -255,46 +252,44 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
                 if params['use_Bulk_Formula'] == True:
                     
                     #computes everything but shortwave
-                    q_lw_ao, q_sens_ao, q_lat_ao = get_atm_ocean_HF(temp[0], forcing, alpha_n, n)
-                    q_in_ao = (1-alpha_n)*q_in[n-1]
-                    q_out_ao = -(q_lw_ao+q_sens_ao+q_lat_ao) #fluxes were defined as positive down. ice fraction already accoutned for
-                    q_net_ao = q_in_ao-q_out_ao
+                    F_lw_ao, F_sens_ao, F_lat_ao = get_atm_ocean_HF(temp[0], forcing, alpha_n, n)
+                    F_in_ao = (1-alpha_n)*F_in[n-1]
+                    F_out_ao = -(F_lw_ao+F_sens_ao+F_lat_ao) #fluxes were defined as positive down. ice fraction already accoutned for
+                    F_net_ao = F_in_ao-F_out_ao
                     
-                    pwp_out['q_sens_ao'][n-1] = q_sens_ao
-                    pwp_out['q_lat_ao'][n-1] = q_lat_ao
-                    pwp_out['q_lw_ao'][n-1] = q_lw_ao
-                    pwp_out['q_net_ao'][n-1] = q_net_ao
+                    pwp_out['F_sens_ao'][n-1] = F_sens_ao
+                    pwp_out['F_lat_ao'][n-1] = F_lat_ao
+                    pwp_out['F_lw_ao'][n-1] = F_lw_ao
+                    pwp_out['F_net_ao'][n-1] = F_net_ao
                     
-                    q_lw_ai, q_sens_ai, q_lat_ai = get_atm_ice_HF(skt_n, forcing, alpha_n, n)
-                    q_in_ai = alpha_n*q_in[n-1]
-                    q_out_ai = -(q_lw_ai+q_sens_ai+q_lat_ai) #fluxes were defined as positive down. ice fraction already accoutned for
-                    q_net_ai = q_in_ai - q_out_ai
-                    F_ai = q_net_ai
+                    F_lw_ai, F_sens_ai, F_lat_ai = get_atm_ice_HF(skt_n, forcing, alpha_n, n)
+                    F_in_ai = alpha_n*F_in[n-1]
+                    F_out_ai = -(F_lw_ai+F_sens_ai+F_lat_ai) #fluxes were defined as positive down. ice fraction already accoutned for
+                    F_net_ai = F_in_ai - F_out_ai
+                    F_ai = F_net_ai
                     
-                    pwp_out['q_sens_ai'][n-1] = q_sens_ai
-                    pwp_out['q_lat_ai'][n-1] = q_lat_ai
-                    pwp_out['q_lw_ai'][n-1] = q_lw_ai
-                    pwp_out['q_net_ai'][n-1] = q_net_ai
+                    pwp_out['F_sens_ai'][n-1] = F_sens_ai
+                    pwp_out['F_lat_ai'][n-1] = F_lat_ai
+                    pwp_out['F_lw_ai'][n-1] = F_lw_ai
+                    pwp_out['F_net_ai'][n-1] = F_net_ai
                 
                 else:
-                    q_in_ao = (1-alpha_n)*q_in[n-1]
-                    q_out_ao = (1-alpha_n)*q_out[n-1]
-                    q_net_ao = q_in_ao - q_out_ao
+                    F_in_ao = (1-alpha_n)*F_in[n-1]
+                    F_out_ao = (1-alpha_n)*F_out[n-1]
+                    F_net_ao = F_in_ao - F_out_ao
                     
-                    q_in_ai = alpha_n*q_in[n-1]
-                    q_out_ai = alpha_n*q_out[n-1]
-                    q_net_ai = q_in_ai - q_out_ai
-                    F_ai = q_net_ai
+                    F_in_ai = alpha_n*F_in[n-1]
+                    F_out_ai = alpha_n*F_out[n-1]
+                    F_net_ai = F_in_ai - F_out_ai
+                    F_ai = F_net_ai
                 
-                print("F_ao: %.2f" %q_net_ao)
+                print("F_ao: %.2f" %F_net_ao)
                 
                 #compute ocean->ice heat flux
                 F_oi = PWP_ice.get_ocean_ice_heat_flux(temp, sal, dens, params)
                 
                 #modify existing sea ice
-                #h_ice, temp_ice_surf, temp, sal = PWP_ice.modify_existing_ice(temp_ice_surf, h_ice, temp, sal, dens, F_atm, F_ocean, alpha_n, skt_n, params)
-                h_ice, temp_ice_surf, temp, sal, F_i, F_aio = PWP_ice.ice_model_v3(h_ice, skt_n, temp, sal, dens, F_ai, F_oi, alpha_n, params)
-                #h_ice, temp_ice_surf, temp, sal, F_i = PWP_ice.ice_model_v4(h_ice, pwp_out['surf_ice_temp'][n-1], temp, sal, dens, F_ai, F_oi, alpha_n, params)
+                h_ice, temp_ice_surf, temp, sal, F_i, F_aio = PWP_ice.grow_ice_v3(h_ice, skt_n, temp, sal, dens, F_ai, F_oi, alpha_n, params)
                 
                 print(temp[:15].mean())
                 
@@ -302,12 +297,11 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
                 sal[0] = sal[0] + sal_ref*(1-alpha_n)*emp[n-1]*dt/dz #TODO: keep track of rain/snow on top of ice (big task)
                 
                 # apply heat flux through leads
-                temp = temp + q_in_ao*absrb*dt/(dz*dens_ref*cpw) #incoming solar
-                temp[0] = temp[0] - q_out_ao*dt/(dz*dens_ref*cpw) #outgoing heat
+                temp = temp + F_in_ao*absrb*dt/(dz*dens_ref*cpw) #incoming solar
+                temp[0] = temp[0] - F_out_ao*dt/(dz*dens_ref*cpw) #outgoing heat
                 
                 #TODO: apply passive scalar flux through leads
                 
-                #debug_here()
                 #check if temp is less than freezing point
                 T_fz = sw.fp(sal_ref, p=dz)  #is sal[0] appropriate here? This is essentially brine water
                 dT = temp[0]-T_fz
@@ -326,7 +320,7 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
                 pwp_out['ice_thickness'][n] = h_ice
                 pwp_out['F_oi'][n-1] = F_oi
                 pwp_out['F_ai'][n-1] = F_ai-F_aio
-                pwp_out['F_ao'][n-1] = q_net_ao+F_aio+lead_ice_heating
+                pwp_out['F_ao'][n-1] = F_net_ao+F_aio+lead_ice_heating
                 pwp_out['F_i'][n-1] = F_i
                 pwp_out['alpha_true'][n] = alpha_n
             
@@ -350,7 +344,7 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
         dens = getDensity(sal, temp, z, dopt=params['dens_option'])
         
         
-        #save pre-entrainment temp
+        #save pre-entrainment temp (just for debugging)
         temp_pre = temp.copy()
         sal_pre = sal.copy()
         dens_pre = dens.copy()
@@ -361,7 +355,7 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
         if np.any(np.diff(dens)<0):
             debug_here()
         
-        #compute mlt and mls after entrainment
+        #compute mlt and mls after entrainment (just for debugging)
         mld_post_ent, mld_idx_post_ent = getMLD(dens, z, params)
         dMLD = mld_post_ent - mld_pre
         
@@ -385,6 +379,7 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
 
         ### Apply drag to current ###
         #Original comment: this is a horrible parameterization of inertial-internal wave dispersion
+        #I don't know why this is horrible -EW
         if ucon > 1e-10:
             uvel = uvel*(1-dt*ucon)
             vvel = vvel*(1-dt*ucon)
@@ -415,8 +410,15 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
         ### Apply diffusion ###
         if params['rkz'] > 0:
             
-            #By default, nz1=zlen 
-            nz1 = len(z[z<=params['diff_zlim']])
+            ##################################################
+            """
+            Here I am experimenting with applying diffusion to just the upper portion of the water column.
+            By default, diffusion is applied everywhere. For long (multi-year) model runs, this can lead to significant 
+            smoothing in the deep ocean. The params['diff_zlim'] sets the maximum depth over which
+            diffusion is applied - this max depth must be below the MLD. Exercisiing this option preserves 
+            the deep ocean stratification but it comes at a cost of higher numerical error.
+            """
+            nz1 = len(z[z<=params['diff_zlim']]) #by default is params['diff_zlim'] is some big number
             
             #Limit diffusion to some upper level of ocean but no shallower than the maximum MLD
             nz2 = mld_idx
@@ -427,6 +429,9 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
             else:
                 nz=nz1
     
+            ##################################################
+            
+            
             temp = diffus(params['dstab'], nz, temp)
             sal = diffus(params['dstab'], nz, sal)
             uvel = diffus(params['dstab'], nz, uvel)
@@ -440,7 +445,7 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
 
         
         # find MLD again, after all mixing processes complete
-        mld_idx = np.flatnonzero(dens-dens[0]>params['mld_thresh'])[0] #finds the first index that exceed ML threshold
+        mld_idx = np.flatnonzero(dens-dens[0]>params['mld_thresh'])[0] #finds the first index that exceeds ML threshold
         mld_post_mix = z[mld_idx]
 
         # find MLD by interpolating to the exact value
@@ -480,8 +485,7 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
         
     pwp_out['ice_start'] = np.array(pwp_out['ice_start'])
     
-    return pwp_out
-    
+    return pwp_out    
 
 def remove_si(z, t, s, d, u, v, ps, params):
     
@@ -516,8 +520,7 @@ def remove_si(z, t, s, d, u, v, ps, params):
         else:
             stat_unstable = False
     
-    return t, s, d, u, v, ps
-    
+    return t, s, d, u, v, ps    
 
 def mix5(z, t, s, d, u, v, ps, j, params):
     
@@ -630,6 +633,10 @@ def grad_mix(z, t, s, d, u, v, ps, dz, g, rg, nz, params, n):
         
         i+=1
         
+        #Check to make sure profile contains no nans
+        if np.any(np.isnan(t)) or np.any(np.isnan(s)) or np.any(np.isnan(d)):
+            debug_here()
+            raise ValueError("Nans appeared in profile. Something very bad happened!")
         
     
     return t, s, d, u, v, ps
@@ -721,7 +728,7 @@ def get_atm_ocean_HF(sst, forcing, alpha, n):
     
     flux sign convention: postive-down
     
-    This is loosely based on Large and Yeager 2004
+    This is based on Large and Yeager 2004
     Q = f_i*Q_io + f_o*Q_ao
     """
     
@@ -816,33 +823,32 @@ def get_atm_ocean_HF(sst, forcing, alpha, n):
     # theta_star_10m_ocn = theta_10m - sst_K
     # q_star_10m_ocn = q_10m - q_sat_ocn
     
-    q_sens_ao = f_o*rho_air*c_p_air*C_h_new*(theta_10m - sst_K)*Un_10m
-    q_lat_ao = f_o*L_v*rho_air*C_e_new*(q_10m - q_sat_ocn)*Un_10m
+    F_sens_ao = f_o*rho_air*c_p_air*C_h_new*(theta_10m - sst_K)*Un_10m #if atm warmer than ocean F_sens is positive (warms ocean)
+    F_lat_ao = f_o*L_v*rho_air*C_e_new*(q_10m - q_sat_ocn)*Un_10m #if atm warmer than ocean F_sens is positive (warms ocean)
     
     
     #get longwave over the ocean
     sigma = 5.67e-8 #W/m2/K4 (step-boltzmann constant)
     eps = 1.0 #emissivity
-    q_lw_ao = f_o*(forcing['dlw'][n-1] - eps*sigma*sst_K**4)
+    F_lw_ao = f_o*(forcing['dlw'][n-1] - eps*sigma*sst_K**4)
     
     # theta_v_10m = theta_10m*(1. + 0.608*q_10m)
     # t_star_10m_ocn = (C_h/np.sqrt(C_d))*theta_star_10m_ocn
     # q_star_10m_ocn = (C_e/np.sqrt(C_d))*q_star_10m_ocn
     
-    print("q_sens_ao = %.2f, q_lat_ao = %.2f, q_lw_ao = %.2f W/m2" %(q_sens_ao, q_lat_ao, q_lw_ao))
+    
+    print("F_sens_ao = %.2f, F_lat_ao = %.2f, F_lw_ao = %.2f W/m2" %(F_sens_ao, F_lat_ao, F_lw_ao))
     #
     # if n%500==0 and n<=1500:
     #     debug_here()
     
-    return q_lw_ao, q_sens_ao, q_lat_ao
+    return F_lw_ao, F_sens_ao, F_lat_ao
     
 
 def get_atm_ice_HF(surf_temp, forcing, alpha, n):
     
     """
     Like get_ocean_atm_HF() but for ice-atmosphere fluxes.
-    
-    Don't really need this if we are prescribing the surface temp of the sea ice
     
     TODO: combine the two functions
     """
@@ -878,17 +884,17 @@ def get_atm_ice_HF(surf_temp, forcing, alpha, n):
     theta_v_2m = theta_2m*(1. + 0.608*q_2m) #virtual potential air temp
     
     #compute latent and sens heat fluxes over ice
-    q_lat_ai = f_i*L_f*rho_air*C_e*(q_2m-q_sat_ice)*U_10m
-    q_sens_ai = f_i*rho_air*C_h*(theta_2m-surf_temp_K)*U_10m
+    F_lat_ai = f_i*L_f*rho_air*C_e*(q_2m-q_sat_ice)*U_10m
+    F_sens_ai = f_i*rho_air*C_h*(theta_2m-surf_temp_K)*U_10m
     
     #compute lw radiation over ice
     sigma = 5.67e-8 #W/m2/K4 (step-boltzmann constant)
     eps = 0.95 #emissivity
-    q_lw_ai = f_i*eps*(forcing['dlw'][n-1] - sigma*surf_temp_K**4)
+    F_lw_ai = f_i*eps*(forcing['dlw'][n-1] - sigma*surf_temp_K**4)
     
     #debug_here()
     
-    return q_lw_ai, q_sens_ai, q_lat_ai
+    return F_lw_ai, F_sens_ai, F_lat_ai
     
 
 def getDensity(s,t,z, dopt):
@@ -956,11 +962,11 @@ def local_stir(z, s, t, ps, dopt):
             dd = np.diff(d)
         
         if mix_frac<1:
-            mix_frac = mix_frac+0.01
+            mix_frac = mix_frac+0.1
         else:
             mix_frac=1
         
-        if i>1e3:
+        if i>5e3:
             print("Failed to stabilize profile after %i iterations :(" %i)
             break
         
