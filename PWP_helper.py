@@ -10,6 +10,7 @@ import PWP
 from datetime import datetime
 import xarray as xr
 import timeit
+import pickle
 
 import warnings
 from IPython.core.debugger import Tracer
@@ -319,16 +320,24 @@ def run_PWP(met_data, prof_data, param_kwds=None, overwrite=True, makeLivePlots=
     t_elapsed  = (tnow - t0)
     print("Time elapsed: %i minutes and %i seconds" %(np.floor(t_elapsed/60), t_elapsed%60))
     
-    ## write output to disk
-    # if overwrite:
-    #     time_stamp = ''
-    # else:
-    #     #use unique time stamp
-    #     time_stamp = datetime.now().strftime("_%Y%m%d_%H%M")
-    #
-    # if len(suffix)>0 and suffix[0] != '_':
-    #     suffix = '_%s' %suffix
-    #
+    
+    ## save output as pickle files
+    if overwrite:
+        time_stamp = ''
+    else:
+        #use unique time stamp
+        time_stamp = datetime.now().strftime("_%Y%m%d_%H%M")
+
+    if len(suffix)>0 and suffix[0] != '_':
+        suffix = '_%s' %suffix
+     
+    output_fpath = "output/pwp_output%s%s.p" %(suffix, time_stamp)
+    forcing_fpath = "output/forcing%s%s.p" %(suffix, time_stamp)
+    
+    pickle.dump(pwp_out, open(output_fpath, 'wb'))
+    pickle.dump(forcing, open(forcing_fpath, 'wb'))
+    
+
     # # save output as netCDF file
     # output_fpath = "output/pwp_output%s%s.nc" %(suffix, time_stamp)
     # forcing_fpath = "output/forcing%s%s.nc" %(suffix, time_stamp)
