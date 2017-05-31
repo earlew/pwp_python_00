@@ -283,6 +283,7 @@ def run_PWP(met_data, prof_data, param_kwds=None, overwrite=True, makeLivePlots=
     prof_dset = xr.open_dataset('input_data/%s' %prof_data)
     
     if 'start_date' in prof_dset.attrs and 'end_date' in prof_dset.attrs:
+        
         print('=============================================')
         print("Initializing with float %s..." %prof_dset.float_num)
         print("Float starting location: %.2fE, %.2fN" %(prof_dset['lon'][0].values, prof_dset['lat'][0].values))
@@ -311,6 +312,8 @@ def run_PWP(met_data, prof_data, param_kwds=None, overwrite=True, makeLivePlots=
     # plot forcing
     makeSomePlots(forcing, pwp_out, justForcing=True)
     plt.show()
+    
+    debug_here()
     
     ## run the model
     pwp_out = PWP.pwpgo(forcing, params, pwp_out, makeLivePlots)
@@ -488,14 +491,18 @@ def prep_data(met_dset, prof_dset, params):
     time_vec = np.arange(met_dset['time'][0], met_dset['time'][-1], params['dt_d']) 
     tlen = len(time_vec)
     
-    #debug_here()
-    
     #interpolate surface forcing data to new time vector
     from scipy.interpolate import interp1d
     forcing = {} 
     for vname in met_dset:
         p_intp = interp1d(met_dset['time'], met_dset[vname], axis=0)
         forcing[vname] = p_intp(time_vec)
+        
+    if 'dtime' in met_dset:
+        from datetime import timedelta
+        dt_model = timedelta(seconds=params['dt'])
+        dtime2 = np.arange(met_dset['dtime'][0].values, met_dset['dtime'][-1].values, dt_model)
+        forcing['dtime'] = dtime2
         
     #adjust skin temperature if it exists
     if 'skt' in list(forcing.keys()):
@@ -763,8 +770,25 @@ def livePlots(pwp_out, n):
     plt.pause(0.05)
 
     plt.show()
+    
+    
+def formatDates(ax):
+    
+    import matplotlib.dates as mdates
+    # years_md = mdates.YearLocator()   # every year
+    months_md = mdates.MonthLocator()  # every month
+    days_md15 = mdates.DayLocator([1,15])  # every 15 days
+    days_md1 = mdates.DayLocator()  # every 1 day
+    dateFmt = mdates.DateFormatter('%b-%d-%Y')
+    #yearsFmt = mdates.DateFormatter('%Y')
+    
+    ax.xaxis.set_major_locator(days_md15)
+    ax.xaxis.set_major_formatter(dateFmt)
+    ax.xaxis.set_minor_locator(days_md1)   
+    
+    plt.gcf().autofmt_xdate()
 
-def makeSomePlots(forcing, pwp_out, time_vec=None, zlim=500, save_plots=False, suffix='', justForcing=False, showPlots=True):
+def makeSomePlots(forcing, pwp_out, zlim=500, save_plots=False, suffix='', justForcing=False, showPlots=True):
     
     """
     TODO: add doc file
@@ -778,11 +802,16 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, zlim=500, save_plots=False, s
     ## Plot surface fluxes
     fig0, axes = plt.subplots(3,1, sharex=True, figsize=(7.5,9))
     
-    if time_vec is None:
-        tvec = pwp_out['time']
+    if 'dtime' in forcing:
+        tvec = forcing['dtime']
     else:
-        tvec = time_vec
+        tvec = pwp_out['time']
     
+    # if time_vec is None:
+    #     tvec = pwp_out['time']
+    # else:
+    #     tvec = time_vec
+    #
     
     axes = axes.flatten()
     ## plot surface heat flux
@@ -798,6 +827,8 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, zlim=500, save_plots=False, s
     #axes[0].set_ylim(-500,300)
     
     axes[0].legend(loc=0, ncol=2, fontsize='smaller')
+    # if 'dtime' in forcing:
+    #     formatDates(axes[0])
     
     
     ##plot wind stress
@@ -833,6 +864,9 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, zlim=500, save_plots=False, s
     axes[1].set_title('Skin temperature')
     axes[1].grid(True)
     axes[1].set_xlabel('Time (days)')
+    
+    if 'dtime' in forcing:
+        formatDates(axes[1])
     
     
     
@@ -896,6 +930,9 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, zlim=500, save_plots=False, s
 
     axes[2].legend(loc=0, ncol=2, fontsize='medium')
     
+    if 'dtime' in forcing:
+        formatDates(axes[2])
+    
     
     #plot summary of ML evolution
     
@@ -928,6 +965,9 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, zlim=500, save_plots=False, s
         cb = plt.colorbar(im, ax=ax, format='%.2f')
      
     ax.set_xlabel('Days') 
+    
+    if 'dtime' in forcing:
+        formatDates(ax)
     
     if save_plots:     
         plt.savefig('plots/sal_temp_ztseries_%s.png' %suffix, bbox_inches='tight') 
@@ -985,11 +1025,17 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, zlim=500, save_plots=False, s
     axes[0].set_title('Ice thickness')
     axes[0].grid(True)
     
+    if 'dtime' in forcing:
+        formatDates(axes[0])
+    
     axes[1].plot(tvec, pwp_out['surf_ice_temp'], '-')
     axes[1].set_ylabel('Temperature (C)')
     axes[1].set_xlabel('Time (days)')
     axes[1].set_title('Ice surface temperature')
     axes[1].grid(True)
+    
+    if 'dtime' in forcing:
+        formatDates(axes[1])
     
     if save_plots:     
         plt.savefig('plots/ice_temp_thickness%s.pdf' %suffix, bbox_inches='tight')
@@ -1045,6 +1091,9 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, zlim=500, save_plots=False, s
     plt.legend(loc=0)
     plt.grid(True)
     
+    if 'dtime' in forcing:
+        formatDates(plt.gca())
+    
     print("mean ocean warming: %.5f W/m2" %F_ocean_net.mean())
     
     if save_plots:     
@@ -1065,6 +1114,9 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, zlim=500, save_plots=False, s
     plt.ylabel('MLD (m)')
     plt.legend(loc=0)
     plt.grid(True)
+    
+    if 'dtime' in forcing:
+        formatDates(plt.gca())
     
     if save_plots:     
         plt.savefig('plots/MLD_evolution_%s.pdf' %suffix, bbox_inches='tight')
@@ -1088,6 +1140,9 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, zlim=500, save_plots=False, s
     axes[2].set_xlabel('Time (days)')
     axes[2].set_title('MLT - T_fz')
     axes[2].grid(True) 
+    
+    if 'dtime' in forcing:
+        formatDates(axes[2])
     
     if save_plots:     
         plt.savefig('plots/MLT_MLS_%s.pdf' %suffix, bbox_inches='tight')
@@ -1133,6 +1188,9 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, zlim=500, save_plots=False, s
         fig.subplots_adjust(right=0.8) #adjust sublot to make colorbar fit
         fig.subplots_adjust(hspace=0.3) 
         fig.colorbar(im, ax=ax2, cax=cbar_ax)
+        
+        if 'dtime' in forcing:
+            formatDates(ax2)
     
         if save_plots:
             #pass
