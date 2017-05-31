@@ -104,6 +104,81 @@ def demo3():
     
     return forcing, pwp_out  
     
+    
+def demo4(period='sum_win_2015'):
+    
+    """
+    Example script of how to run the PWP model.
+    This run is initialized with an late summer profile from Maud Rise and forced by NCEP fluxes through till early winter. 
+    
+    test cases are for 2015 and 2016
+    
+    period == 'sum_win_2015', 'sum_win_2016', mix1, mix2
+    
+    """
+    
+    date_range_2015 = ['2015-Mar-03', '2015-Jul-15']
+    date_range_2016 = ['2016-Feb-27', '2016-Jul-10']
+    
+    if period=='sum_win_2015':
+        float_date_range = date_range_2015
+        forcing_date_range = date_range_2015
+    elif period=='sum_win_2016':
+        float_date_range = date_range_2016
+        forcing_date_range = date_range_2016
+    elif period=='mix1':
+        float_date_range = date_range_2015
+        forcing_date_range = date_range_2016
+    elif period=='mix1':
+        float_date_range = date_range_2016
+        forcing_date_range = date_range_2015
+        
+    
+    
+    p={}
+    p['rkz']=1e-6
+    p['dz'] = 1
+    p['dt'] = 1.5
+    p['max_depth'] = 500
+    p['ice_ON'] = True
+    p['winds_ON'] = True
+    p['emp_ON'] = False
+    p['alpha'] = 0.95
+    p['dopt'] = 'pdens'
+    p['fix_alpha'] = True
+    p['mld_thresh'] = 0.01
+    p['use_Bulk_Formula'] = True
+    #p['qnet_offset'] = -40 #W/m2
+
+    
+    if p['ice_ON']:
+        ice_str = '' 
+    else:
+        ice_str = '_noICE'
+        
+    if p['winds_ON']:
+        wind_str = ''
+    else:
+        wind_str = '_noWINDS'
+        
+    if p['emp_ON']:
+        emp_str = ''
+    else:
+        emp_str = '_noEMP'
+        
+    if p['use_Bulk_Formula']:
+        qflux_str = '_bulk'
+    else:
+        qflux_str = ''
+    
+    fnum = 9094#'0068' #9099
+    met_data = 'NCEP_forcing_for_f%s_%s-%s.nc' %(fnum, forcing_date_range[0], forcing_date_range[-1])
+    prof_data = 'float%s_%s_%s.nc' %(fnum, float_date_range[0], float_date_range[-1])
+    suffix = 'demo4_%s_float%s%s%s%s%s_alpha%s' %(period, fnum, ice_str, wind_str, emp_str, qflux_str, p['alpha'])
+    forcing, pwp_out = run_PWP(met_data=met_data, prof_data=prof_data, param_kwds=p, suffix=suffix, save_plots=True)
+    
+    return forcing, pwp_out, suffix 
+    
 
 def run_PWP(met_data, prof_data, param_kwds=None, overwrite=True, makeLivePlots=False, suffix='', save_plots=False):
     
