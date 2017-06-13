@@ -786,7 +786,9 @@ def formatDates(ax):
     ax.xaxis.set_major_formatter(dateFmt)
     ax.xaxis.set_minor_locator(days_md1)   
     
-    plt.gcf().autofmt_xdate()
+    labels = ax.get_xticklabels()
+    plt.setp(labels, rotation=30, fontsize=10)
+
 
 def makeSomePlots(forcing, pwp_out, zlim=500, save_plots=False, suffix='', justForcing=False, showPlots=True):
     
@@ -819,22 +821,17 @@ def makeSomePlots(forcing, pwp_out, zlim=500, save_plots=False, suffix='', justF
     axes[0].plot(tvec, forcing['qlat'], label='$Q_{lat}$')
     axes[0].plot(tvec, forcing['qsens'], label='$Q_{sens}$')
     axes[0].plot(tvec, forcing['sw'], label='$Q_{sw}$')
-    axes[0].hlines(0, tvec[0], pwp_out['time'][-1], linestyle='-', color='0.3')
+    axes[0].hlines(0, tvec[0], tvec[-1], linestyle='-', color='0.3')
     axes[0].plot(tvec, forcing['F_in']-forcing['F_out'], ls='-', lw=2, color='k', label='$Q_{net}$')   
     axes[0].set_ylabel('Heat flux (W/m2)')
     axes[0].set_title('Heat flux into ocean')
     axes[0].grid(True)
-    #axes[0].set_ylim(-500,300)
-    
-    axes[0].legend(loc=0, ncol=2, fontsize='smaller')
-    # if 'dtime' in forcing:
-    #     formatDates(axes[0])
-    
+    axes[0].set_xlim()
     
     ##plot wind stress
     axes[1].plot(tvec, forcing['tx'], label=r'$\tau_x$')
     axes[1].plot(tvec, forcing['ty'], label=r'$\tau_y$')
-    axes[1].hlines(0, tvec[0], pwp_out['time'][-1], linestyle='--', color='0.3')
+    axes[1].hlines(0, tvec[0], tvec[-1], linestyle='--', color='0.3')
     axes[1].set_ylabel('Wind stress (N/m2)')
     axes[1].set_title('Wind stress')
     axes[1].grid(True)
@@ -844,12 +841,15 @@ def makeSomePlots(forcing, pwp_out, zlim=500, save_plots=False, suffix='', justF
     ## plot freshwater forcing
     emp_mmpd = forcing['emp']*1000*3600*24 #convert to mm per day
     axes[2].plot(tvec, emp_mmpd, label='E-P')
-    axes[2].hlines(0, tvec[0], pwp_out['time'][-1], linestyle='--', color='0.3')
+    axes[2].hlines(0, tvec[0], tvec[-1], linestyle='--', color='0.3')
     axes[2].set_ylabel('Freshwater forcing (mm/day)')
     axes[2].set_title('Freshwater forcing')
     axes[2].grid(True)
     axes[2].legend(loc=0, fontsize='medium')
     axes[2].set_xlabel('Time (days)')
+    
+    if 'dtime' in forcing:
+        formatDates(axes[2])
     
     ## plot ice conc. and surf temp.
     fig1, axes = plt.subplots(2,1, sharex=True, figsize=(7.5,9))
@@ -864,23 +864,55 @@ def makeSomePlots(forcing, pwp_out, zlim=500, save_plots=False, suffix='', justF
     axes[1].set_title('Skin temperature')
     axes[1].grid(True)
     axes[1].set_xlabel('Time (days)')
-    
+
     if 'dtime' in forcing:
         formatDates(axes[1])
+        
+        
     
     
+    # plot surface variables used to compute bulk fluxes
+    fig, axes = plt.subplots(3,1, sharex=True, figsize=(7.5,9))
+    axes = axes.flatten()
+    axes[0].plot(tvec, forcing['atemp2m']-273.15, label='2m Temp')
+    axes[0].plot(tvec, forcing['skt'], label='Skin Temp')
+    axes[0].legend(loc=0, fontsize='medium')
+    axes[0].set_ylabel('Temperature ($^{\circ}$C)')
+    axes[0].set_title('Near-surface temperature')
+    axes[0].grid(True)
     
+    axes[1].plot(tvec, forcing['u10m'], label='u-wind')
+    axes[1].plot(tvec, forcing['v10m'], label='v-wind')
+    axes[1].legend(loc=0, fontsize='medium')
+    axes[1].set_ylabel('Wind speed')
+    axes[1].set_title('10 meter winds (m/s)')
+    axes[1].grid(True)
     
+    axes[2].plot(tvec, forcing['shum2m']*1000)
+    axes[2].set_ylabel('Specific Humidity (g/kg)')
+    axes[2].set_title('2m specific humidity')
+    axes[2].grid(True)
+    
+    if 'dtime' in forcing:
+        formatDates(axes[2])
+        
+    if save_plots:     
+        fig.savefig('plots/surface_state%s.pdf' %suffix, bbox_inches='tight')
+
     if justForcing:
+        plt.show()
+        plt.pause(1)
         return
         
     #add true ice conc. to above plot
     axes[0].plot(tvec, pwp_out['alpha_true'], label='Actual')
     axes[0].legend(loc=0, fontsize='medium')
     
+    
+    
     if save_plots:     
         fig0.savefig('plots/surface_forcing%s.pdf' %suffix, bbox_inches='tight')
-        fig1.savefig('plots/surface_forcing2%s.pdf' %suffix, bbox_inches='tight')
+        fig1.savefig('plots/ice_conc_temp%s.pdf' %suffix, bbox_inches='tight')
         
         plt.close('all')
     
@@ -893,7 +925,7 @@ def makeSomePlots(forcing, pwp_out, zlim=500, save_plots=False, suffix='', justF
     axes[0].plot(tvec, pwp_out['F_lat_ao'], label='$Q_{lat}^{ocn}$')
     axes[0].plot(tvec, pwp_out['F_sens_ao'], label='$Q_{sens}^{ocn}$')
     axes[0].plot(tvec, (1-pwp_out['alpha_true'])*forcing['sw'], label='$Q_{sw}^{ocn}$')
-    axes[0].hlines(0, tvec[0], pwp_out['time'][-1], linestyle='-', color='0.3')
+    axes[0].hlines(0, tvec[0], tvec[-1], linestyle='-', color='0.3')
     axes[0].plot(tvec, pwp_out['F_net_ao'], ls='-', lw=2, color='k', label='$Q_{net}^{ocn}$')
     axes[0].set_ylabel('Heat flux (W/m2)')
     axes[0].set_title('Computed Atmosphere-ocean heat flux')
@@ -907,7 +939,7 @@ def makeSomePlots(forcing, pwp_out, zlim=500, save_plots=False, suffix='', justF
     axes[1].plot(tvec, pwp_out['F_lat_ai'], label='$Q_{lat}^{ice}$')
     axes[1].plot(tvec, pwp_out['F_sens_ai'], label='$Q_{sens}^{ice}$')
     axes[1].plot(tvec, pwp_out['alpha_true']*forcing['sw'], label='$Q_{sw}^{ice}$')
-    axes[1].hlines(0, tvec[0], pwp_out['time'][-1], linestyle='-', color='0.3')
+    axes[1].hlines(0, tvec[0], tvec[-1], linestyle='-', color='0.3')
     axes[1].plot(tvec, pwp_out['F_net_ai'], ls='-', lw=2, color='k', label='$Q_{net}^{ice}$')
     axes[1].set_ylabel('Heat flux (W/m2)')
     axes[1].set_title('Computed atmosphere-ice heat flux')
@@ -921,7 +953,7 @@ def makeSomePlots(forcing, pwp_out, zlim=500, save_plots=False, suffix='', justF
     axes[2].plot(tvec, pwp_out['F_lat_ai']+pwp_out['F_lat_ao'], label='$Q_{lat}$')
     axes[2].plot(tvec, pwp_out['F_sens_ai']+pwp_out['F_sens_ao'], label='$Q_{sens}$')
     axes[2].plot(tvec, forcing['sw'], label='$Q_{sw}$')
-    axes[2].hlines(0, tvec[0], pwp_out['time'][-1], linestyle='-', color='0.3')
+    axes[2].hlines(0, tvec[0], tvec[-1], linestyle='-', color='0.3')
     axes[2].plot(tvec, pwp_out['F_net_ai'] + pwp_out['F_net_ai'], ls='-', lw=2, color='k', label='$Q_{net}$')
     axes[2].set_ylabel('Heat flux (W/m2)')
     axes[2].set_title('Total surface heat flux')
@@ -932,13 +964,21 @@ def makeSomePlots(forcing, pwp_out, zlim=500, save_plots=False, suffix='', justF
     
     if 'dtime' in forcing:
         formatDates(axes[2])
+        
+    
+    if save_plots:     
+        fig2.savefig('plots/computed_surface_forcing%s.pdf' %suffix, bbox_inches='tight')
+        
+        plt.close('all')
+    
+    
     
     
     #plot summary of ML evolution
     
     #get a smoothed MLD time series
     from scipy.signal import savgol_filter
-    dt = tvec[1]-tvec[0]
+    dt = pwp_out['time'][1]-pwp_out['time'][0]
     mld_exact2 = pwp_out['mld_exact2'].copy()
     mld_exact2_sm = np.zeros(len(mld_exact2))*np.nan
     nan_i = np.isnan(mld_exact2)
@@ -1018,7 +1058,7 @@ def makeSomePlots(forcing, pwp_out, zlim=500, save_plots=False, suffix='', justF
         plt.close()    
         
     ## plot ice growth and ice temp
-    fig, axes = plt.subplots(2,1, figsize=(7.5,6))
+    fig, axes = plt.subplots(2,1, figsize=(7.5,9))
     axes[0].plot(tvec, pwp_out['ice_thickness'], '-')
     axes[0].set_ylabel('Ice thickness (m)')
     #axes[0].xlabel('Time (days)')
@@ -1084,11 +1124,11 @@ def makeSomePlots(forcing, pwp_out, zlim=500, save_plots=False, suffix='', justF
     plt.plot(tvec,  F_ocean_net_sm, label='$F_{ao}$ - $F_{oi}$', lw=2, c='magenta')
     
     plt.hlines(0, tvec[0], tvec[-1])
-    # plt.ylim(-100, 100)
+    plt.ylim(-400, 200)
     #plt.ylim(-1.5*np.abs(pwp_out['F_atm'].max()), 1.5*np.abs(pwp_out['F_atm'].max()))
     plt.xlabel('Time (days)')
     plt.ylabel('Heat flux (W/m2)')
-    plt.legend(loc=0)
+    plt.legend(loc=0, fontsize='small')
     plt.grid(True)
     
     if 'dtime' in forcing:
@@ -1107,8 +1147,8 @@ def makeSomePlots(forcing, pwp_out, zlim=500, save_plots=False, suffix='', justF
     plt.plot(tvec[1:], pwp_out['mld_exact'][1:], label='exact')
     plt.plot(tvec[1:], pwp_out['mld_exact2'][1:], label='exact2')
     plt.plot(tvec[1], pwp_out['mld'][1], 'ro', label='day0', ms=7)
-    plt.plot(tvec[tvec==1], pwp_out['mld'][tvec==1], 'go', label='day1', ms=7)
-    plt.plot(tvec[tvec==5], pwp_out['mld'][tvec==5], 'ko', label='day5', ms=7)
+    plt.plot(tvec[forcing['time']==1], pwp_out['mld'][forcing['time']==1], 'go', label='day1', ms=7)
+    plt.plot(tvec[forcing['time']==5], pwp_out['mld'][forcing['time']==5], 'ko', label='day5', ms=7)
     plt.gca().invert_yaxis() 
     plt.xlabel('Time (days)')
     plt.ylabel('MLD (m)')
