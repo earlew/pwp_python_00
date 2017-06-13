@@ -71,7 +71,7 @@ def demo3():
     p['fix_alpha'] = True
     p['mld_thresh'] = 0.01
     p['use_Bulk_Formula'] = True
-    #p['qnet_offset'] = -40 #W/m2
+    # p['qnet_offset'] = -40 #W/m2
 
     
     if p['ice_ON']:
@@ -93,6 +93,12 @@ def demo3():
         qflux_str = '_bulk'
     else:
         qflux_str = ''
+        
+    if p['qnet_offset'] ==0:
+        q_offset_str = ''
+    else:
+        q_offset_str = '_qoff%s'%p['qnet_offset']
+        
     
     fnum = 9094#'0068' #9099
     p1 = 10#25 #10
@@ -100,7 +106,7 @@ def demo3():
     nump = p2-p1
     met_data = 'NCEP_forcing_for_f%s_p%s-%s.nc' %(fnum, p1, p2)
     prof_data = 'float%s_%s_%s.nc' %(fnum, p1, p2)
-    suffix = '%s_%sc%s%s%s%s_alpha%s' %(fnum, nump, ice_str, wind_str, emp_str, qflux_str, p['alpha'])
+    suffix = '%s_%sc%s%s%s%s_alpha%s%s' %(fnum, nump, ice_str, wind_str, emp_str, qflux_str, p['alpha'], q_offset_str)
     forcing, pwp_out = run_PWP(met_data=met_data, prof_data=prof_data, param_kwds=p, suffix=suffix, save_plots=True)
     
     return forcing, pwp_out  
@@ -110,7 +116,7 @@ def demo4(period='sum_win_2015'):
     
     """
     Example script of how to run the PWP model.
-    This run is initialized with an late summer profile from Maud Rise and forced by NCEP fluxes through till early winter. 
+    This run is initialized with an late summer profile from float 9094 and forced by NCEP fluxes through till early winter. 
     
     test cases are for 2015 and 2016
     
@@ -130,7 +136,7 @@ def demo4(period='sum_win_2015'):
     elif period=='mix1':
         float_date_range = date_range_2015
         forcing_date_range = date_range_2016
-    elif period=='mix1':
+    elif period=='mix2':
         float_date_range = date_range_2016
         forcing_date_range = date_range_2015
         
@@ -149,7 +155,7 @@ def demo4(period='sum_win_2015'):
     p['fix_alpha'] = True
     p['mld_thresh'] = 0.01
     p['use_Bulk_Formula'] = True
-    #p['qnet_offset'] = -40 #W/m2
+    p['qnet_offset'] = -40 #W/m2
 
     
     if p['ice_ON']:
@@ -171,11 +177,98 @@ def demo4(period='sum_win_2015'):
         qflux_str = '_bulk'
     else:
         qflux_str = ''
+        
+    if p['qnet_offset'] ==0:
+        q_offset_str = ''
+    else:
+        q_offset_str = '_qoff%s'%p['qnet_offset']
     
     fnum = 9094#'0068' #9099
     met_data = 'NCEP_forcing_for_f%s_%s-%s.nc' %(fnum, forcing_date_range[0], forcing_date_range[-1])
     prof_data = 'float%s_%s_%s.nc' %(fnum, float_date_range[0], float_date_range[-1])
-    suffix = 'demo4_%s_float%s%s%s%s%s_alpha%s' %(period, fnum, ice_str, wind_str, emp_str, qflux_str, p['alpha'])
+    suffix = 'demo4_%s_float%s%s%s%s%s_alpha%s%s' %(period, fnum, ice_str, wind_str, emp_str, qflux_str, p['alpha'], q_offset_str)
+    forcing, pwp_out = run_PWP(met_data=met_data, prof_data=prof_data, param_kwds=p, suffix=suffix, save_plots=True)
+    
+    return forcing, pwp_out, suffix 
+    
+    
+
+def demo5(period='sum_win_2015'):
+    
+    """
+    Example script of how to run the PWP model.
+    This run is initialized with an late summer profile from float 9094 and forced by NCEP fluxes through till early winter. 
+    
+    test cases are for 2015 and 2016
+    
+    period == 'sum_win_2015', 'sum_win_2016', mix1, mix2
+    
+    """
+    
+    date_range_2015 = ['2015-Mar-02', '2015-Jul-14']
+    date_range_2016 = ['2016-Feb-25', '2016-Jul-19']
+    
+    if period=='sum_win_2015':
+        float_date_range = date_range_2015
+        forcing_date_range = date_range_2015
+    elif period=='sum_win_2016':
+        float_date_range = date_range_2016
+        forcing_date_range = date_range_2016
+    elif period=='mix1':
+        float_date_range = date_range_2015
+        forcing_date_range = date_range_2016
+    elif period=='mix2':
+        float_date_range = date_range_2016
+        forcing_date_range = date_range_2015
+        
+    
+    
+    p={}
+    p['rkz']=1e-6
+    p['dz'] = 1
+    p['dt'] = 1.5
+    p['max_depth'] = 500
+    p['ice_ON'] = True
+    p['winds_ON'] = True
+    p['emp_ON'] = False
+    p['alpha'] = 0.95
+    p['dopt'] = 'pdens'
+    p['fix_alpha'] = True
+    p['mld_thresh'] = 0.01
+    p['use_Bulk_Formula'] = True
+    p['qnet_offset'] = -40 #W/m2
+
+    
+    if p['ice_ON']:
+        ice_str = '' 
+    else:
+        ice_str = '_noICE'
+        
+    if p['winds_ON']:
+        wind_str = ''
+    else:
+        wind_str = '_noWINDS'
+        
+    if p['emp_ON']:
+        emp_str = ''
+    else:
+        emp_str = '_noEMP'
+        
+    if p['use_Bulk_Formula']:
+        qflux_str = '_bulk'
+    else:
+        qflux_str = ''
+        
+    if p['qnet_offset'] ==0:
+        q_offset_str = ''
+    else:
+        q_offset_str = '_qoff%s'%p['qnet_offset']
+    
+    fnum = 9099#'0068' #9099
+    #met_data = 'NCEP_forcing_for_f%s_%s-%s.nc' %(fnum, forcing_date_range[0], forcing_date_range[-1])
+    met_data = 'NCEP_forcing_for_f%s_%s-%s.nc' %(9094, '2015-Mar-03', '2015-Jul-15')
+    prof_data = 'float%s_%s_%s.nc' %(fnum, float_date_range[0], float_date_range[-1])
+    suffix = 'demo4_%s_float%s%s%s%s%s_alpha%s%s' %(period, fnum, ice_str, wind_str, emp_str, qflux_str, p['alpha'], q_offset_str)
     forcing, pwp_out = run_PWP(met_data=met_data, prof_data=prof_data, param_kwds=p, suffix=suffix, save_plots=True)
     
     return forcing, pwp_out, suffix 
@@ -310,10 +403,7 @@ def run_PWP(met_data, prof_data, param_kwds=None, overwrite=True, makeLivePlots=
     met_dset.close()
     
     # plot forcing
-    makeSomePlots(forcing, pwp_out, justForcing=True)
-    plt.show()
-    
-    debug_here()
+    makeSomePlots(forcing, pwp_out, save_plots=True, justForcing=True)
     
     ## run the model
     pwp_out = PWP.pwpgo(forcing, params, pwp_out, makeLivePlots)
@@ -348,13 +438,14 @@ def run_PWP(met_data, prof_data, param_kwds=None, overwrite=True, makeLivePlots=
     # pwp_out2 = phf.save2nc(pwp_out, output_fpath, dt_save=params['dt_save'])
     # forcing2 = phf.save2nc(forcing, forcing_fpath, dt_save=params['dt_save'], type='forc')
     
+    #debug_here()
     ## do analysis of the results
     makeSomePlots(forcing, pwp_out, zlim=params['plot_zlim'], suffix=suffix, save_plots=save_plots)
     
     return forcing, pwp_out   
 
 
-def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1, alpha=0., h_i0=0.0, rkz=0., diff_zlim=5000, plot_zlim=500, qnet_offset=0., dopt='dens0', use_Bulk_Formula=False, fix_alpha=False, ice_ON=False, winds_ON=True, emp_ON=True):
+def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1, alpha=0., h_i0=0.0, rkz=0., diff_zlim=5000, plot_zlim=500, qnet_offset=0., dopt='dens0', use_Bulk_Formula=False, fix_alpha=False, ice_ON=False, winds_ON=True, emp_ON=True, drag_ON=True):
                 
     
     """
@@ -415,6 +506,7 @@ def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1, al
     params['ice_ON'] = ice_ON
     params['winds_ON'] = winds_ON
     params['emp_ON'] = emp_ON
+    params['drag_ON'] = drag_ON
     
     params['alpha'] = alpha #sea ice concentration 
     params['fix_alpha'] = fix_alpha #if fix_alpha=True, use params['alpha'] instead of ice conc. from forcing
@@ -430,7 +522,6 @@ def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1, al
     - 'dens' cals dens(), which uses the full density equation.
 
     'dens0' is the simpliest/fastest option but can produce weak density inversions in weakly statified but otherwise stable water columns.
-    'pdens' uses 
     
     """
     
