@@ -380,9 +380,10 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
         ### Apply drag to current ###
         #Original comment: this is a horrible parameterization of inertial-internal wave dispersion
         #I don't know why this is horrible -EW
-        if ucon > 1e-10:
-            uvel = uvel*(1-dt*ucon)
-            vvel = vvel*(1-dt*ucon)
+        if params['drag_ON']:
+            if ucon > 1e-10:
+                uvel = uvel*(1-dt*ucon)
+                vvel = vvel*(1-dt*ucon)
         
         uvel, vvel = rot(uvel, vvel, ang)
         
