@@ -95,7 +95,7 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
     # alpha = params['alpha']
     
     F_net = F_in-F_out
-    F_net = F_net+params['qnet_offset']
+    F_net = F_net
     
     #add dz and dt to params
     params['dt'] = dt
@@ -184,6 +184,7 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
             if params['use_Bulk_Formula'] == True:
                 #computes atmosphere-ocean fluxes - everything but shortwave
                 F_lw_ao, F_sens_ao, F_lat_ao = get_atm_ocean_HF(temp[0], forcing, alpha_n, n)
+                F_sens_ao = F_sens_ao + params['qnet_offset'] #add artificial flux (default zero) to adjust sensible flux. Use to speed up cool.
                 F_in_ao = (1-alpha_n)*F_in[n-1]
                 F_out_ao = -(F_lw_ao+F_sens_ao+F_lat_ao) #fluxes were defined as positive down. ice fraction already accoutned for
                 F_net_ao = F_in_ao-F_out_ao
@@ -195,7 +196,7 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
             
             else:
                 F_in_ao = F_in[n-1]
-                F_out_ao = F_out[n-1]
+                F_out_ao = F_out[n-1]+ params['qnet_offset']
                 F_net_ao = F_net[n-1]
             
             
@@ -230,7 +231,7 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
         else:
             
             
-            #need to implement a smooth transition in ice-fraction from open water to non-zero ice percentage
+            #todo: implement a smooth transition in ice-fraction from open water to non-zero ice percentage
             #without this, ice frac can abruptly transition from open ocean to >50% ice cover
             
             # if transition_ice_frac:
@@ -341,6 +342,7 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
         # if dT_error>0.01:
         #     print("Warning: heat applied is not exactly consistent with heat change in water column")
         #     #debug_here()
+    
             
         pwp_out['alpha_true'][n-1] = alpha_n
         
@@ -917,7 +919,6 @@ def get_atm_ice_HF(surf_temp, forcing, alpha, n):
     eps = 0.95 #emissivity
     F_lw_ai = f_i*eps*(forcing['dlw'][n-1] - sigma*surf_temp_K**4)
     
-    #debug_here()
     
     return F_lw_ai, F_sens_ai, F_lat_ai
     
@@ -1006,6 +1007,7 @@ def local_stir(z, s, t, ps, dopt):
     axes[0].set_ylabel("Depth (m)")
     axes[0].set_xlabel("Temperature (C)")
     axes[0].legend(loc=0)
+    axes[0].set_xlim(-2, 1.5)
     
     axes[1].plot(s0, z, label='initial')
     axes[1].plot(s, z, label='stabilized')
@@ -1014,6 +1016,7 @@ def local_stir(z, s, t, ps, dopt):
     axes[1].set_ylabel("Depth (m)")
     axes[1].set_xlabel("Salinity (psu)")
     axes[1].legend(loc=0)
+    axes[1].set_xlim(33.5, 34.75)
     
     axes[2].plot(d0-1000, z, label='initial')
     axes[2].plot(d-1000, z, label='stabilized')
@@ -1022,6 +1025,9 @@ def local_stir(z, s, t, ps, dopt):
     axes[2].set_ylabel("Depth (m)")
     axes[2].set_xlabel("%s - 1000 (kg/m3)" %dopt)
     axes[2].legend(loc=0)
+    from matplotlib.ticker import FormatStrFormatter
+    axes[2].xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    axes[2].set_xlim(26.8, 28)
     
     debug_here()
     

@@ -202,12 +202,7 @@ def demo4(period='sum_win_2015'):
 def demo5(period='sum_win_2015'):
     
     """
-    Example script of how to run the PWP model.
-    This run is initialized with an late summer profile from float 9094 and forced by NCEP fluxes through till early winter. 
-    
-    test cases are for 2015 and 2016
-    
-    period == 'sum_win_2015', 'sum_win_2016', mix1, mix2
+    Like the demo4 but uses a summer profile from  float 9099
     
     """
     
