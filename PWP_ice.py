@@ -137,7 +137,7 @@ def create_initial_ice(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, alpha,
     return h_ice_f, temp_ice_surf_f, temp_sw, sal_sw
     
     
-def grow_ice_v1(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, alpha, params):
+def ice_model_0(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, alpha, params):
     
     """
     Function to evolve ice using when either F_ai>0 or when temp_ice_surf>T_fz
@@ -176,7 +176,7 @@ def grow_ice_v1(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, a
             
             print("warming ice...")
             
-            #use heat warm the ice. Assume linear profile.
+            #use heat warm the ice. Assume linear profile - this is why factor of 2 is needed.
             temp_ice_surf_f = temp_ice_surf_i + 2*total_available_heat/(c_ice*h_ice_i*rho_ice)
             #no change in ice thickness, since ice was not warmed to freezing temp
             dh_ice = 0
@@ -303,7 +303,7 @@ def grow_ice_v1(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, a
     #debug_here()
     return h_ice_f, temp_ice_surf_f, temp_sw, sal_sw, F_aio
     
-def grow_ice_v3(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, alpha, params):
+def ice_model_T(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, alpha, params):
     
     """
     This ice model uses specified surface ice temperatures.
@@ -330,7 +330,7 @@ def grow_ice_v3(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, a
     assert h_ice_i >=0, "Error! negative ice thickness. Something went terribly wrong!"
     
     ### evolve sea ice ###
-    if temp_ice_surf_i < temp_fz and F_ai<0: 
+    if temp_ice_surf_i < temp_fz and F_ai<0 and params['iceMod']==1: 
         print("grow ice with specified ice surface temperatures...")
     
         #define initial conditions and time step for ice growth model
@@ -368,7 +368,7 @@ def grow_ice_v3(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, a
 
         if switch_algorithm:
             #this restarts the ice growth/melt process
-            h_ice_f, temp_ice_surf_f, temp_sw, sal_sw, F_aio = grow_ice_v1(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, alpha, params)
+            h_ice_f, temp_ice_surf_f, temp_sw, sal_sw, F_aio = ice_model_0(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, alpha, params)
 
         else:
             #get final ice thickness
@@ -396,7 +396,7 @@ def grow_ice_v3(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, a
     else:
         
         #use simple ice algorithm
-        h_ice_f, temp_ice_surf_f, temp_sw, sal_sw, F_aio = grow_ice_v1(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, alpha, params)
+        h_ice_f, temp_ice_surf_f, temp_sw, sal_sw, F_aio = ice_model_0(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, alpha, params)
         dh_ice = h_ice_f - h_ice_i
         
     
@@ -413,7 +413,7 @@ def grow_ice_v3(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, a
     
     return h_ice_f, temp_ice_surf_f, temp_sw, sal_sw, F_i, F_aio
 
-def ice_model_v4(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, alpha, params):
+def ice_model_F(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, alpha, params):
     
     """
     This ice model uses specificied surface fluxes and assumes the ice is in thermal equilibrium with the atmosphere
@@ -474,7 +474,7 @@ def ice_model_v4(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, 
     else:
         
         #use thin ice algorithm
-        h_ice_f, temp_ice_surf_f, temp_sw, sal_sw, F_aio = grow_ice_v1(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, alpha, params)
+        h_ice_f, temp_ice_surf_f, temp_sw, sal_sw, F_aio = ice_model_0(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, alpha, params)
         dh_ice = h_ice_f - h_ice_i
 
         

@@ -285,11 +285,15 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
                 
                 print("F_ao: %.2f" %F_net_ao)
                 
+                
+                # F_out_ao = F_out_ao + (1-alpha_n)*params['qnet_offset']
+                # F_out_ai = F_out_ai + alpha_n*params['qnet_offset']
+                
                 #compute ocean->ice heat flux
                 F_oi = PWP_ice.get_ocean_ice_heat_flux(temp, sal, dens, params)
                 
                 #modify existing sea ice
-                h_ice, temp_ice_surf, temp, sal, F_i, F_aio = PWP_ice.grow_ice_v3(h_ice, skt_n, temp, sal, dens, F_ai, F_oi, alpha_n, params)
+                h_ice, temp_ice_surf, temp, sal, F_i, F_aio = PWP_ice.ice_model_T(h_ice, skt_n, temp, sal, dens, F_ai, F_oi, alpha_n, params)
                 
                 print(temp[:15].mean())
                 
@@ -722,7 +726,7 @@ def getMLD(dens, z, params):
     
     return mld, mld_idx
 
-def get_atm_ocean_HF(sst, forcing, alpha, n):
+def get_atm_ocean_HF(sst, forcing, alpha, n, height_match=False):
     
     """
     Function to compute ocean atmosphere heat fluxes in the presence of sea ice.
@@ -771,6 +775,12 @@ def get_atm_ocean_HF(sst, forcing, alpha, n):
     tx = forcing['tx'][n-1]
     ty = forcing['ty'][n-1]
     
+    #get longwave over the ocean
+    sigma = 5.67e-8 #W/m2/K4 (step-boltzmann constant)
+    eps = 1.0 #emissivity
+    F_lw_ao = f_o*(forcing['dlw'][n-1] - eps*sigma*sst_K**4)
+    
+    #get variables for turbulent heat fluxes
     Un_10m_init = np.sqrt(u10m**2 + v10m**2) #10m wind speed
     q_sat_ocn = (1./rho_air)*q1_ocn*np.e**(q2_ocn/sst_K) #saturation specific humidity
     theta_2m = atemp2m*(1000./1002.)**(r/c_p_air) #potential air temp
@@ -794,9 +804,23 @@ def get_atm_ocean_HF(sst, forcing, alpha, n):
     
     
     #compute initial sensible and latent heat fluxes
-    q_sens_ao_init = f_o*rho_air*c_p_air*C_h*(theta_2m - sst_K)*Un_10m_init
-    q_lat_ao_init = f_o*L_v*rho_air*C_e*(q_2m - q_sat_ocn)*Un_10m_init
+    F_sens_ao_init = f_o*rho_air*c_p_air*C_h*(theta_2m - sst_K)*Un_10m_init
+    F_lat_ao_init = f_o*L_v*rho_air*C_e*(q_2m - q_sat_ocn)*Un_10m_init
     
+    if height_match==False:
+        
+        if n==1:
+            print("Warning: Skipping height match between winds and humidity!")
+            
+        print("F_sens_ao = %.2f, F_lat_ao = %.2f, F_lw_ao = %.2f W/m2" %(F_sens_ao_init, F_lat_ao_init, F_lw_ao))
+        
+        return F_lw_ao, F_sens_ao_init, F_lat_ao_init
+        
+    #WARNING: The code below sometimes produces really weird values. Generally, the adjustments are relatively small, tending to slightly 
+    #increase the heat fluxes. However, on rare occassions these differences can be very large O(1000 W/m2). This is obviously unphysical. It's probably best
+    #to ignore the height adjustment process for now and stick to the simple bulk forumla computations.
+    
+        
     #get monin-obukhov length scale
     # L_mo_ocn = -rho_air*c_p_air*theta_v_2m*u_star**3/(kappa*g*qsens_ao_init)
     
@@ -827,15 +851,15 @@ def get_atm_ocean_HF(sst, forcing, alpha, n):
     F_sens_ao = f_o*rho_air*c_p_air*C_h_new*(theta_10m - sst_K)*Un_10m #if atm warmer than ocean F_sens is positive (warms ocean)
     F_lat_ao = f_o*L_v*rho_air*C_e_new*(q_10m - q_sat_ocn)*Un_10m #if atm warmer than ocean F_sens is positive (warms ocean)
     
-    
-    #get longwave over the ocean
-    sigma = 5.67e-8 #W/m2/K4 (step-boltzmann constant)
-    eps = 1.0 #emissivity
-    F_lw_ao = f_o*(forcing['dlw'][n-1] - eps*sigma*sst_K**4)
+
     
     # theta_v_10m = theta_10m*(1. + 0.608*q_10m)
     # t_star_10m_ocn = (C_h/np.sqrt(C_d))*theta_star_10m_ocn
     # q_star_10m_ocn = (C_e/np.sqrt(C_d))*q_star_10m_ocn
+    
+    if abs(F_sens_ao)>1000:
+        print("woah!")
+        debug_here()
     
     
     print("F_sens_ao = %.2f, F_lat_ao = %.2f, F_lw_ao = %.2f W/m2" %(F_sens_ao, F_lat_ao, F_lw_ao))

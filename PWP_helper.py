@@ -71,7 +71,8 @@ def demo3():
     p['fix_alpha'] = True
     p['mld_thresh'] = 0.01
     p['use_Bulk_Formula'] = True
-    # p['qnet_offset'] = -40 #W/m2
+    p['qnet_offset'] = 0 #W/m2
+    p['iceMod'] = 1 #1: use ice_model_0(), 1: ice_model_T()
 
     
     if p['ice_ON']:
@@ -98,6 +99,11 @@ def demo3():
         q_offset_str = ''
     else:
         q_offset_str = '_qoff%s'%p['qnet_offset']
+        
+    if p['iceMod']==1:
+        qflux_str = '_iceModT'
+    elif p['iceMod']==0:
+        qflux_str = '_iceMod0'
         
     
     fnum = 9094#'0068' #9099
@@ -445,12 +451,12 @@ def run_PWP(met_data, prof_data, param_kwds=None, overwrite=True, makeLivePlots=
     return forcing, pwp_out   
 
 
-def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1, alpha=0., h_i0=0.0, rkz=0., diff_zlim=5000, plot_zlim=500, qnet_offset=0., dopt='dens0', use_Bulk_Formula=False, fix_alpha=False, ice_ON=False, winds_ON=True, emp_ON=True, drag_ON=True):
+def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1, alpha=-999, h_i0=0.0, rkz=0., diff_zlim=5000, plot_zlim=500, qnet_offset=0., dopt='dens0', use_Bulk_Formula=False, fix_alpha=False, ice_ON=False, winds_ON=True, emp_ON=True, drag_ON=True, iceMod=1):
                 
     
     """
                 
-    TODO: update doc
+    TODO: combine all these input into dict
     
     This function sets the main paramaters/constants used in the model.
     These values are packaged into a dictionary, which is returned as output.
@@ -508,9 +514,12 @@ def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1, al
     params['emp_ON'] = emp_ON
     params['drag_ON'] = drag_ON
     
+    
+    params['iceMod'] = iceMod #
     params['alpha'] = alpha #sea ice concentration 
     params['fix_alpha'] = fix_alpha #if fix_alpha=True, use params['alpha'] instead of ice conc. from forcing
     params['h_i0'] = h_i0 #initial ice thickness
+    
     params['qnet_offset'] = qnet_offset #arbitrary offset to the net atmospheric heat flux.
     
     params['dens_option'] = dopt # 'dens', 'dens0' or 'pdens' 
