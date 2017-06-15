@@ -133,6 +133,7 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
         print("Initializing ice model with %sm slab of ice." %params['h_i0'])
 
     
+    
     print("Number of time steps: %s" %tlen)
     
     if makeLivePlots:
@@ -969,7 +970,7 @@ def getDensity(s,t,z, dopt):
     return dens
     
 
-def local_stir(z, s, t, ps, dopt):
+def local_stir(z, s, t, ps, dopt, checkProfile=True, max_iter=1e4):
     
     
     s0 = s.copy()
@@ -1019,46 +1020,53 @@ def local_stir(z, s, t, ps, dopt):
         else:
             mix_frac=1
         
-        if i>5e3:
+        if i>max_iter:
             print("Failed to stabilize profile after %i iterations :(" %i)
             break
         
     print("Profile stabilized. %i iterations required." %i)
         
     #plot stablized profile
-    fig, axes = plt.subplots(1,3, figsize=(12,6), sharey=True)
-    axes[0].plot(t0, z, label='initial')
-    axes[0].plot(t, z, label='stabilized')
-    axes[0].grid(True)
-    axes[0].invert_yaxis()
-    axes[0].set_ylabel("Depth (m)")
-    axes[0].set_xlabel("Temperature (C)")
-    axes[0].legend(loc=0)
-    axes[0].set_xlim(-2, 1.5)
+    if checkProfile:
+        fig, axes = plt.subplots(1,3, figsize=(12,6), sharey=True, num=99)
+        axes[0].plot(t0, z, label='initial')
+        axes[0].plot(t, z, label='stabilized')
+        axes[0].grid(True)
+        axes[0].invert_yaxis()
+        axes[0].set_ylabel("Depth (m)")
+        axes[0].set_xlabel("Temperature (C)")
+        axes[0].legend(loc=0)
+        axes[0].set_xlim(-2, 1.5)
     
-    axes[1].plot(s0, z, label='initial')
-    axes[1].plot(s, z, label='stabilized')
-    axes[1].grid(True)
-    axes[1].invert_yaxis()
-    axes[1].set_ylabel("Depth (m)")
-    axes[1].set_xlabel("Salinity (psu)")
-    axes[1].legend(loc=0)
-    axes[1].set_xlim(33.5, 34.75)
+        axes[1].plot(s0, z, label='initial')
+        axes[1].plot(s, z, label='stabilized')
+        axes[1].grid(True)
+        axes[1].invert_yaxis()
+        axes[1].set_ylabel("Depth (m)")
+        axes[1].set_xlabel("Salinity (psu)")
+        axes[1].legend(loc=0)
+        axes[1].set_xlim(33.5, 34.75)
     
-    axes[2].plot(d0-1000, z, label='initial')
-    axes[2].plot(d-1000, z, label='stabilized')
-    axes[2].grid(True)
-    axes[2].invert_yaxis()
-    axes[2].set_ylabel("Depth (m)")
-    axes[2].set_xlabel("%s - 1000 (kg/m3)" %dopt)
-    axes[2].legend(loc=0)
-    from matplotlib.ticker import FormatStrFormatter
-    axes[2].xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-    axes[2].set_xlim(26.8, 28)
+        axes[2].plot(d0-1000, z, label='initial')
+        axes[2].plot(d-1000, z, label='stabilized')
+        axes[2].grid(True)
+        axes[2].invert_yaxis()
+        axes[2].set_ylabel("Depth (m)")
+        axes[2].set_xlabel("%s - 1000 (kg/m3)" %dopt)
+        axes[2].legend(loc=0)
+        from matplotlib.ticker import FormatStrFormatter
+        axes[2].xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+        axes[2].set_xlim(26.8, 28)
     
-    debug_here()
     
-    return s, t, ps, d 
+        print("Enter 'c' to continue...")
+        debug_here()
+        plt.close(99)
+    #else:
+        
+        
+    
+    return s, t, d, ps 
         
         
     
