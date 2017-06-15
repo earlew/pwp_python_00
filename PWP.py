@@ -70,7 +70,9 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
     sal_ref = 34.0
     dens_ref = 1026.0
     
-    #unpack some of the variables (I could probably do this more elegantly)
+    T_fz = sw.fp(sal_ref, p=0)
+     
+    #unpack some of the variables (probably not necessary)
     F_in = forcing['F_in']
     F_out = forcing['F_out']
     emp = forcing['emp']
@@ -174,6 +176,7 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
             alpha_n = forcing['icec2'][n-1]
         
         skt_n = forcing['skt'][n-1]
+        
         
         
         ### Absorb solar radiation and FWF in surf layer ###
@@ -317,7 +320,7 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
                 #TODO: apply passive scalar flux through leads
                 
                 #check if temp is less than freezing point
-                T_fz = sw.fp(sal_ref, p=dz)  #is sal[0] appropriate here? This is essentially brine water
+                #T_fz = sw.fp(sal_ref, p=dz)  
                 dT = temp[0]-T_fz
                 lead_ice_heating = 0.0
                 if dT<0:
