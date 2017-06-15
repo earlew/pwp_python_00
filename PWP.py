@@ -298,7 +298,7 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
                 
                 print("F_ao: %.2f" %F_net_ao)
                 
-                
+                #debug_here()
                 # F_out_ao = F_out_ao + (1-alpha_n)*params['qnet_offset']
                 # F_out_ai = F_out_ai + alpha_n*params['qnet_offset']
                 
@@ -308,7 +308,7 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
                 #modify existing sea ice
                 h_ice, temp_ice_surf, temp, sal, F_i, F_aio = PWP_ice.ice_model_T(h_ice, skt_n, temp, sal, dens, F_ai, F_oi, alpha_n, params)
                 
-                print(temp[:15].mean())
+                #print(temp[:15].mean())
                 
                 # apply E-P flux through leads
                 sal[0] = sal[0] + sal_ref*(1-alpha_n)*emp[n-1]*dt/dz #TODO: keep track of rain/snow on top of ice (big task)
@@ -335,11 +335,16 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
                 #save ice related output
                 pwp_out['surf_ice_temp'][n] = temp_ice_surf
                 pwp_out['ice_thickness'][n] = h_ice
-                pwp_out['F_oi'][n-1] = F_oi
-                pwp_out['F_ai'][n-1] = F_ai-F_aio
+                pwp_out['F_oi'][n-1] = F_oi 
                 pwp_out['F_ao'][n-1] = F_net_ao+F_aio+lead_ice_heating
                 pwp_out['F_i'][n-1] = F_i
                 pwp_out['alpha_true'][n] = alpha_n
+                
+                if params['iceMod'] == 0:
+                    pwp_out['F_ai'][n-1] = F_ai-F_aio
+                elif params['iceMod'] == 1:
+                    pwp_out['F_ai'][n-1] = -F_i
+                    
             
             else:
                 
@@ -370,8 +375,6 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
         ### relieve static instability ###
         temp, sal, dens, uvel, vvel, ps = remove_si(z, temp, sal, dens, uvel, vvel, ps, params)
         
-        if np.any(np.diff(dens)<0):
-            debug_here()
         
         #compute mlt and mls after entrainment (just for debugging)
         mld_post_ent, mld_idx_post_ent = getMLD(dens, z, params)
