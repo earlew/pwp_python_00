@@ -446,78 +446,98 @@ def run_PWP(met_data, prof_data, param_kwds=None, overwrite=True, makeLivePlots=
     return forcing, pwp_out   
 
 
-def set_params(lat, dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1, alpha=-999, h_i0=0.0, rkz=0., diff_zlim=5000, plot_zlim=500, qnet_offset=0., dopt='dens0', use_Bulk_Formula=False, fix_alpha=False, ice_ON=False, winds_ON=True, emp_ON=True, drag_ON=True, iceMod=1):
+def set_params(lat, param_mods):
                 
     
     """
-                
-    TODO: combine all these input into dict
-    
     This function sets the main paramaters/constants used in the model.
     These values are packaged into a dictionary, which is returned as output.
     Definitions are listed below.
     
-    CONTROLS (default values are in [ ]):
-    lat: latitude of profile
-    dt: time-step increment. Input value in units of hours, but this is immediately converted to seconds.[3 hours]
-    dz: depth increment (meters). [1m]
-    max_depth: Max depth of vertical coordinate (meters). [100]
-    mld_thresh: Density criterion for MLD (kg/m3). [1e-4] 
-    dt_save: time-step increment for saving to file (multiples of dt). [1]
     
-    
-    rkz: background vertical diffusion (m**2/s). [0.]
-    
-    
-    OUTPUT is dict with fields containing the above variables plus the following:
-    dt_d: time increment (dt) in units of days
-    g: acceleration due to gravity [9.8 m/s^2]
-    cpw: specific heat of water [4183.3 J/kgC]
-    f: coriolis term (rad/s). [sw.f(lat)]
-    ucon: coefficient of inertial-internal wave dissipation (s^-1) [0.1*np.abs(f)]
-                
+    original default arguments:
+    dt=3., dz=1., max_depth=100., mld_thresh=1e-4, dt_save=1, alpha=-999, h_i0=0.0, rkz=0., 
+    diff_zlim=5000, plot_zlim=500, qnet_offset=0., dopt='dens0', use_Bulk_Formula=False, 
+    fix_alpha=False, ice_ON=False, winds_ON=True, emp_ON=True, drag_ON=True, iceMod=1           
+    (delete the above soon)
+
     """
     
-    rb=0.65 #rb: critical bulk richardson number. [0.65]
-    rg=0.25 #rg: critical gradient richardson number. [0.25]
-    beta1=0.6 #beta1: longwave extinction coefficient (meters). [0.6]
-    beta2=20.0 #beta2: shortwave extinction coefficient (meters). [20] 
     
     params = {}
-    params['dt'] = 3600.0*dt
-    params['dt_d'] = params['dt']/86400.
-    params['dz'] = dz
-    params['dt_save'] = int(dt_save)
-    params['lat'] = lat
-    params['rb'] = rb
-    params['rg'] = rg
-    params['rkz'] = rkz
-    params['beta1'] = beta1
-    params['beta2'] = beta2
-    params['max_depth'] = max_depth
-  
-    params['g'] = 9.81
-    params['f'] = sw.f(lat)
-    params['cpw'] = 4183.3
-    params['ucon'] = (0.1*np.abs(params['f']))
-    params['mld_thresh'] = mld_thresh
-    params['diff_zlim'] = diff_zlim
-    params['plot_zlim'] = plot_zlim
     
-    params['ice_ON'] = ice_ON
-    params['winds_ON'] = winds_ON
-    params['emp_ON'] = emp_ON
-    params['drag_ON'] = drag_ON
+    #general PWP model configuration parameters
+    params['dt_hr'] = 3 #time-step increment (hours)
+    params['dz'] = 1 #depth increment (meters)
+    params['dt_save'] = 1 #time-step increment for saving to file (multiples of dt). TODO: Actually implement this 
+    params['lat'] = lat 
+    params['max_depth'] = 100 #maximum depth of profile (meters)
+    params['use_Bulk_Formula'] = False #compute surface fluxes using bulk formulae (True) or simply use what's provided (False)
+    
+    #physical constants
+    params['g'] = 9.81 #gravitional constant (m/s**2)
+    params['cpw'] = 4183.3 #heat capacity of seawater
     
     
-    params['iceMod'] = iceMod #
-    params['alpha'] = alpha #sea ice concentration 
-    params['fix_alpha'] = fix_alpha #if fix_alpha=True, use params['alpha'] instead of ice conc. from forcing
-    params['h_i0'] = h_i0 #initial ice thickness
+    #arbitrary co-efficients
+    params['beta1'] = 0.6 #longwave extinction coefficient (meters). [0.6]
+    params['beta2'] = 20.0 #shortwave extinction coefficient (meters). [20]
+    params['rkz'] = 0 #diffusion co-efficient (m2/s)
     
-    params['qnet_offset'] = qnet_offset #arbitrary offset to the net atmospheric heat flux.
     
-    params['dens_option'] = dopt # 'dens', 'dens0' or 'pdens' 
+    #thresholds for mixing
+    params['rb'] = 0.65 #critical bulk richardson number. [0.65]
+    params['rg'] = 0.25 #critical gradient richardson number. [0.25]
+    params['mld_thresh'] = 1e-4 #Density criterion for MLD (kg/m3). [1e-4] 
+    params['diff_zlim'] = 1e10 #maximum depth over which diffusion is applied (meters)
+     
+    
+    #plotting controls
+    params['plot_zlim'] = 500 #maximum depth to show when generating plots at the end of the run (meters)
+    
+    
+    #ice-model controls 
+    params['iceMod'] = 1 #ice model options. 1 to use ice_model_T, 0 to use ice_model_0
+    params['alpha'] = -999 #sea ice concentration 
+    params['h_i0'] = 0 #initial ice thickness (meters)
+    
+    #process controls
+    params['ice_ON'] = True #switch to allow ice formation
+    params['winds_ON'] = True #switch to turn on/off winds
+    params['emp_ON'] = True #switch to turn on/off E-P fluxes
+    params['drag_ON'] = True #switch to turn on/off current drag
+    params['gradMix_ON'] = True #switch to allow gradient richardson number mixing
+    
+    #Miscellany
+    params['qnet_offset'] = 0 #arbitrary offset to the net atmospheric heat flux (W/m2).
+    params['dens_option'] = 'dens0' #density option: 'dens', 'dens0' or 'pdens' (see below)
+    
+    
+    #modify paramaters
+    for param in param_mods:
+        if param not in params:
+            raise ValueError("%s does not exist in params." %param)
+        else:
+            params[param] = param_mods[param] #throws error if param is not in params
+
+    
+    #derived quantities (not allowed to change these with param_mods)
+    params['dt'] = 3600.0*params['dt_hr'] #time-step increment (seconds)
+    params['dt_d'] = params['dt']/86400. #time-step increment (days)
+    params['f'] = sw.f(lat) #coriolis parameter (1/s)
+    params['ucon'] = (0.1*np.abs(params['f'])) #used for for current drag
+    
+    if params['alpha']>0 and params['alpha']<1:
+        params['fix_alpha'] = True #if fix_alpha=True, use params['alpha'] instead of ice conc. from forcing
+    else:
+        params['fix_alpha'] = False 
+        
+    
+    if params['gradMix_ON']==False:
+        params['rg'] = 0
+    
+    
+    
     """
     NOTES about density option:
     default is dens0 because that was the original specification.
