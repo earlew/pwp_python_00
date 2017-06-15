@@ -25,9 +25,10 @@ def demo1():
     forcing_fname = 'beaufort_met.nc'
     prof_fname = 'beaufort_profile.nc' 
     print("Running Test Case 1 with data from Beaufort gyre...")
-    forcing, pwp_out = run_PWP(met_data=forcing_fname, prof_data=prof_fname, makeLivePlots=False, suffix='demo1_nodiff', save_plots=True)
+    suffix='demo1_nodiff'
+    forcing, pwp_out = run_PWP(met_data=forcing_fname, prof_data=prof_fname, makeLivePlots=False, suffix=suffix, save_plots=True)
     
-    return forcing, pwp_out
+    return forcing, pwp_out, suffix
 
 def demo2(dopt='pdens'):
     
@@ -44,36 +45,37 @@ def demo2(dopt='pdens'):
     p['rkz']=1e-6
     p['dz'] = 2.0 
     p['max_depth'] = 500.0 
-    p['dopt'] = dopt
+    p['dens_option'] = dopt
     warnings.simplefilter('error', UserWarning)
-    forcing, pwp_out = run_PWP(met_data=forcing_fname, prof_data=prof_fname, suffix='demo2_1e6diff', save_plots=True, param_kwds=p)
+    suffix = 'demo2_1e6diff'
+    forcing, pwp_out = run_PWP(met_data=forcing_fname, prof_data=prof_fname, suffix=suffix, save_plots=True, param_mods=p)
     
-    return forcing, pwp_out
+    return forcing, pwp_out, suffix
     
 
-def demo3():
+def demo3(iceMod=1):
     
     """
-    Example script of how to run the PWP model.
+    Example run that involves sea-ice
     This run is initialized with an early winter profile from Maud Rise and uses NCEP fluxes. 
     """
     
     p={}
-    p['rkz']=1e-6
+    p['rkz']=1e-5
     p['dz'] = 1
-    p['dt'] = 1.5
-    p['max_depth'] = 500
+    p['dt_hr'] = 6
+    p['max_depth'] = 1000
     p['ice_ON'] = True
     p['winds_ON'] = True
     p['emp_ON'] = False
     p['alpha'] = 0.95
-    p['dopt'] = 'pdens'
-    p['fix_alpha'] = True
-    p['mld_thresh'] = 0.01
+    p['dens_option'] = 'pdens'
+    # p['fix_alpha'] = True
+    p['mld_thresh'] = 0.0001
     p['use_Bulk_Formula'] = True
     p['qnet_offset'] = 0 #W/m2
-    p['iceMod'] = 1 #1: use ice_model_0(), 1: ice_model_T()
-
+    p['iceMod'] = iceMod #0: use ice_model_0(), 1: ice_model_T()
+    p['gradMix_ON'] = False
     
     if p['ice_ON']:
         ice_str = '' 
@@ -101,9 +103,15 @@ def demo3():
         q_offset_str = '_qoff%s'%p['qnet_offset']
         
     if p['iceMod']==1:
-        qflux_str = '_iceModT'
+        iceMod_str = '_iceModT'
     elif p['iceMod']==0:
-        qflux_str = '_iceMod0'
+        iceMod_str = '_iceMod0'
+        
+    
+    if p['gradMix_ON']:
+        gradMix_str = ''
+    else:
+        gradMix_str = '_noGradMix'
         
     
     fnum = 9094#'0068' #9099
@@ -112,10 +120,12 @@ def demo3():
     nump = p2-p1
     met_data = 'NCEP_forcing_for_f%s_p%s-%s.nc' %(fnum, p1, p2)
     prof_data = 'float%s_%s_%s.nc' %(fnum, p1, p2)
-    suffix = '%s_%sc%s%s%s%s_alpha%s%s' %(fnum, nump, ice_str, wind_str, emp_str, qflux_str, p['alpha'], q_offset_str)
-    forcing, pwp_out = run_PWP(met_data=met_data, prof_data=prof_data, param_kwds=p, suffix=suffix, save_plots=True)
+    suffix = '%s_%sc%s%s%s%s_alpha%s%s%s%s' %(fnum, nump, ice_str, wind_str, emp_str, qflux_str, p['alpha'], q_offset_str, iceMod_str, gradMix_str)
     
-    return forcing, pwp_out  
+    
+    forcing, pwp_out = run_PWP(met_data=met_data, prof_data=prof_data, param_mods=p, suffix=suffix, save_plots=True)
+    
+    return forcing, pwp_out, suffix
     
     
 def demo4(period='sum_win_2015'):
@@ -193,12 +203,11 @@ def demo4(period='sum_win_2015'):
     met_data = 'NCEP_forcing_for_f%s_%s-%s.nc' %(fnum, forcing_date_range[0], forcing_date_range[-1])
     prof_data = 'float%s_%s_%s.nc' %(fnum, float_date_range[0], float_date_range[-1])
     suffix = 'demo4_%s_float%s%s%s%s%s_alpha%s%s' %(period, fnum, ice_str, wind_str, emp_str, qflux_str, p['alpha'], q_offset_str)
-    forcing, pwp_out = run_PWP(met_data=met_data, prof_data=prof_data, param_kwds=p, suffix=suffix, save_plots=True)
+    
+    forcing, pwp_out = run_PWP(met_data=met_data, prof_data=prof_data, param_mods=p, suffix=suffix, save_plots=True)
     
     return forcing, pwp_out, suffix 
     
-    
-
 def demo5(period='sum_win_2015'):
     
     """
@@ -270,99 +279,16 @@ def demo5(period='sum_win_2015'):
     met_data = 'NCEP_forcing_for_f%s_%s-%s.nc' %(9094, '2015-Mar-03', '2015-Jul-15')
     prof_data = 'float%s_%s_%s.nc' %(fnum, float_date_range[0], float_date_range[-1])
     suffix = 'demo4_%s_float%s%s%s%s%s_alpha%s%s' %(period, fnum, ice_str, wind_str, emp_str, qflux_str, p['alpha'], q_offset_str)
-    forcing, pwp_out = run_PWP(met_data=met_data, prof_data=prof_data, param_kwds=p, suffix=suffix, save_plots=True)
+    
+    forcing, pwp_out = run_PWP(met_data=met_data, prof_data=prof_data, param_mods=p, suffix=suffix, save_plots=True)
     
     return forcing, pwp_out, suffix 
     
 
-def run_PWP(met_data, prof_data, param_kwds=None, overwrite=True, makeLivePlots=False, suffix='', save_plots=False):
+def run_PWP(met_data, prof_data, param_mods={}, overwrite=True, makeLivePlots=False, suffix='', save_plots=False):
     
     """
-    This is the main controller function for the model. The flow of the algorithm
-    is as follows:
-        
-        1) Set model parameters (see set_params function in PWP_helper.py).
-        2) Read in forcing and initial profile data.
-        3) Prepare forcing and profile data for model run (see prep_data in PWP_helper.py).
-            3.1) Interpolate forcing data to prescribed time increments.
-            3.2) Interpolate profile data to prescribed depth increments.
-            3.3) Initialize model output variables.
-        4) Iterate the PWP model specified time interval:
-            4.1) apply winds, heat and salt fluxes
-            4.2) rotate, adjust to wind, rotate
-            4.3) apply bulk Richardson number mixing
-            4.4) apply gradient Richardson number mixing
-            4.5) apply drag associated with internal wave dissipation
-            4.5) apply diapycnal diffusion
-        5) Save results to output file
-    
-    Input:
-    met_data -  path to netCDF file containing forcing/meterological data. This file must be in the
-                input_data/ directory.
-                
-                The data fields should include 'time', 'sw', 'lw', 'qlat', 'qsens', 'tx',
-                'ty', and 'precip'. These fields should store 1-D time series of the same
-                length.
-                
-                The model expects positive heat flux values to represent ocean warming. The time
-                data field should contain a 1-D array representing fraction of day. For example,
-                for 6 hourly data, met_data['time'] should contain a number series that increases
-                in steps of 0.25, such as np.array([1.0, 1.25, 1.75, 2.0, 2.25...]).
-                
-                See https://github.com/earlew/pwp_python#input-data for more info about the
-                expected intput data.
-    
-    prof_data - path to netCDF file containing initial profile data. This must be in input_data/ directory.
-                Fields should include: ['z', 't', 's', 'lat']. These represent 1-D vertical profiles of temperature,
-                salinity and density. lat can (should?) be a float.
-                
-                See https://github.com/earlew/pwp_python#input-data for more info about the
-                expected intput data
-    
-    overwrite - controls the naming of output file. If True, the same filename is used for
-                every model run. If False, a unique time_stamp is generated and appended
-                to the file name. Default is True.
-    
-    makeLivePlots - if True, the code will generate live plots of mixed layer properties at
-                each time step (makes the code run a lot SLOWER). Default is False
-    
-    suffix - string to add to the end of filenames. e.g. suffix = 'nodiff' leads to 'pwp_out_nodiff.nc.
-            default is an empty string ''.
-    
-    save_plots -this gets passed on to the makeSomePlots() function in the PWP_helper. If True, the code
-                saves the generated plots. Default is False.
-    
-    param_kwds -dict containing keyword arguments for set_params function. See PWP_helper.set_params()
-                for more details. If None, default parameters are used. Default is None.
-    
-    Output:
-    
-    forcing, pwp_out = PWP.run()
-    
-    forcing: a dictionary containing the interpolated surface forcing.
-    pwp_out: a dictionary containing the solutions generated by the model.
-    
-    This script also saves the following to file:
-    
-    'pwp_output.nc'- a netCDF containing the output generated by the model.
-    'pwp_output.p' - a pickle file containing the output generated by the model.
-    'forcing.p' - a pickle file containing the (interpolated) forcing used for the model run.
-    If overwrite is set to False, a timestamp will be added to these file names.
-    
-    ------------------------------------------------------------------------------
-    There are two ways to run the model:
-    1.  You can run the model by typing "python PWP.py" from the bash command line. This
-        will initiate this function with the set defaults. Typing "%run PWP" from the ipython
-        command line will do the same thing.
-    
-    2.  You can also import the module then call the run() function specifically. For example,
-        >> import PWP
-        >> forcing, pwp_out = PWP.run()
-        Alternatively, if you want to change the defaults...
-        >> forcing, pwp_out = PWP.run(met_data='new_forcing.nc', overwrite=False, diagnostics=False)
-    
-    This is a more interactive approach as it provides direct access to all of the model's
-    subfunctions.
+    This is the main controller function for the model. See https://github.com/earlew/pwp_python/wiki for more info
     
     """
     
@@ -391,11 +317,9 @@ def run_PWP(met_data, prof_data, param_kwds=None, overwrite=True, makeLivePlots=
     except IndexError:
         lat = prof_dset['lat'].values
     
-    if param_kwds is None:
-        params = set_params(lat=lat)
-    else:
-        param_kwds['lat'] = lat
-        params = set_params(**param_kwds)
+    
+    params = set_params(lat, param_mods)
+
     
     ## prep forcing and initial profile data for model run (see prep_data function for more details)
     forcing, pwp_out, params = prep_data(met_dset, prof_dset, params)
@@ -550,7 +474,7 @@ def set_params(lat, param_mods):
     """
     
     
-    params['use_Bulk_Formula'] = use_Bulk_Formula #compute surface fluxes using bulk formulae (True) or simply use what's provided (False)
+    
     
     return params
 
@@ -559,8 +483,8 @@ def prep_data(met_dset, prof_dset, params):
     """
     This function prepares the forcing and profile data for the model run.
     
-    Below, the surface forcing and profile data are interpolated to the user defined time steps
-    and vertical resolutions, respectively. Secondary quantities are also computed and packaged 
+    Below, the surface forcing and profile data are interpolated to the user defined time-steps
+    and vertical resolution. Secondary quantities are also computed and packaged 
     into dictionaries. The code also checks that the time and vertical increments meet the 
     necessary stability requirements.
     
@@ -752,6 +676,7 @@ def prep_data(met_dset, prof_dset, params):
     print("Using %s density option." %params['dens_option'])
     
     dens0 = PWP.getDensity(sal0, temp0, init_prof['z'], dopt=params['dens_option'])
+    #the above variable has nothing to do with params['dens_option']. Sorry.
         
     if any(np.diff(dens0)<0):
         message = "Warning!!! Initial density profile has instabilities..."
@@ -759,7 +684,7 @@ def prep_data(met_dset, prof_dset, params):
         #warnings.warn(message)
         print(message)
         
-    sal0, temp0, ps0, dens0  = PWP.local_stir(init_prof['z'], sal0, temp0, ps0, params['dens_option'])
+    sal0, temp0, dens0, ps0   = PWP.local_stir(z=init_prof['z'], s=sal0, t=temp0, ps=ps0, dopt=params['dens_option'])
     
     #initialize variables for output
     #Todo: set time resolution of output file
@@ -966,26 +891,7 @@ def makeSomePlots(forcing, pwp_out, zlim=500, save_plots=False, suffix='', justF
     if 'dtime' in forcing:
         formatDates(axes[2])
     
-    ## plot ice conc. and surf temp.
-    fig1, axes = plt.subplots(2,1, sharex=True, figsize=(7.5,9))
-    axes = axes.flatten()
-    axes[0].plot(tvec, forcing['icec'], label='Forced')
-    axes[0].set_ylabel('Ice cover percentage (%)')
-    axes[0].set_title('Ice concentration')
-    axes[0].grid(True)
-    
-    axes[1].plot(tvec, forcing['skt'])
-    axes[1].set_ylabel('Temperature (C)')
-    axes[1].set_title('Skin temperature')
-    axes[1].grid(True)
-    axes[1].set_xlabel('Time (days)')
 
-    if 'dtime' in forcing:
-        formatDates(axes[1])
-        
-        
-    
-    
     # plot surface variables used to compute bulk fluxes
     fig, axes = plt.subplots(3,1, sharex=True, figsize=(7.5,9))
     axes = axes.flatten()
@@ -1019,17 +925,37 @@ def makeSomePlots(forcing, pwp_out, zlim=500, save_plots=False, suffix='', justF
         plt.pause(1)
         return
         
-    #add true ice conc. to above plot
-    axes[0].plot(tvec, pwp_out['alpha_true'], label='Actual')
-    axes[0].legend(loc=0, fontsize='medium')
     
     
     
-    if save_plots:     
+         
         fig0.savefig('plots/surface_forcing%s.pdf' %suffix, bbox_inches='tight')
-        fig1.savefig('plots/ice_conc_temp%s.pdf' %suffix, bbox_inches='tight')
+        
         
         plt.close('all')
+        
+        
+    ## plot ice conc. and surf temp.
+    fig1, axes = plt.subplots(2,1, sharex=True, figsize=(7.5,9))
+    axes = axes.flatten()
+    axes[0].plot(tvec, forcing['icec'], label='From forcing')
+    axes[0].plot(tvec, pwp_out['alpha_true'], label='Actual')
+    axes[0].legend(loc=0, fontsize='medium')
+    axes[0].set_ylabel('Ice cover percentage (%)')
+    axes[0].set_title('Ice concentration')
+    axes[0].grid(True)
+    
+    axes[1].plot(tvec, forcing['skt'])
+    axes[1].set_ylabel('Temperature (C)')
+    axes[1].set_title('Skin temperature')
+    axes[1].grid(True)
+    axes[1].set_xlabel('Time (days)')
+
+    if 'dtime' in forcing:
+        formatDates(axes[1])
+        
+    if save_plots:
+        fig1.savefig('plots/ice_conc_temp%s.pdf' %suffix, bbox_inches='tight')
     
     
     ## Plot computed heat fluxes
@@ -1337,7 +1263,7 @@ def makeSomePlots(forcing, pwp_out, zlim=500, save_plots=False, suffix='', justF
         ax2.invert_yaxis() 
         ax2.set_ylabel('Depth (m)', fontsize=12)
         ax2.set_xlabel('Time (days)', fontsize=12)
-        ax2.set_title('%s (%s) and MLD evolution' %(vble[i], units[i]), fontsize=12)
+        ax2.set_title('%s (%s) change and MLD evolution' %(vble[i], units[i]), fontsize=12)
     
         cbar_ax = fig.add_axes([0.83, 0.10, 0.025, 0.58]) #make a new axes for the colorbar
         fig.subplots_adjust(right=0.8) #adjust sublot to make colorbar fit
