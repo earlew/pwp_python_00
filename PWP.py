@@ -625,6 +625,10 @@ def grad_mix(z, t, s, d, u, v, ps, dz, g, rg, nz, params, n):
             #     print("whoa there. negative richardson number")
             #     print(r[j])
             #     debug_here()
+            
+        if np.any(r<0):
+            debug_here()
+            raise ValueError("negative richardson number. Something went wrong. :(")
         
         #find the smallest value of r in the profile
         r_min = np.min(r)
@@ -647,6 +651,15 @@ def grad_mix(z, t, s, d, u, v, ps, dz, g, rg, nz, params, n):
              j2 = nz-1
         
         i+=1
+        
+        if np.any(np.diff(d)<0):
+            print("density inversion introduced in grad mix routine. Attempting to rectify...")
+            s, t, d, ps  = local_stir(z, s, t, ps, dopt=params['dens_option'], checkProfile=False)
+        
+        
+        if i==1e4:
+            debug_here()
+            raise ValueError("Stability could not be achieved. Something went wrong. :(")
         
         #Check to make sure profile contains no nans
         if np.any(np.isnan(t)) or np.any(np.isnan(s)) or np.any(np.isnan(d)):
@@ -676,6 +689,12 @@ def stir(z, t, s, d, u, v, ps, rc, r, j, params, n):
     rcon = 0.02+(rc-r)/2.
     rnew = rc+rcon/5.
     f = 1-r/rnew
+    
+    #EW: if 0<r<rc, then rcon>0, rnew>rcon>r and f<1. Everything checks out. 
+    
+    if f>1:
+        raise ValueError("Mixing fraction exceeds 1. Something went wrong. :(")
+        
     
     #mix temp
     dt = (t[j+1]-t[j])*f/2.
