@@ -263,7 +263,15 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
                     pwp_out['F_lw_ao'][n-1] = F_lw_ao
                     pwp_out['F_net_ao'][n-1] = F_net_ao
                     
-                    F_lw_ai, F_sens_ai, F_lat_ai = get_atm_ice_HF(skt_n, forcing, alpha_n, n)
+                    if params['iceMod']==1:
+                        ice_surf_T = skt_n 
+
+                    elif params['iceMod']==0:
+                        ice_surf_T = T_fz
+                        #NOTE: In this case, the ice-model does NOT use the fluxes computed by get_atm_ice_HF()
+                        # instead, the ice model uses skt_n as the ice surface temperature
+                        
+                    F_lw_ai, F_sens_ai, F_lat_ai = get_atm_ice_HF(ice_surf_T, forcing, alpha_n, n)
                     F_in_ai = alpha_n*F_in[n-1]
                     F_out_ai = -(F_lw_ai+F_sens_ai+F_lat_ai) #fluxes were defined as positive down. ice fraction already accoutned for
                     F_net_ai = F_in_ai - F_out_ai
