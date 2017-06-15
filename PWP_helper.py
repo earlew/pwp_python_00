@@ -73,7 +73,7 @@ def demo3(iceMod=1):
     # p['fix_alpha'] = True
     p['mld_thresh'] = 0.0001
     p['use_Bulk_Formula'] = True
-    p['qnet_offset'] = 0 #W/m2
+    p['qnet_offset'] = 0 #W/m2 (default is zero)
     p['iceMod'] = iceMod #0: use ice_model_0(), 1: ice_model_T()
     p['gradMix_ON'] = False
     
@@ -1037,7 +1037,7 @@ def makeSomePlots(forcing, pwp_out, zlim=500, save_plots=False, suffix='', justF
     for i in range(3):
         ax = axes[i]
         clvls = np.linspace(clim[i][0], clim[i][1], 21)
-        im = ax.contourf(pwp_out['time'], pwp_out['z'], pwp_out[vble[i]], clvls, cmap=cmap[i], extend='both')
+        im = ax.contourf(tvec, pwp_out['z'], pwp_out[vble[i]], clvls, cmap=cmap[i], extend='both')
         ax.plot(tvec[1:], mld_exact2_sm[1:], '-k')
         ax.set_ylabel('Depth (m)')
         ax.set_ylim(0,zlim)
@@ -1066,7 +1066,7 @@ def makeSomePlots(forcing, pwp_out, zlim=500, save_plots=False, suffix='', justF
     host.set_xlabel("Temperature ($^{\circ}$C)")
     par1.set_xlabel("Salinity (PSU)")
     
-    host.set_ylim(0, max(pwp_out['z']))
+    host.set_ylim(0, zlim)
     host.invert_yaxis()
     
     p1, = host.plot(pwp_out['temp'][:,0], pwp_out['z'], '--r', label='$T_i$')
@@ -1099,27 +1099,27 @@ def makeSomePlots(forcing, pwp_out, zlim=500, save_plots=False, suffix='', justF
         plt.close()    
         
     ## plot ice growth and ice temp
-    fig, axes = plt.subplots(2,1, figsize=(7.5,9))
-    axes[0].plot(tvec, pwp_out['ice_thickness'], '-')
-    axes[0].set_ylabel('Ice thickness (m)')
+    fig, axes = plt.subplots(1,1, figsize=(7.5,9))
+    axes.plot(tvec, pwp_out['ice_thickness'], '-')
+    axes.set_ylabel('Ice thickness (m)')
     #axes[0].xlabel('Time (days)')
-    axes[0].set_title('Ice thickness')
-    axes[0].grid(True)
+    axes.set_title('Ice thickness')
+    axes.grid(True)
     
     if 'dtime' in forcing:
-        formatDates(axes[0])
+        formatDates(axes)
     
-    axes[1].plot(tvec, pwp_out['surf_ice_temp'], '-')
-    axes[1].set_ylabel('Temperature (C)')
-    axes[1].set_xlabel('Time (days)')
-    axes[1].set_title('Ice surface temperature')
-    axes[1].grid(True)
-    
-    if 'dtime' in forcing:
-        formatDates(axes[1])
+    # axes[1].plot(tvec, pwp_out['surf_ice_temp'], '-')
+    # axes[1].set_ylabel('Temperature (C)')
+    # axes[1].set_xlabel('Time (days)')
+    # axes[1].set_title('Ice surface temperature')
+    # axes[1].grid(True)
+    #
+    # if 'dtime' in forcing:
+    #     formatDates(axes[1])
     
     if save_plots:     
-        plt.savefig('plots/ice_temp_thickness%s.pdf' %suffix, bbox_inches='tight')
+        plt.savefig('plots/ice_thickness%s.pdf' %suffix, bbox_inches='tight')
         plt.close()
      
     plt.figure(figsize=(6,6.5))
@@ -1234,7 +1234,52 @@ def makeSomePlots(forcing, pwp_out, zlim=500, save_plots=False, suffix='', justF
     
     vble = ['temp', 'sal', 'ps']
     units = ['$^{\circ}$C', 'PSU', '$\mu$mol/kg']
-    # clim = ([-1.5, 2.5], [34.0, 34.75], [200, 325])
+    clim = ([-1.5, 2.5], [34.0, 34.75], [200, 325])
+    cmap = [plt.cm.coolwarm, plt.cm.RdYlGn_r, plt.cm.coolwarm]
+    zlim = 250
+    
+    for i in range(3):
+        fig = plt.figure(figsize=(7,9))
+        ax1 = plt.subplot2grid((4,1), (0,0), colspan=1)
+        ax2 = plt.subplot2grid((4,1), (1,0), rowspan=4)
+    
+        #plot Ice
+        ax1.plot(tvec, 100*pwp_out['ice_thickness'], '-b')
+        ax1.set_title('Ice thickness (cm)', fontsize=12)
+        ax1.set_ylabel('Thickness (cm)', fontsize=12)
+        ax1.get_xaxis().set_visible(False)
+        ax1.grid(True)
+    
+        #plot ocean
+        vmin, vmax = clim[i][:]
+        im = ax2.pcolormesh(tvec, pwp_out['z'], pwp_out[vble[i]], vmin=vmin, vmax=vmax, cmap=cmap[i])
+        ax2.plot(tvec, mld_exact2_sm, 'k')
+        ax2.set_ylim(0,zlim)
+        ax2.invert_yaxis() 
+        ax2.set_ylabel('Depth (m)', fontsize=12)
+        ax2.set_xlabel('Time (days)', fontsize=12)
+        ax2.set_title('%s (%s) and MLD evolution' %(vble[i], units[i]), fontsize=12)
+    
+        cbar_ax = fig.add_axes([0.83, 0.10, 0.025, 0.58]) #make a new axes for the colorbar
+        fig.subplots_adjust(right=0.8) #adjust sublot to make colorbar fit
+        fig.subplots_adjust(hspace=0.3) 
+        fig.colorbar(im, ax=ax2, cax=cbar_ax)
+        
+        if 'dtime' in forcing:
+            formatDates(ax2)
+    
+        if save_plots:
+            #pass
+            plt.savefig('plots/%s_ice_MLD_evolution_%s.png' %(vble[i], suffix), bbox_inches='tight')
+            plt.close()
+        
+        
+        
+    #same as above but with anomalies
+    
+    vble = ['temp', 'sal', 'ps']
+    units = ['$^{\circ}$C', 'PSU', '$\mu$mol/kg']
+    #clim = ([-1.5, 2.0], [33.75, 34.75], [200, 325])
     cmap = [plt.cm.coolwarm, plt.cm.RdYlGn_r, plt.cm.coolwarm]
     zlim = 250
     
@@ -1275,9 +1320,8 @@ def makeSomePlots(forcing, pwp_out, zlim=500, save_plots=False, suffix='', justF
     
         if save_plots:
             #pass
-            plt.savefig('plots/MLD_%s_evolution_%s.png' %(vble[i], suffix), bbox_inches='tight')
+            plt.savefig('plots/%s_anom_ice_MLD_evolution_%s.png' %(vble[i], suffix), bbox_inches='tight')
             plt.close()
-        
         
     # #plot salinity evolution
     # fig = plt.figure(figsize=(7,9))
