@@ -17,6 +17,8 @@ import warnings
 debug_here = Tracer()
 
 #define constants
+#TODO: move all this stuff to params 
+
 L_ice = 333e3 #Latent heat of fusion (J kg-1) - from Hyatt 2006
 rho_ice = 920. #density of ice (kg/m3) - from Hyatt 2006
 k_ice = 2. #thermal conductivity of sea ice (W m-1 K-1) - from Thorndike 1992
@@ -85,7 +87,7 @@ def iceGrowthModel_ode_v3(t, y, F_ai, F_oi):
 
 def get_ocean_ice_heat_flux(temp_sw, sal_sw, rho_sw, params):    
     
-    rho_sw0 = rho_sw[0] #density of seawater in model layer 1 (kg/m3)
+    #rho_sw0 = rho_sw[0] #density of seawater in model layer 1 (kg/m3)
     #temp_fz = sw.fp(sal_sw[0], p=1) #freezing point of seawater at given salinity
     
     dT_surf = temp_sw[:bdry_lyr].mean() - temp_fz
@@ -231,37 +233,7 @@ def ice_model_0(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, a
                 print("F_aio = %.2f" %F_aio)
                 
                 temp_ice_surf_f = np.nan #since there is no ice
-                
-                # TODO: delete soon
-                # #first apply ocean heat flux
-                # available_OCN_heat_for_ice_melt = F_oi*params['dt'] - warming_heat_sink
-                # """
-                # NOTE: available_OCN_heat_for_ice_melt will generally be positive. If it is negative,
-                # it will add to the heat required to melt ice.
-                # """
-                #
-                # heat_required_to_melt_ice = melting_heat_sink-available_OCN_heat_for_ice_melt
-                # """
-                # NOTE: This will generally be postive. If this is negative, then F_oi has completely
-                # melted the ice. The leftover ocean heat for ice melt (i.e. excess ocean cooling) is
-                # compensated by the available_ATM_heat_for_ocean_warming.
-                # """
-                #
-                # #apply atmospheric heat flux
-                # available_ATM_heat_for_ocean_warming = F_ai*params['dt'] - heat_required_to_melt_ice
-                #
-                # assert available_ATM_heat_for_ocean_warming>=0, "Something went wrong. F_ai should be sufficient to melt ice."
-                #
-                # #now warm the ocean
-                # dT_surf = available_ATM_heat_for_ocean_warming/(params['dz']*dens_ref*c_sw)
-                # temp_sw[0] = temp_sw[0]+dT_surf
-                #
-                # #the the portion of the atm-ice heat flux that became an ocean warming flux.
-                # F_aio = available_ATM_heat_for_ocean_warming/params['dt']
-                # print("F_aio = %.2f" %F_aio)
-                #
-                # temp_ice_surf_f = np.nan #since there is no ice    
-                
+
                 
         
     else:
@@ -273,8 +245,8 @@ def ice_model_0(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, a
         # message = "Oh oh. Unexpected error. Code should not come here..."
         # warnings.warn(message)
         # debug_here()
-
-        print("growing ice following Hyatt 2006...")
+        #
+        # print("growing ice following Hyatt 2006...")
 
         #compute ocean surface temp change due to heat loss through ice (combine with the above?)
         dT_surf = total_available_heat/(params['dz']*dens_ref*c_sw)
@@ -403,7 +375,7 @@ def ice_model_T(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, a
     assert h_ice_i >=0., "Error! negative ice thickness. Something went terribly wrong!"
 
     #cool ocean surface temp according to F_oi
-    dT = F_oi*dt/(params['dz']*dens_ref*c_sw)
+    dT = alpha*F_oi*dt/(params['dz']*dens_ref*c_sw)
     temp_sw[0] = temp_sw[0]-dT
       
     
