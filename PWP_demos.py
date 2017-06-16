@@ -68,7 +68,8 @@ def demo3(iceMod=1):
     p['iceMod'] = iceMod #0: use ice_model_0(), 1: ice_model_T()
     p['gradMix_ON'] = False
     p['examine_stabilized_plot'] = False #generally you want this to be ON
-    p['quiet_mode'] = True #to suppress out
+    p['quiet_mode'] = False #to suppress out
+    p['plots2make'] = [2, 6, 10, 11, 12] #plots to make 
     
     if p['ice_ON']:
         ice_str = '' 
@@ -99,6 +100,9 @@ def demo3(iceMod=1):
         iceMod_str = '_iceModT'
     elif p['iceMod']==0:
         iceMod_str = '_iceMod0'
+    elif p['iceMod']==2:
+        iceMod_str = '_iceModF'
+    
         
     
     if p['gradMix_ON']:

@@ -619,7 +619,9 @@ def formatDates(ax):
     ax.xaxis.set_minor_locator(days_md1)   
     
     labels = ax.get_xticklabels()
-    plt.setp(labels, rotation=30, fontsize=10)
+    plt.setp(labels, rotation=30, fontsize=10, ha='right')
+    
+    #plt.gcf().autofmt_xdate()
 
 
 def makeSomePlots(forcing, pwp_out, params, suffix='', justForcing=False, showPlots=True, save_plots=True):
@@ -1040,14 +1042,17 @@ def makeSomePlots(forcing, pwp_out, params, suffix='', justForcing=False, showPl
             ax2.set_ylabel('Depth (m)', fontsize=12)
             ax2.set_xlabel('Time (days)', fontsize=12)
             ax2.set_title('%s (%s) and MLD evolution' %(vble[i], units[i]), fontsize=12)
+            
     
             cbar_ax = fig.add_axes([0.83, 0.10, 0.025, 0.58]) #make a new axes for the colorbar
             fig.subplots_adjust(right=0.8) #adjust sublot to make colorbar fit
             fig.subplots_adjust(hspace=0.3) 
             fig.colorbar(im, ax=ax2, cax=cbar_ax)
-        
+            
             if 'dtime' in forcing:
                 formatDates(ax2)
+        
+            
     
             if save_plots:
                 #pass
@@ -1088,15 +1093,16 @@ def makeSomePlots(forcing, pwp_out, params, suffix='', justForcing=False, showPl
             ax2.set_ylabel('Depth (m)', fontsize=12)
             ax2.set_xlabel('Time (days)', fontsize=12)
             ax2.set_title('%s (%s) change and MLD evolution' %(vble[i], units[i]), fontsize=12)
-    
+            
+
             cbar_ax = fig.add_axes([0.83, 0.10, 0.025, 0.58]) #make a new axes for the colorbar
             fig.subplots_adjust(right=0.8) #adjust sublot to make colorbar fit
             fig.subplots_adjust(hspace=0.3) 
             fig.colorbar(im, ax=ax2, cax=cbar_ax)
-        
+            
             if 'dtime' in forcing:
                 formatDates(ax2)
-    
+
             if save_plots:
                 #pass
                 plt.savefig('plots/%s_anom_ice_MLD_evolution%s%s' %(vble[i], suffix, params['image_fmt']), bbox_inches='tight')

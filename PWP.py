@@ -279,6 +279,14 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
                         ice_surf_T = T_fz
                         #NOTE: In this case, the ice-model does NOT use the fluxes computed by get_atm_ice_HF()
                         # instead, the ice model uses skt_n as the ice surface temperature
+                    elif params['iceMod']==2:
+                        k_ice=2 #TODO: add this to params
+                        ice_surf_T = pwp_out['surf_ice_temp'][n-1] #use ice-temp computed at previous time step
+                        
+                        if np.isnan(ice_surf_T):
+                            #happens if ice melted completely in the previous timestep.
+                            ice_surf_T = T_fz
+                            #debug_here()
                         
                     F_lw_ai, F_sens_ai, F_lat_ai = get_atm_ice_HF(ice_surf_T, forcing, alpha_n, n)
                     F_in_ai = alpha_n*F_in[n-1]
@@ -311,7 +319,7 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
                 F_oi = PWP_ice.get_ocean_ice_heat_flux(temp, sal, dens, params)
                 
                 #modify existing sea ice
-                h_ice, temp_ice_surf, temp, sal, F_i, F_aio = PWP_ice.ice_model_T(h_ice, skt_n, temp, sal, dens, F_ai, F_oi, alpha_n, params)
+                h_ice, temp_ice_surf, temp, sal, F_i, F_aio = PWP_ice.ice_model_main(h_ice, skt_n, temp, sal, dens, F_ai, F_oi, alpha_n, params)
                 
                 #print(temp[:15].mean())
                 
@@ -347,7 +355,7 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
                 
                 if params['iceMod'] == 0:
                     pwp_out['F_ai'][n-1] = F_ai-F_aio
-                elif params['iceMod'] == 1:
+                elif params['iceMod'] == 1 or params['iceMod'] == 2:
                     pwp_out['F_ai'][n-1] = -F_i
                     
             

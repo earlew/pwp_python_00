@@ -78,6 +78,7 @@ def iceGrowthModel_ode_v3(t, y, F_ai, F_oi):
     
     """   
     Like version 2, but with surface temp chosen so that F_i == -F_ai 
+    Not currently used.
     """
     F_i = -F_ai
     dh = (F_i - F_oi)/(L_ice*rho_ice)
@@ -201,7 +202,8 @@ def ice_model_0(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, a
                 """
                 
                 #compute change in ice thickness
-                dh_ice = -available_heat_for_melt/(rho_ice*L_ice) #denom is J/m3. need to multiply by ice frac???
+                dh_ice = -available_heat_for_melt/(rho_ice*L_ice) #denom is J/m3. 
+                
                 
                 #set ice surface temp to freezing temp
                 temp_ice_surf_f = temp_fz
@@ -255,10 +257,11 @@ def ice_model_0(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, a
         #keep ice at the freezing point 
         temp_ice_surf_f = temp_fz
 
-        #if there is enough heat to cool the ocean surface past its freezing point, use the remaining heat flux to create ice
+        #if ocean surface is cooled past its freezing point, use excess cooling to create ice
         if temp_sw0 < temp_fz:
             dh_ice = dens_ref*c_sw*params['dz']*(temp_fz-temp_sw0)/(rho_ice*L_ice)
             temp_sw[0] = temp_fz
+            
         else:
             #this is the case where the heat loss is not enough to cool the ocean past the freezing point.
             dh_ice = 0
@@ -425,7 +428,7 @@ def ice_model_F(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, a
     
     ### Modify sea ice ###
     
-    if abs(F_ai + F_oi) >= 0:
+    if (F_ai + F_oi) <= 0:
         
         #we split this up because, melting sea-ice is a bit tricky
         
@@ -454,7 +457,7 @@ def ice_model_F(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, a
     assert h_ice_i >=0., "Error! negative ice thickness. Something went terribly wrong!"
 
     #cool ocean surface temp according to F_oi
-    dT = F_oi*dt/(params['dz']*dens_ref*c_sw)
+    dT = alpha*F_oi*dt/(params['dz']*dens_ref*c_sw)
     temp_sw[0] = temp_sw[0]-dT
       
     
@@ -466,10 +469,27 @@ def ice_model_F(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, a
     
         
 
+def ice_model_main(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, alpha, params):
+    
+    """
+    This function selects the appropriate
+    """
+    
+    
+    if params['iceMod']==0 or  params['iceMod']==1:  
+        #TODO: Make ice_model_0 a stand-alone model
+        h_ice_f, temp_ice_surf_f, temp_sw, sal_sw, F_i, F_aio =  ice_model_T(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, alpha, params)  
+        
+    elif params['iceMod']==2:
+        
+        h_ice_f, temp_ice_surf_f, temp_sw, sal_sw, F_i, F_aio =  ice_model_F(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, alpha, params)  
+    
+    else:
+        params['iceMod']=1
+        h_ice_f, temp_ice_surf_f, temp_sw, sal_sw, F_i, F_aio =  ice_model_T(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, alpha, params)  
         
     
-    
-    
+    return h_ice_f, temp_ice_surf_f, temp_sw, sal_sw, F_i, F_aio
     
     
     
