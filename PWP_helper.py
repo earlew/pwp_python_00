@@ -1203,6 +1203,10 @@ def save2nc(data_dict, fpath, dt_save=1, type='out'):
                 data_mean = np.ma.array(data_mean)
                 data_ds[key] = (dims, data_mean)
                 data_dict_save[key] = np.array(data_mean)
+def disablePrint():
+    import sys, os
+    # Disable print statements
+    sys.stdout = open(os.devnull, 'w')
 
                 # data_ds[key] = (dims, data_dict[key][::dt_save])
                 # data_dict_save[key] = data_dict[key][::dt_save]
@@ -1215,6 +1219,11 @@ def save2nc(data_dict, fpath, dt_save=1, type='out'):
     
     return data_dict_save
     
+def enablePrint():
+    import sys, os
+    # Restore print
+    sys.stdout = sys.__stdout__
+  
 
 
     

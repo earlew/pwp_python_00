@@ -141,6 +141,11 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
     if makeLivePlots:
         #make plot of initial profile
         phf.livePlots(pwp_out, 0)
+        
+        
+    if params['quiet_mode']:
+        print("\nquiet mode: ON. Print statements will be supressed during model integration.")
+        phf.disablePrint()
     
     
     for n in range(1,tlen):
