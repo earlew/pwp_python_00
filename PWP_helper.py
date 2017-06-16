@@ -49,8 +49,8 @@ def run_PWP(met_data, prof_data, param_mods={}, overwrite=True, makeLivePlots=Fa
     except IndexError:
         lat = prof_dset['lat'].values
     
-    
-    params = set_params(lat, param_mods)
+    param_mods['lat'] = lat
+    params = set_params(param_mods)
 
     
     ## prep forcing and initial profile data for model run (see prep_data function for more details)
@@ -60,7 +60,7 @@ def run_PWP(met_data, prof_data, param_mods={}, overwrite=True, makeLivePlots=Fa
     met_dset.close()
     
     # plot forcing
-    makeSomePlots(forcing, pwp_out, save_plots=True, justForcing=True)
+    makeSomePlots(forcing, pwp_out, params, justForcing=True, save_plots=save_plots)
     
     ## run the model
     pwp_out = PWP.pwpgo(forcing, params, pwp_out, makeLivePlots)
@@ -97,12 +97,12 @@ def run_PWP(met_data, prof_data, param_mods={}, overwrite=True, makeLivePlots=Fa
     
     #debug_here()
     ## do analysis of the results
-    makeSomePlots(forcing, pwp_out, zlim=params['plot_zlim'], suffix=suffix, save_plots=save_plots)
+    makeSomePlots(forcing, pwp_out, params, suffix=suffix, save_plots=save_plots)
     
     return forcing, pwp_out   
 
 
-def set_params(lat, param_mods):
+def set_params(param_mods={}, display_params=False):
                 
     
     """
@@ -119,20 +119,30 @@ def set_params(lat, param_mods):
 
     """
     
-    
     params = {}
+    params_meta = {}
     
     #general PWP model configuration parameters
     params['dt_hr'] = 3 #time-step increment (hours)
     params['dz'] = 1 #depth increment (meters)
     params['dt_save'] = 1 #time-step increment for saving to file (multiples of dt). TODO: Actually implement this 
-    params['lat'] = lat 
+    params['lat'] = 45 #latitude (degrees north) 
     params['max_depth'] = 100 #maximum depth of profile (meters)
-    params['use_Bulk_Formula'] = False #compute surface fluxes using bulk formulae (True) or simply use what's provided (False)
+    params['use_Bulk_Formula'] = False #compute surface fluxes using bulk formulae (True) or simply use what's provided.
+    
+    #store variable info
+    params_meta['dt_hr'] = 'time-step increment (hours)'
+    params_meta['dz'] = 'depth increment (meters)'
+    params_meta['dt_save'] = 'time-step increment for saving to file (multiples of dt). Not currently implemented'
+    params_meta['lat']= 'latitude (degrees north)'
+    params_meta['use_Bulk_Formula']= "compute surface fluxes using bulk formulae (True) or simply use what's provided."
     
     #physical constants
     params['g'] = 9.81 #gravitional constant (m/s**2)
     params['cpw'] = 4183.3 #heat capacity of seawater
+    
+    params_meta['g']  = 'gravitional constant (m/s**2)'
+    params_meta['cpw'] = 'heat capacity of seawater'
     
     
     #arbitrary co-efficients
@@ -140,34 +150,63 @@ def set_params(lat, param_mods):
     params['beta2'] = 20.0 #shortwave extinction coefficient (meters). [20]
     params['rkz'] = 0 #diffusion co-efficient (m2/s)
     
+    params_meta['beta1'] = 'longwave extinction coefficient (meters).'
+    params_meta['beta2'] = 'shortwave extinction coefficient (meters).'
+    params_meta['rkz'] = 'diffusion co-efficient (m2/s)'
     
     #thresholds for mixing
     params['rb'] = 0.65 #critical bulk richardson number. [0.65]
     params['rg'] = 0.25 #critical gradient richardson number. [0.25]
     params['mld_thresh'] = 1e-4 #Density criterion for MLD (kg/m3). [1e-4] 
     params['diff_zlim'] = 1e10 #maximum depth over which diffusion is applied (meters)
+    
+    params_meta['rb'] = 'critical bulk richardson number'
+    params_meta['rg'] = 'critical gradient richardson number'
+    params_meta['mld_thresh'] = 'Density criterion for MLD (kg/m3)'
+    params_meta['diff_zlim']= 'maximum depth over which diffusion is applied (meters)'
      
     
     #plotting controls
     params['plot_zlim'] = 500 #maximum depth to show when generating plots at the end of the run (meters)
+    params['plots2make'] = range(7) #list of plots to make. see makeSomePlots(...))
+    params['image_fmt'] = '.png'
     
+    params_meta['plot_zlim'] = 'maximum depth to show when generating plots at the end of the run'
+    params_meta['plots2make'] = 'list of plots to make. First 7 are ocean-only. The rest involve ice.'
+    params_meta['image_fmt'] = "image format when saving plots. Eg. .png, .pdf, .eps etc. See plt.savefig() for more options."
     
     #ice-model controls 
     params['iceMod'] = 1 #ice model options. 1 to use ice_model_T, 0 to use ice_model_0
     params['alpha'] = -999 #sea ice concentration 
     params['h_i0'] = 0 #initial ice thickness (meters)
     
+    params_meta['iceMod'] = 'ice model options. [1 to use ice_model_T, 0] to use ice_model_0'
+    params_meta['alpha'] = 'sea ice concentration (-999 is default) '
+    params_meta['h_i0']= 'initial ice thickness (meters)'
+    
     #process controls
-    params['ice_ON'] = True #switch to allow ice formation
-    params['winds_ON'] = True #switch to turn on/off winds
-    params['emp_ON'] = True #switch to turn on/off E-P fluxes
-    params['drag_ON'] = True #switch to turn on/off current drag
-    params['gradMix_ON'] = True #switch to allow gradient richardson number mixing
+    params['ice_ON'] = True #[True]/False switch to allow ice formation
+    params['winds_ON'] = True #[True]/False switch to turn on/off winds
+    params['emp_ON'] = True #[True]/False switch to turn on/off E-P fluxes
+    params['drag_ON'] = True #[True]/False switch to turn on/off current drag
+    params['gradMix_ON'] = True #[True]/False switch to allow gradient richardson number mixing
+    
+    params_meta['ice_ON'] = '[True]/False switch to allow ice formation'
+    params_meta['winds_ON'] = '[True]/False switch to turn on/off winds'
+    params_meta['emp_ON'] = '[True]/False switch to turn on/off E-P fluxes'
+    params_meta['drag_ON'] = '[True]/False switch to turn on/off current drag'
+    params_meta['gradMix_ON'] = '[True]/False switch to allow gradient richardson number mixing'
     
     #Miscellany
     params['qnet_offset'] = 0 #arbitrary offset to the net atmospheric heat flux (W/m2).
     params['dens_option'] = 'dens0' #density option: 'dens', 'dens0' or 'pdens' (see below)
+    params['examine_stabilized_plot'] = True
+    params['quiet_mode'] = False
     
+    
+    params_meta['qnet_offset'] = 'arbitrary offset to the net atmospheric heat flux (W/m2)'
+    params_meta['dens_option'] = "option to control how density is computed. 'dens', ['dens0'] or 'pdens' (see notes in script)"
+    params_meta['examine_stabilized_plot'] = '[True]/False switch to examine plot after initial stabilization.'
     
     #modify paramaters
     for param in param_mods:
@@ -180,7 +219,7 @@ def set_params(lat, param_mods):
     #derived quantities (not allowed to change these with param_mods)
     params['dt'] = 3600.0*params['dt_hr'] #time-step increment (seconds)
     params['dt_d'] = params['dt']/86400. #time-step increment (days)
-    params['f'] = sw.f(lat) #coriolis parameter (1/s)
+    params['f'] = sw.f(params['lat']) #coriolis parameter (1/s)
     params['ucon'] = (0.1*np.abs(params['f'])) #used for for current drag
     
     if params['alpha']>0 and params['alpha']<1:
@@ -191,7 +230,29 @@ def set_params(lat, param_mods):
     
     if params['gradMix_ON']==False:
         params['rg'] = 0
+        
+        
     
+    
+    if display_params:
+        print("--------------------------------------")
+        print("CURRENT PARAMETER VALUES:")
+        
+        for param in params:
+            print("Name: %s" %param)
+            print("Value: %s" %params[param])
+            # print("%s: %s" %(param, params[param].values))
+            try:
+                if len(params_meta[param]) > 60:
+                    print("Description:\n%s" %params_meta[param])
+                else:
+                    print("Description: %s" %params_meta[param])
+            except KeyError:
+                print("Description: None")
+            
+            print("\n")
+        
+        print("--------------------------------------")
     
     
     """
@@ -204,7 +265,6 @@ def set_params(lat, param_mods):
     'dens0' is the simpliest/fastest option but can produce weak density inversions in weakly statified but otherwise stable water columns.
     
     """
-    
     
     
     
@@ -416,7 +476,7 @@ def prep_data(met_dset, prof_dset, params):
         #warnings.warn(message)
         print(message)
         
-    sal0, temp0, dens0, ps0   = PWP.local_stir(z=init_prof['z'], s=sal0, t=temp0, ps=ps0, dopt=params['dens_option'])
+    sal0, temp0, dens0, ps0   = PWP.local_stir(z=init_prof['z'], s=sal0, t=temp0, ps=ps0, dopt=params['dens_option'], checkProfile=params['examine_stabilized_plot'])
     
     #initialize variables for output
     #Todo: set time resolution of output file
