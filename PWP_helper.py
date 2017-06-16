@@ -1107,118 +1107,12 @@ def custom_div_cmap(numcolors=11, name='custom_div_cmap', mincol='blue', midcol=
     
     return cmap   
     
-def save2nc(data_dict, fpath, dt_save=1, type='out'):
-    
-    #WARNING: This script is broken. Delete and re-do
-    
-    data_ds = xr.Dataset()
-    data_dict_save = {}
-    # zt_vars = ['temp', 'sal', 'uvel', 'vvel', 'dens']
-    # t_vars = ['mld', 'F_atm', 'F_i', 'F_ocean_ice', 'ice_thickness', 'surf_ice_temp', 'mld_exact', 'mld_exact2']
-    # z_vars = ['z']
-    
-    # if type=='out':
-    #     zt_shape = data_dict['temp'].shape
-    #     t_shape = data_dict['mld'].shape
-    #     z_shape = data_dict['z'].shape
-    # else:
-    #     t_shape = data_dict['time'].shape
-    
-    tvec = data_dict['time']
-    # len_tvec_save = int(np.floor(len(tvec)/dt_save))
-    tvec_save = tvec[::dt_save]
-    ti = range(0, len(tvec), dt_save)
-    
-    assert len(ti)==len(tvec_save), "Error. dimension mismatch."
-    
-    for key in data_dict:
-        
-        if isinstance(data_dict[key], (float, int)):
-            data_ds[key] =  data_dict[key]
-            data_dict_save[key] = data_dict[key]
-            
-        else:
-            
-            if type=='out':
-                
-                zt_shape = data_dict['temp'].shape
-                t_shape = data_dict['mld'].shape
-                z_shape = data_dict['z'].shape
-
-                if data_dict[key].shape == t_shape:
-                    dims = ('t',)
-                    #need to take time mean of forcing. Can't subsample.
-                    #data_mean = data_dict[key].reshape(-1, dt_save).mean(axis=1)
-                    data_mean = []
-                    for i in range(len(ti)):
-                        #for when there is an incomplete day at the end
-                        if ti[i]==ti[-1]:
-                            data_mean.append(data_dict[key][ti[i]:].mean())             
-                        else:
-                            data_mean.append(data_dict[key][ti[i]:ti[i+1]].mean())
-                            
-                    data_mean = np.ma.array(data_mean)
-                    data_ds[key] = (dims, data_mean)
-                    data_dict_save[key] = np.array(data_mean)
-    
-                elif data_dict[key].shape == z_shape:
-                    dims = ('z', )
-                    data_ds[key] = (dims, data_dict[key])
-                    data_dict_save[key] = data_dict[key]
-    
-                elif data_dict[key].shape == zt_shape:
-                    dims = ('z', 't')                
-                    # data_mean = np.zeros((len(data_dict['z']), len(tvec_save)))*np.nan
-                    # for i in range(len(ti)):
-                    #     #for when there is an incomplete day at the end
-                    #     if ti[i]==ti[-1]:
-                    #         data_mean[:,i] = data_dict[key][:, ti[i]:].mean(axis=1)
-                    #     else:
-                    #         data_mean[:,i] = data_dict[key][:, ti[i]:ti[i+1]].mean(axis=1)
-                    #
-                    # data_ds[key] = (dims, data_mean)
-                    # data_dict_save[key] = data_mean
-
-                    data_ds[key] = (dims, data_dict[key][:,::dt_save])
-                    data_dict_save[key] = data_dict[key][:,::dt_save]
-
-                else:
-                    print("%s variable has unrecognized shape. Can't save to ncfile. Skipping..." %key)
-                    continue
-            else:
-                
-                if key=='absrb':
-                    continue
-                    
-                dims = ('t',)
-                
-                data_mean = []
-                for i in range(len(ti)):
-                    #for when there is an incomplete day at the end
-                    if ti[i]==ti[-1]:
-                        data_mean.append(data_dict[key][ti[i]:].mean())             
-                    else:
-                        data_mean.append(data_dict[key][ti[i]:ti[i+1]].mean())
-                        
-                data_mean = np.ma.array(data_mean)
-                data_ds[key] = (dims, data_mean)
-                data_dict_save[key] = np.array(data_mean)
 def disablePrint():
     import sys, os
     # Disable print statements
     sys.stdout = open(os.devnull, 'w')
 
-                # data_ds[key] = (dims, data_dict[key][::dt_save])
-                # data_dict_save[key] = data_dict[key][::dt_save]
 
-    data_dict['time'] = np.arange(len(tvec_save))
-    data_ds['time'] = ('t', np.arange(len(tvec_save)))
-    # debug_here()
-    data_ds.to_netcdf(fpath)
-    data_ds.close
-    
-    return data_dict_save
-    
 def enablePrint():
     import sys, os
     # Restore print
@@ -1226,10 +1120,112 @@ def enablePrint():
   
 
 
-    
-    
-    
-    
-    
-    
-    
+# def save2nc(data_dict, fpath, dt_save=1, type='out'):
+#
+#     #WARNING: This script is broken. Delete and re-do
+#
+#     data_ds = xr.Dataset()
+#     data_dict_save = {}
+#     # zt_vars = ['temp', 'sal', 'uvel', 'vvel', 'dens']
+#     # t_vars = ['mld', 'F_atm', 'F_i', 'F_ocean_ice', 'ice_thickness', 'surf_ice_temp', 'mld_exact', 'mld_exact2']
+#     # z_vars = ['z']
+#
+#     # if type=='out':
+#     #     zt_shape = data_dict['temp'].shape
+#     #     t_shape = data_dict['mld'].shape
+#     #     z_shape = data_dict['z'].shape
+#     # else:
+#     #     t_shape = data_dict['time'].shape
+#
+#     tvec = data_dict['time']
+#     # len_tvec_save = int(np.floor(len(tvec)/dt_save))
+#     tvec_save = tvec[::dt_save]
+#     ti = range(0, len(tvec), dt_save)
+#
+#     assert len(ti)==len(tvec_save), "Error. dimension mismatch."
+#
+#     for key in data_dict:
+#
+#         if isinstance(data_dict[key], (float, int)):
+#             data_ds[key] =  data_dict[key]
+#             data_dict_save[key] = data_dict[key]
+#
+#         else:
+#
+#             if type=='out':
+#
+#                 zt_shape = data_dict['temp'].shape
+#                 t_shape = data_dict['mld'].shape
+#                 z_shape = data_dict['z'].shape
+#
+#                 if data_dict[key].shape == t_shape:
+#                     dims = ('t',)
+#                     #need to take time mean of forcing. Can't subsample.
+#                     #data_mean = data_dict[key].reshape(-1, dt_save).mean(axis=1)
+#                     data_mean = []
+#                     for i in range(len(ti)):
+#                         #for when there is an incomplete day at the end
+#                         if ti[i]==ti[-1]:
+#                             data_mean.append(data_dict[key][ti[i]:].mean())
+#                         else:
+#                             data_mean.append(data_dict[key][ti[i]:ti[i+1]].mean())
+#
+#                     data_mean = np.ma.array(data_mean)
+#                     data_ds[key] = (dims, data_mean)
+#                     data_dict_save[key] = np.array(data_mean)
+#
+#                 elif data_dict[key].shape == z_shape:
+#                     dims = ('z', )
+#                     data_ds[key] = (dims, data_dict[key])
+#                     data_dict_save[key] = data_dict[key]
+#
+#                 elif data_dict[key].shape == zt_shape:
+#                     dims = ('z', 't')
+#                     # data_mean = np.zeros((len(data_dict['z']), len(tvec_save)))*np.nan
+#                     # for i in range(len(ti)):
+#                     #     #for when there is an incomplete day at the end
+#                     #     if ti[i]==ti[-1]:
+#                     #         data_mean[:,i] = data_dict[key][:, ti[i]:].mean(axis=1)
+#                     #     else:
+#                     #         data_mean[:,i] = data_dict[key][:, ti[i]:ti[i+1]].mean(axis=1)
+#                     #
+#                     # data_ds[key] = (dims, data_mean)
+#                     # data_dict_save[key] = data_mean
+#
+#                     data_ds[key] = (dims, data_dict[key][:,::dt_save])
+#                     data_dict_save[key] = data_dict[key][:,::dt_save]
+#
+#                 else:
+#                     print("%s variable has unrecognized shape. Can't save to ncfile. Skipping..." %key)
+#                     continue
+#             else:
+#
+#                 if key=='absrb':
+#                     continue
+#
+#                 dims = ('t',)
+#
+#                 data_mean = []
+#                 for i in range(len(ti)):
+#                     #for when there is an incomplete day at the end
+#                     if ti[i]==ti[-1]:
+#                         data_mean.append(data_dict[key][ti[i]:].mean())
+#                     else:
+#                         data_mean.append(data_dict[key][ti[i]:ti[i+1]].mean())
+#
+#                 data_mean = np.ma.array(data_mean)
+#                 data_ds[key] = (dims, data_mean)
+#                 data_dict_save[key] = np.array(data_mean)
+#
+#                 # data_ds[key] = (dims, data_dict[key][::dt_save])
+#                 # data_dict_save[key] = data_dict[key][::dt_save]
+#
+#     data_dict['time'] = np.arange(len(tvec_save))
+#     data_ds['time'] = ('t', np.arange(len(tvec_save)))
+#     # debug_here()
+#     data_ds.to_netcdf(fpath)
+#     data_ds.close
+#
+#     return data_dict_save
+#
+#
