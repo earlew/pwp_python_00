@@ -639,10 +639,12 @@ def makeSomePlots(forcing, pwp_out, params, suffix='', justForcing=False, showPl
             suffix = '_%s' %suffix
 
     
+    #use datetime array as time axis if available
     if 'dtime' in forcing:
         tvec = forcing['dtime']
     else:
         tvec = pwp_out['time']
+        
 
     # 1. Plot prescribed surface fluxes
     if 1 in params['plots2make']: 

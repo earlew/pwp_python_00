@@ -104,23 +104,38 @@ For the density option, 'dens0' calls `dens0()` from the `seawater` module which
 **NOTE**: The default 'dens0' setting is the fastest option but it may not be diserable when working with weakly stratified water columns. In such scenarios, 'pdens' or 'dens' may be more appropriate.
 
 ### Test case 1: Southern Ocean in the summer
-This test case uses data from the default input files, *SO\_met\_30day.nc* and *SO\_profile1.nc*. The *SO\_met\_30day.nc* file contains 6-hourly [NCEP reanalysis surface fluxes](http://www.esrl.noaa.gov/psd/data/gridded/data.ncep.reanalysis.surfaceflux.html) at -53.5 N and 0.02 E, which is situated in the Atlantic sector of the Southern Ocean - just north of the winter ice-edge. The *SO_profile1.nc* file contains temperature and salinity profile data at the above location, collected on December 11, 2014. This data is the the first profile from Argo float [5904469](http://www.ifremer.fr/co-argoFloats/float?detail=false&ptfCode=5904469).
+This test case uses data from the default input files, *SO\_met\_30day.nc* and *SO\_profile1.nc*. The *SO\_met\_30day.nc* file contains 6-hourly [NCEP reanalysis surface fluxes](http://www.esrl.noaa.gov/psd/data/gridded/data.ncep.reanalysis.surfaceflux.html) at -53.5 N and 0.02 E, which is situated in the Atlantic sector of the Southern Ocean - just north of the winter ice-edge. The *SO_profile1.nc* file contains temperature and salinity profile data at the above location, collected on December 11, 2014. This data is the the first profile from Argo float [5904469](http://www.ifremer.fr/co-argoFloats/float?detail=false&ptfCode=5904469). This is example is based on `PWP_helper.demo2()`
 
-The surface forcing time series are shown below.
+To start, we load the required modules then check the default paramater settings:
 
-![Sample Forcing](README_plots/surface_forcing_demo2.png)
+~~~python
+import PWP
+import PWP_helper as phf
+
+params_def = phf.set_params(display_params=True)
+~~~
 
 For this model run, we set the vertical diffusivity to 1x10<sup>-6</sup> m<sup>2</sup>/s, and change the max depth and depth increment to 500m and 2m, respectively:
 
-```
+~~~python
 forcing_fname = 'SO_met_30day.nc'
 prof_fname = 'SO_profile1.nc'
 p={}
 p['rkz']=1e-6
 p['dz'] = 2.0 
 p['max_depth'] = 500.0 
-forcing, pwp_out = PWP_helper.run_PWP(met_data=forcing_fname, prof_data=prof_fname, save_plots=True, param_kwds=p)
-```
+~~~
+
+Next we run the model
+
+~~~python
+forcing, pwp_out = phf.run_PWP(met_data=forcing_fname, prof_data=prof_fname, save_plots=True, param_mods=p)
+~~~
+
+The surface forcing time series are shown below.
+
+![Sample Forcing](README_plots/surface_forcing_demo2.png)
+
 
 The results are displayed below.    
 
@@ -149,7 +164,7 @@ When this option is set, the ice-atmosphere heat fluxes are also computed in a s
 
 # Thermodynamic Sea-Ice Model
 
-If `params[ice_ON]=True` the PWP model, the PWP model is able to generate sea-ice. The algorithms for generating sea-ice are located in *PWP_ice.py* file. When sea-ice is generated, the iteration step of the PWP model becomes:
+If `params[ice_ON]=True`, the PWP model is able to generate sea-ice. The algorithms for generating sea-ice are located in *PWP_ice.py* file. When sea-ice is generated, the iteration step of the PWP model becomes:
 
 3. Iterate the PWP model:
     + _if sea-ice exists_, compute ocean-ice heat flux, evolve sea-ice and apply sea-ice salinity flux.
@@ -263,11 +278,20 @@ where $F_{oi}$ is the ocean-ice heat flux, $c_h$ is the heat transfer co-efficie
 
 ## Example runs with PWP+ice
 
-This example is based on `demo3()` in *PWP_helper.py*. For this run, the model is initialized with a float profile (UW ID: 9094) collected on April 03, 2015 over Maud Rise, in the Weddell Sea. The forcing is provided by NCEP reanalysis for the period April 03, 2015 to September 14, 2015 - the entire winter season. 
+This example is based on `demo3()` in *PWP_helper.py*. For this run, the model is initialized with a float profile (UW ID: 9094) collected on April 03, 2015 over Maud Rise, in the Weddell Sea. The forcing is provided by NCEP reanalysis for the period April 03, 2015 to September 14, 2015 - the entire winter season.
 
-For this run, we make the following modifications to the default configuration:
+As before, we can check the default configurations of the model by running the `set_params` function with `display_params=True`
 
 ```
+import PWP
+import PWP_helper as phf
+
+params_def = phf.set_params(display_params=True)
+```
+
+Next, we make the following modifications to the default parameters:
+
+~~~python
 p={}
 p['rkz']=1e-5 #diffusion coefficient (m2/s)
 p['dz'] = 1 #1m vertical res
@@ -281,10 +305,17 @@ p['use_Bulk_Formula'] = True
 p['iceMod'] = 1 #0 for ice_model_0(), 1 for ice_model_T()
 p['gradMix_ON'] = False #no grad rich mixing (to speed things up)
 
-```
-The results of this run are shown below: 
+~~~
 
-![atm-state](README_plots/surface_state_9094_15c_noEMP_bulk_alpha0.95_iceModT_noGradMix.pdf)
+Finally, we run the model
+
+~~~python
+forcing, pwp_out = phf.run_PWP(met_data=met_data, prof_data=prof_data, param_mods=p, save_plots=True)
+~~~
+
+Some of the results for this run are shown below: 
+
+![atm-state](README_plots/surface_state_9094_15c_noEMP_bulk_alpha0.95_iceModT_noGradMix.png)
 
 Fig. 1: atmospheric values used to by the bulk formula routines.
 
@@ -294,15 +325,15 @@ Fig. 1: atmospheric values used to by the bulk formula routines.
 Fig. 3: evolution of sea-ice thickness and upper 250m salinity.
 
 
-![ml-evol](README_plots/MLT_MLS__9094_15c_noEMP_bulk_alpha0.95_iceModT_noGradMix.pdf)
+![ml-evol](README_plots/MLT_MLS__9094_15c_noEMP_bulk_alpha0.95_iceModT_noGradMix.png)
 
 Fig. 3: close up look at mixed layer temperature and salinity.
 
-![surf-fluxes](README_plots/ice_ocean_fluxes_9094_15c_noEMP_bulk_alpha0.95_iceModT_noGradMix.pdf)
+![surf-fluxes](README_plots/ice_ocean_fluxes_9094_15c_noEMP_bulk_alpha0.95_iceModT_noGradMix.png)
 
 Fig. 4: ice-ocean and ice-atmosphere heat fluxes shown.
 
-![surf-fluxes](README_plots/initial_final_TS_profiles_9094_15c_noEMP_bulk_alpha0.95_iceModT_noGradMix.pdf)
+![surf-fluxes](README_plots/initial_final_TS_profiles_9094_15c_noEMP_bulk_alpha0.95_iceModT_noGradMix.png)
 
 Fig. 5: comparisons of the initial and final profiles.
 

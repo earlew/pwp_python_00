@@ -35,6 +35,7 @@ def demo2(dopt='pdens'):
     p['dens_option'] = dopt
     p['examine_stabilized_plot'] = False
     p['quiet_mode'] = False
+    #p['image_fmt'] = '.png'
 
     suffix = 'demo2_1e6diff'
     forcing, pwp_out = phf.run_PWP(met_data=forcing_fname, prof_data=prof_fname, suffix=suffix, save_plots=True, param_mods=p)

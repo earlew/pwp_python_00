@@ -44,3 +44,5 @@ personal_modules.py
 pwp_argo.py
 *.bak
 input_data2/
+checkpoint.ipynb
+*checkpoint.ipynb
