@@ -512,6 +512,11 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
         
     pwp_out['ice_start'] = np.array(pwp_out['ice_start'])
     
+    if params['quiet_mode']:
+        phf.enablePrint()
+        print("quiet mode: OFF. Print statements re-enabled\n")
+        
+    
     return pwp_out    
 
 def remove_si(z, t, s, d, u, v, ps, params):
