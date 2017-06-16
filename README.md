@@ -103,6 +103,15 @@ For the density option, 'dens0' calls `dens0()` from the `seawater` module which
 
 **NOTE**: The default 'dens0' setting is the fastest option but it may not be diserable when working with weakly stratified water columns. In such scenarios, 'pdens' or 'dens' may be more appropriate.
 
+
+### Initial stabilization
+
+Intial T,S profiles can sometimes have instabilities, especially if they come from raw profile data. These instabilities are often caused by instrument noise and are usually inconsequential. However, the PWP mixing algorithm, specifically the `remove_si` function, is designed to mix away all instabilities. If that noise-generated instability is deep in the water column, `remove_si()` will irreparably deepen the mixed layer to that level on the very first time-step.
+
+To circumvent this behavior, I implemented the `local_stir()` algorithm. This algorithm is based on the `stir()` algorithm used by `grad_mix()`. It is designed to eliminate small instabilities within the water column by mixing the unstable cell with an adjacent cell. The stabilization is done iteratively and starts out with a small mixing fraction (0.5). This mixing fraction is gradually increased with each iteration until all instabilities are removed. 
+
+As a check, a comparison between the initial and stabilized plots are displayed, which the user has to manually approve before the model integration starts. This behavior can be disabled by setting `params['examine_stabilized_plot'] = False` in the `set_params()`.
+
 ### Test case 1: Southern Ocean in the summer
 This test case uses data from the default input files, *SO\_met\_30day.nc* and *SO\_profile1.nc*. The *SO\_met\_30day.nc* file contains 6-hourly [NCEP reanalysis surface fluxes](http://www.esrl.noaa.gov/psd/data/gridded/data.ncep.reanalysis.surfaceflux.html) at -53.5 N and 0.02 E, which is situated in the Atlantic sector of the Southern Ocean - just north of the winter ice-edge. The *SO_profile1.nc* file contains temperature and salinity profile data at the above location, collected on December 11, 2014. This data is the the first profile from Argo float [5904469](http://www.ifremer.fr/co-argoFloats/float?detail=false&ptfCode=5904469). This is example is based on `PWP_helper.demo2()`
 
@@ -141,7 +150,7 @@ The results are displayed below.
 
 ![Sample Forcing](README_plots/initial_final_TS_profiles_demo2_1e6diff.png)
 
-You can repeat this test case by running the `run_demo2()` function in *PWP_helper.py*.
+You can repeat this test case by running the `demo2()` function in *PWP_demos.py*.
 
 
 

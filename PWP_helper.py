@@ -738,7 +738,8 @@ def makeSomePlots(forcing, pwp_out, params, suffix='', justForcing=False, showPl
     mld_exact2_sm[~nan_i] = savgol_filter(mld_exact2[~nan_i], window_length=wlen, polyorder=1, mode='nearest')
         
     
-    # 3. plot ice conc. and surf temp.
+    # 3. plot ice conc. and surf temp. 
+    # should move this down further but that will mess up my numbering, which was probably a bad idea to begin with.
     if 3 in params['plots2make']:  
        
         

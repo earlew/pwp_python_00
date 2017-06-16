@@ -35,6 +35,7 @@ def demo2(dopt='pdens'):
     p['dens_option'] = dopt
     p['examine_stabilized_plot'] = False
     p['quiet_mode'] = False
+    p['plots2make'] = [1, 6]
     #p['image_fmt'] = '.png'
 
     suffix = 'demo2_1e6diff'
