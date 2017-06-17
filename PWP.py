@@ -298,10 +298,14 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
                 #compute ocean->ice heat flux
                 F_oi = PWP_ice.get_ocean_ice_heat_flux(temp, sal, dens, params)
                 
+                #cool ocean surface temp according to F_oi (could this ever cool the ocean past the freezing point???)
+                dT = alpha_n*F_oi*dt/(params['dz']*dens_ref*cpw)
+                temp[0] = temp[0]-dT
+                
                 #modify existing sea ice
                 h_ice, temp_ice_surf, temp, sal, F_i, F_aio = PWP_ice.ice_model_main(h_ice, skt_n, temp, sal, dens, F_ai, F_oi, alpha_n, params)
                 
-                #print(temp[:15].mean())
+                #TODO: compute sea-ice sal flux here rather than inside ice model
                 
                 # apply E-P flux through leads
                 sal[0] = sal[0] + sal_ref*(1-alpha_n)*emp[n-1]*dt/dz

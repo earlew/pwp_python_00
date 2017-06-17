@@ -134,6 +134,8 @@ def create_initial_ice(temp_sw, sal_sw, rho_sw, alpha, params):
     #set ocean surface to freezing temp
     temp_sw[0] = temp_fz
     
+    assert dh_ice >=0, "Error! negative ice thickness. Something went terribly wrong!"
+    
     
     return dh_ice, temp_ice_surf_f, temp_sw, sal_sw
     
@@ -150,7 +152,7 @@ def ice_model_0(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, a
         
     F_aio = 0.0 #Leftover atm-ice heat flux that goes into warming the ocean.
         
-    print("running basic ice algorithm...")
+    print("running ice_model_0...")
     
     #define surface density and freezing temp
     #temp_fz = sw.fp(sal_sw[0], p=1) #freezing point of seawater at given salinity
@@ -241,15 +243,12 @@ def ice_model_0(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, a
         """
         if available heat is negative, grow ice according to Hyatt 2006 (eqn. 5.11). 
         """
-        
-        # message = "Oh oh. Unexpected error. Code should not come here..."
-        # warnings.warn(message)
-        # debug_here()
-        #
+
         # print("growing ice following Hyatt 2006...")
 
-        #compute ocean surface temp change due to heat loss through ice (combine with the above?)
-        dT_surf = total_available_heat/(params['dz']*dens_ref*c_sw)
+        #compute ocean surface temp change due to heat loss through ice (only use atm heat because F_oi cooling on ocean was already appplied)
+        total_atm_heat = F_ai*params['dt']
+        dT_surf = total_atm_heat/(params['dz']*dens_ref*c_sw)
         temp_sw0 = temp_sw[0]+dT_surf
 
         #keep ice at the freezing point 
@@ -268,12 +267,9 @@ def ice_model_0(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, a
             
     #get final ice thickness
     h_ice_f = h_ice_i + dh_ice
-    
-    #debug_here()
   
     print("F_ai: %.2f, F_oi: %.2f, h_i=%.4f, dh: %.4f" %(F_ai, F_oi, h_ice_i, dh_ice))
-    
-    #debug_here()
+
     return h_ice_f, temp_ice_surf_f, temp_sw, sal_sw, F_aio
     
 def ice_model_T(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, alpha, params):
@@ -375,14 +371,11 @@ def ice_model_T(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, a
     
     assert h_ice_i >=0., "Error! negative ice thickness. Something went terribly wrong!"
 
-    #cool ocean surface temp according to F_oi
-    dT = alpha*F_oi*dt/(params['dz']*dens_ref*c_sw)
-    temp_sw[0] = temp_sw[0]-dT
       
     
     #compute salinity change  
-    dsal_sw = alpha*dh_ice*(sal_ref-sal_ice)/(dz*bdry_lyr)
-    sal_sw[:bdry_lyr] = sal_sw[:bdry_lyr]+dsal_sw
+    dsal_sw = alpha*dh_ice*(sal_ref-sal_ice)/(dz)
+    sal_sw[0] = sal_sw[0]+dsal_sw
     
     return h_ice_f, temp_ice_surf_f, temp_sw, sal_sw, F_i, F_aio
 
@@ -416,13 +409,6 @@ def ice_model_F(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, a
     assert h_ice_i >=0., "Error! negative ice thickness. Something went terribly wrong!"
     
     
-    #warming_sink: heat gain required to bring ice to freezing point:
-    warming_heat_sink = -(temp_ice_surf_i-temp_fz)*c_ice*h_ice_i*alpha 
-    #melting_heat_sink: heat gain required to completely melt ice of thickness, after it has warmed to the freezing point:
-    melting_heat_sink = alpha*h_ice_i*rho_ice*L_ice
-    #total ice heat sink: warming_heat_sink + melting_heat_sink
-    total_ice_heat_sink = warming_heat_sink + melting_heat_sink
-    
     
     ### Modify sea ice ###
     
@@ -454,14 +440,14 @@ def ice_model_F(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, a
     
     assert h_ice_i >=0., "Error! negative ice thickness. Something went terribly wrong!"
 
-    #cool ocean surface temp according to F_oi
-    dT = alpha*F_oi*dt/(params['dz']*dens_ref*c_sw)
-    temp_sw[0] = temp_sw[0]-dT
+    # #cool ocean surface temp according to F_oi
+    # dT = alpha*F_oi*dt/(params['dz']*dens_ref*c_sw)
+    # temp_sw[0] = temp_sw[0]-dT
       
     
     #compute salinity change  
-    dsal_sw = alpha*dh_ice*(sal_ref-sal_ice)/(dz*bdry_lyr)
-    sal_sw[:bdry_lyr] = sal_sw[:bdry_lyr]+dsal_sw
+    dsal_sw = alpha*dh_ice*(sal_ref-sal_ice)/(dz)
+    sal_sw[0] = sal_sw[0]+dsal_sw
     
     return h_ice_f, temp_ice_surf_f, temp_sw, sal_sw, F_i, F_aio        
     
