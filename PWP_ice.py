@@ -109,7 +109,7 @@ def get_ocean_ice_heat_flux(temp_sw, sal_sw, rho_sw, params):
 
     return F_sw_dt
 
-def create_initial_ice(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, alpha, params):
+def create_initial_ice(temp_sw, sal_sw, rho_sw, alpha, params):
     
     #temp_ice_surf_i not necessary I suppose
     if params['fix_alpha']:

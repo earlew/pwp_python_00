@@ -217,15 +217,15 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
             temp[1:] = temp[1:] + F_in_ao*absrb[1:]*dt/(dz*dens_ref*cpw)
             
             #check if temp is less than freezing point
-            T_fz = sw.fp(sal_ref, p=dz) 
-            ice_heating = 0.0
+            #T_fz = sw.fp(sal_ref, p=dz) 
+            latent_heat = 0.0
             if temp[0] < T_fz:
 
-                ice_heating = (T_fz-temp[0])*dens_ref*cpw*dz/dt #need to add artificial warming flux to compensate for ice growth
+                latent_heat = (T_fz-temp[0])*dens_ref*cpw*dz/dt #this heat was used to create ice rather than cool the ocean (use to adjust pwp_out['F_ao'])
                 if params['ice_ON']:
                     pwp_out['ice_start'].append(pwp_out['time'][n])
                     #generate sea ice (aka frazil ice)
-                    h_ice, temp_ice_surf, temp, sal = PWP_ice.create_initial_ice(h_ice, temp_ice_surf, temp, sal, dens, alpha_n, params)
+                    h_ice, temp_ice_surf, temp, sal = PWP_ice.create_initial_ice(temp, sal, dens, alpha_n, params)
                     pwp_out['surf_ice_temp'][n] = temp_ice_surf
                     pwp_out['ice_thickness'][n] = h_ice
 
