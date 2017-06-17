@@ -193,7 +193,7 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
             if params['use_Bulk_Formula'] == True:
                 #computes atmosphere-ocean fluxes - everything but shortwave
                 F_lw_ao, F_sens_ao, F_lat_ao = get_atm_ocean_HF(temp[0], forcing, alpha_n, n)
-                F_sens_ao = F_sens_ao + params['qnet_offset'] #add artificial flux (default zero) to adjust sensible flux. Use to speed up cool.
+                F_sens_ao = F_sens_ao + params['qnet_offset'] #add artificial flux (default zero) 
                 F_in_ao = (1-alpha_n)*F_in[n-1]
                 F_out_ao = -(F_lw_ao+F_sens_ao+F_lat_ao) #fluxes were defined as positive down. ice fraction already accoutned for
                 F_net_ao = F_in_ao-F_out_ao
@@ -235,28 +235,10 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
                         print("surface has reached freezing temp. However, ice creation is either turned off or ice_conc is set to zero.")
                         print_ice_warning = False
             
-            pwp_out['F_ao'][n-1] = F_net_ao+ice_heating
+            pwp_out['F_ao'][n-1] = F_net_ao+latent_heat
         
         else:
-            
-            
-            #todo: implement a smooth transition in ice-fraction from open water to non-zero ice percentage
-            #without this, ice frac can abruptly transition from open ocean to >50% ice cover
-            
-            # if transition_ice_frac:
-            #     alpha_true = pwp_out['alpha_true'][n-1]
-            #     alpha_forc = alpha_n
-            #     d_alpha = alpha_true-alpha_forc
-            #     if np.abs(d_alpha)>0.05:
-            #         t_adj = int(10*(1./params['dt_d'])) #give model 10 days to catch up to the ice frac forcing
-            #         alpha_nt = forcing['icec2'][n-2+t_adj]
-            #         alpha_adj = np.linspace(alpha_true, alpha_nt, t_adj)
-            #         forcing['icec2'][n-2:n-2+t_adj] = pwp_out['alpha_true'][n-2:n-2+t_adj]+alpha_adj
-            #         alpha_n = forcing['icec2'][n-1]
-            #         transition_ice_frac = False
-            #
-            #         #debug_here()
-            
+
             if params['ice_ON']:
                 
                 if params['use_Bulk_Formula'] == True:
@@ -274,12 +256,13 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
                     
                     if params['iceMod']==1:
                         ice_surf_T = skt_n 
-
-                    elif params['iceMod']==0:
-                        ice_surf_T = T_fz
                         #NOTE: In this case, the ice-model does NOT use the fluxes computed by get_atm_ice_HF()
                         # instead, the ice model uses skt_n as the ice surface temperature
-                    elif params['iceMod']==2:
+
+                    # elif params['iceMod']==0:
+                    #     ice_surf_T = T_fz
+                        
+                    elif params['iceMod']==2 or params['iceMod']==0:
                         k_ice=2 #TODO: add this to params
                         ice_surf_T = pwp_out['surf_ice_temp'][n-1] #use ice-temp computed at previous time step
                         
@@ -311,9 +294,6 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
                 
                 print("F_ao: %.2f" %F_net_ao)
                 
-                #debug_here()
-                # F_out_ao = F_out_ao + (1-alpha_n)*params['qnet_offset']
-                # F_out_ai = F_out_ai + alpha_n*params['qnet_offset']
                 
                 #compute ocean->ice heat flux
                 F_oi = PWP_ice.get_ocean_ice_heat_flux(temp, sal, dens, params)
@@ -324,7 +304,7 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
                 #print(temp[:15].mean())
                 
                 # apply E-P flux through leads
-                sal[0] = sal[0] + sal_ref*(1-alpha_n)*emp[n-1]*dt/dz #TODO: keep track of rain/snow on top of ice (big task)
+                sal[0] = sal[0] + sal_ref*(1-alpha_n)*emp[n-1]*dt/dz
                 
                 # apply heat flux through leads
                 temp = temp + F_in_ao*absrb*dt/(dz*dens_ref*cpw) #incoming solar
@@ -333,23 +313,22 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
                 #TODO: apply passive scalar flux through leads
                 
                 #check if temp is less than freezing point
-                #T_fz = sw.fp(sal_ref, p=dz)  
                 dT = temp[0]-T_fz
-                lead_ice_heating = 0.0
+                lead_latent_heat = 0.0
                 if dT<0:
                     print("Creating frazil ice in leads.")
-                    lead_ice_heating = -dT*dens_ref*cpw*dz/dt #artificial warming flux to compensate for ice growth
+                    lead_latent_heat = -dT*dens_ref*cpw*dz/dt #this heat flux was used to create ice rather than cool ocean (use to adjust pwp_out['F_ao'])
                     #generate sea ice (aka frazil ice)
-                    h_ice_lead, temp_ice_surf_lead, temp, sal = PWP_ice.create_initial_ice(0.0, np.nan, temp, sal, dens, (1-alpha_n), params)
+                    h_ice_lead, temp_ice_surf_lead, temp, sal = PWP_ice.create_initial_ice(temp, sal, dens, (1-alpha_n), params)
                     # pwp_out['surf_ice_temp'][n] = temp_ice_surf
-                    h_ice = h_ice+h_ice_lead*(1-alpha_n) #add lead ice on top of existing ice (to conserve salt/FW)
+                    h_ice = h_ice+h_ice_lead*(1-alpha_n)/alpha_n #redistribute lead ice on top of existing ice (to conserve salt/FW)
                     
                 
                 #save ice related output
                 pwp_out['surf_ice_temp'][n] = temp_ice_surf
                 pwp_out['ice_thickness'][n] = h_ice
                 pwp_out['F_oi'][n-1] = F_oi 
-                pwp_out['F_ao'][n-1] = F_net_ao+F_aio+lead_ice_heating
+                pwp_out['F_ao'][n-1] = F_net_ao+F_aio+lead_latent_heat
                 pwp_out['F_i'][n-1] = F_i
                 pwp_out['alpha_true'][n] = alpha_n
                 
@@ -365,15 +344,7 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
                 print("Need to turn on ice physics.")
                 debug_here()
         
-        #make sure ocean temp change is consistent with applied heating
-        # col_mean_dQ = np.mean(temp-pwp_out['temp'][:, n-1])*dens_ref*cpw*(z.max()+dz)/dt
-        # F_net = pwp_out['F_ao'][n-1]-pwp_out['F_oi'][n-1]
-        # dT_error = np.abs(col_mean_dQ-F_net)
-        # if dT_error>0.01:
-        #     print("Warning: heat applied is not exactly consistent with heat change in water column")
-        #     #debug_here()
-    
-            
+
         pwp_out['alpha_true'][n-1] = alpha_n
         
         ### compute new density ###    
@@ -431,6 +402,7 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
          
         dens2 = dens.copy()
         if np.any(np.diff(dens2)<0):
+            #this means bulk_mix created an instability. Weird.
             debug_here()  
         
         ### Do the gradient Richardson number instability form of mixing ###

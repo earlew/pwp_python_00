@@ -121,12 +121,10 @@ def create_initial_ice(temp_sw, sal_sw, rho_sw, alpha, params):
     #rho_sw0 = rho_sw[0] #density of seawater in model layer 1 (kg/m3)
     
     print("initiating ice growth...")
-    ##create ice according to Hyatt 2006
-    #first, create a thin layer of sea ice (eqn. 5.11, Hyatt 2006)
-    h_ice_f = h_ice_i + dens_ref*c_sw*dz*(temp_fz-temp_sw[0])/(rho_ice*L_ice)
+    #create a thin layer of sea ice (eqn. 5.11, Hyatt 2006)
+    dh_ice = dens_ref*c_sw*dz*(temp_fz-temp_sw[0])/(rho_ice*L_ice)
     
     #compute salinity change in top layer due to brine rejection (eqn. 5.12, Hyatt 2006)
-    dh_ice = h_ice_f - h_ice_i
     dsal_sw = alpha*dh_ice*(sal_ref-sal_ice)/dz
     sal_sw[0] = sal_sw[0]+dsal_sw
     
@@ -137,7 +135,7 @@ def create_initial_ice(temp_sw, sal_sw, rho_sw, alpha, params):
     temp_sw[0] = temp_fz
     
     
-    return h_ice_f, temp_ice_surf_f, temp_sw, sal_sw
+    return dh_ice, temp_ice_surf_f, temp_sw, sal_sw
     
     
 def ice_model_0(h_ice_i, temp_ice_surf_i, temp_sw, sal_sw, rho_sw, F_ai, F_oi, alpha, params):
