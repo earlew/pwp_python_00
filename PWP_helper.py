@@ -318,7 +318,7 @@ def prep_data(met_dset, prof_dset, params):
     
     import warnings
     from scipy.interpolate import interp1d
-    from scipy.interpolate import InterpolatedUnivariateSpline s
+    from scipy.interpolate import InterpolatedUnivariateSpline 
     
     
     #create new time vector with time step dt_d

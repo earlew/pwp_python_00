@@ -11,12 +11,20 @@ def demo1():
     forcing_fname = 'beaufort_met.nc'
     prof_fname = 'beaufort_profile.nc' 
     print("Running Test Case 1 with data from Beaufort gyre...")
-    suffix='demo1_nodiff'
-    forcing, pwp_out = phf.run_PWP(met_data=forcing_fname, prof_data=prof_fname, makeLivePlots=False, suffix=suffix, save_plots=True)
+    
+    
+    #define param modifications
+    p={}
+    p['dens_option'] = 'pdens'
+    p['plot_zlim'] = 100 #meters
+    
+    suffix='demo1_nodiff' #string to append to all plots names
+
+    forcing, pwp_out = phf.run_PWP(met_data=forcing_fname, prof_data=prof_fname, makeLivePlots=False, suffix=suffix, save_plots=True, param_mods=p)
     
     return forcing, pwp_out, suffix
 
-def demo2(dopt='pdens'):
+def demo2(dopt='pdens', winds_ON=True, emp_ON=True):
     
     """
     Example script of how to run the PWP model.
@@ -36,9 +44,23 @@ def demo2(dopt='pdens'):
     p['examine_stabilized_plot'] = False
     p['quiet_mode'] = False
     p['plots2make'] = [1, 6]
-    #p['image_fmt'] = '.png'
+    
+    #surface forcing controls
+    p['winds_ON'] = winds_ON 
+    p['emp_ON'] = emp_ON
+    
+    #create file name based on param settings
+    if p['winds_ON']:
+        wind_str = ''
+    else:
+        wind_str = '_noWINDS'
+        
+    if p['emp_ON']:
+        emp_str = ''
+    else:
+        emp_str = '_noEMP'
+    suffix = 'demo2_1e6diff%s%s'%(wind_str, emp_str)
 
-    suffix = 'demo2_1e6diff'
     forcing, pwp_out = phf.run_PWP(met_data=forcing_fname, prof_data=prof_fname, suffix=suffix, save_plots=True, param_mods=p)
     
     return forcing, pwp_out, suffix
