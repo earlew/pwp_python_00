@@ -476,7 +476,7 @@ def prep_data(met_dset, prof_dset, params):
         #warnings.warn(message)
         print(message)
         
-    sal0, temp0, dens0, ps0   = PWP.local_stir(z=init_prof['z'], s=sal0, t=temp0, ps=ps0, dopt=params['dens_option'], checkProfile=params['examine_stabilized_plot'])
+        sal0, temp0, dens0, ps0   = PWP.local_stir(z=init_prof['z'], s=sal0, t=temp0, ps=ps0, dopt=params['dens_option'], checkProfile=params['examine_stabilized_plot'])
     
     #initialize variables for output
     #Todo: set time resolution of output file
