@@ -272,6 +272,7 @@ def set_params(param_mods={}, display_params=False):
 
 def prep_data(met_dset, prof_dset, params):
     
+    
     """
     This function prepares the forcing and profile data for the model run.
     
@@ -316,6 +317,9 @@ def prep_data(met_dset, prof_dset, params):
     """
     
     import warnings
+    from scipy.interpolate import interp1d
+    from scipy.interpolate import InterpolatedUnivariateSpline s
+    
     
     #create new time vector with time step dt_d
     #time_vec = np.arange(met_dset['time'][0], met_dset['time'][-1]+params['dt_d'], params['dt_d']) 
@@ -323,7 +327,7 @@ def prep_data(met_dset, prof_dset, params):
     tlen = len(time_vec)
     
     #interpolate surface forcing data to new time vector
-    from scipy.interpolate import interp1d
+    
     forcing = {} 
     for vname in met_dset:
         p_intp = interp1d(met_dset['time'], met_dset[vname], axis=0)
@@ -349,15 +353,6 @@ def prep_data(met_dset, prof_dset, params):
     if 'icec' not in list(forcing.keys()):
         forcing['icec'] = np.zeros(len(forcing['sw']))*np.nan
         
-        
-    #arbitrarily adjust (tune) fluxes
-    # forcing['qsens'][:] = 0.0
-    # forcing['sw'] = 0.75*forcing['sw']
-    # # forcing['lw'] = 1.2*forcing['lw']
-    # # forcing['qlat'] = 1.2*forcing['qlat']
-    # forcing['precip'] = 0.5*forcing['precip']
-    # print "WARNING: fluxes were adjusted!!!"
-            
         
     #interpolate E-P to dt resolution (not sure why this has to be done separately)
     evap_intp = interp1d(met_dset['time'], met_dset['qlat'], axis=0, kind='nearest', bounds_error=False)
@@ -429,7 +424,6 @@ def prep_data(met_dset, prof_dset, params):
     
     #debug_here()
     #interpolate profile data to new z-coordinate
-    from scipy.interpolate import InterpolatedUnivariateSpline 
     for vname in prof_dset:
         if vname == 'lat' or vname=='lon' or vname=='p' or vname=='z':
             continue
