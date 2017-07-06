@@ -14,9 +14,10 @@ April 18, 2016
 """
 
 import numpy as np
-import seawater as sw
 import matplotlib.pyplot as plt
 from IPython.core.debugger import Tracer
+import seawater as sw
+import gsw
 import xarray as xr
 import pickle
 import timeit
@@ -67,10 +68,9 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
     transition_ice_frac = False
     
     #define reference salinity and density (use these when computing heat fluxes)
-    sal_ref = 34.0
-    dens_ref = 1026.0
-    
-    T_fz = sw.fp(sal_ref, p=0)
+    sal_ref = params['sal_ref']
+    dens_ref = params['dens_ref']
+    T_fz = params['temp_fz']
      
     #unpack some of the variables (probably not necessary)
     F_in = forcing['F_in']
@@ -217,7 +217,6 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
             temp[1:] = temp[1:] + F_in_ao*absrb[1:]*dt/(dz*dens_ref*cpw)
             
             #check if temp is less than freezing point
-            #T_fz = sw.fp(sal_ref, p=dz) 
             latent_heat = 0.0
             if temp[0] < T_fz:
 
@@ -352,7 +351,7 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
         pwp_out['alpha_true'][n-1] = alpha_n
         
         ### compute new density ###    
-        dens = getDensity(sal, temp, z, dopt=params['dens_option'])
+        dens = getDensity(sal, temp, z, params, dopt=params['dens_option'])
         
         
         #save pre-entrainment temp (just for debugging)
@@ -450,7 +449,7 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
             ps = diffus(params['dstab'], nz, ps)
             
             ### compute new density ###    
-            dens = getDensity(sal, temp, z, dopt=params['dens_option'])
+            dens = getDensity(sal, temp, z, params, dopt=params['dens_option'])
                 
             
 
@@ -469,7 +468,6 @@ def pwpgo(forcing, params, pwp_out, makeLivePlots=False):
         #save MLT, MLS and MLT_elevation
         MLS_post = np.mean(sal[:mld_idx]);
         MLT_post = np.mean(temp[:mld_idx])
-        #T_fz = sw.fp(MLS_post, 0)
         T_elev = MLT_post - T_fz
     
         ### update output profile data ###
@@ -546,7 +544,7 @@ def mix5(z, t, s, d, u, v, ps, j, params):
     s[:j] = np.mean(s[:j])
     
     ### compute new density ###    
-    d[:j]  = getDensity(s[:j], t[:j], z[:j], dopt=params['dens_option'])
+    d[:j]  = getDensity(s[:j], t[:j], z[:j], params, dopt=params['dens_option'])
 
     #d[:j] = np.mean(d[:j]) #doing ignores the non-linearities in the eqn of state
     u[:j] = np.mean(u[:j])
@@ -655,7 +653,7 @@ def grad_mix(z, t, s, d, u, v, ps, dz, g, rg, nz, params, n):
         
         if np.any(np.diff(d)<0):
             print("density inversion introduced in grad mix routine. Attempting to rectify...")
-            s, t, d, ps  = local_stir(z, s, t, ps, dopt=params['dens_option'], checkProfile=False)
+            s, t, d, ps  = local_stir(z, s, t, ps, params, dopt=params['dens_option'], checkProfile=False)
         
         
         if i==1e4:
@@ -714,7 +712,7 @@ def stir(z, t, s, d, u, v, ps, rc, r, j, params, n):
     
     #recompute density
     #have to be careful here. x[j:j+1] in python is not the same as x[[j,j+1]]. We want the latter
-    d[[j,j+1]] = getDensity(s[[j,j+1]], t[[j,j+1]], z[[j,j+1]], dopt=params['dens_option'])
+    d[[j,j+1]] = getDensity(s[[j,j+1]], t[[j,j+1]], z[[j,j+1]], params, dopt=params['dens_option'])
 
     # if n==512:
     #     debug_here()
@@ -951,18 +949,31 @@ def get_atm_ice_HF(surf_temp, forcing, alpha, n):
     return F_lw_ai, F_sens_ai, F_lat_ai
     
 
-def getDensity(s,t,z, dopt):
+def getDensity(s,t,z,params,dopt):
     
     
  
     if dopt == 'dens0':
-        dens = sw.dens0(s, t)
+        # dens = sw.dens0(s, t)
+
+        p = np.zeros(s.shape)
+        absal = gsw.SA_from_SP(s, p, 0, params['lat'])
+        dens = gsw.rho_t_exact(absal,t,p)
         
     elif dopt == 'dens':
-        dens = sw.dens(s, t, z)
+        # dens = sw.dens(s, t, z)
+
+        p = gsw.p_from_z(-1*z, params['lat'])
+        absal = gsw.SA_from_SP(s, p, 0, params['lat'])  # 0°E used as longitude (makes little difference)
+        dens = gsw.rho(s,gsw.CT_from_t(absal,t,p),gsw.p_from_z(-1*z,params['lat']))
         
     elif dopt == 'pdens':
-        dens = sw.pden(s, t, z, pr=0)
+        # dens = sw.pden(s, t, z, pr=0)
+
+        p = gsw.p_from_z(-1*z, params['lat'])
+        absal = gsw.SA_from_SP(s, p, 0, params['lat'])  # 0°E used as longitude (makes little difference)
+        dens = 1000 + gsw.sigma0(absal, gsw.CT_from_t(absal, t, p))
+
     else:
         print("Error: set appropriate density option: 'dens0', 'pdens' or 'dens' ")
         debug_here()
@@ -970,13 +981,13 @@ def getDensity(s,t,z, dopt):
     return dens
     
 
-def local_stir(z, s, t, ps, dopt, checkProfile=True, max_iter=1e4):
+def local_stir(z, s, t, ps, params, dopt, checkProfile=True, max_iter=1e4):
     
     
     s0 = s.copy()
     t0 = t.copy()
     ps0 = ps.copy()
-    d = getDensity(s,t,z, dopt)
+    d = getDensity(s,t,z,params,dopt)
     d0 = d.copy()
 
     dd = np.diff(d0)
@@ -990,7 +1001,7 @@ def local_stir(z, s, t, ps, dopt, checkProfile=True, max_iter=1e4):
         
         neg_idx = np.flatnonzero(dd<=0)
         neg_idx_r = neg_idx[::-1] #mix from bottom up
-        
+
         for idx in neg_idx_r:
             
             j = idx
@@ -1009,10 +1020,10 @@ def local_stir(z, s, t, ps, dopt, checkProfile=True, max_iter=1e4):
             d_ps = (ps[j+1]-ps[j])*mix_frac/2.
             ps[j+1] = ps[j+1]-d_ps
             ps[j] = ps[j]+d_ps
-            
+
         
             #recompute density
-            d[[j,j+1]] = getDensity(s[[j,j+1]], t[[j,j+1]], z[[j,j+1]], dopt=dopt)
+            d[[j,j+1]] = getDensity(s[[j,j+1]], t[[j,j+1]], z[[j,j+1]], params, dopt=dopt)
             dd = np.diff(d)
         
         if mix_frac<1:
@@ -1022,11 +1033,12 @@ def local_stir(z, s, t, ps, dopt, checkProfile=True, max_iter=1e4):
         
         if i>max_iter:
             print("Failed to stabilize profile after %i iterations :(" %i)
+            debug_here()
             break
         
     print("Profile stabilized. %i iterations required." %i)
         
-    #plot stablized profile
+    #plot stabilized profile
     if checkProfile:
         fig, axes = plt.subplots(1,3, figsize=(12,6), sharey=True, num=99)
         axes[0].plot(t0, z, label='initial')

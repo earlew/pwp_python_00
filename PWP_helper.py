@@ -4,13 +4,13 @@ PWP model.
 """
 
 import numpy as np
-import seawater as sw
 import matplotlib.pyplot as plt
-import PWP
 from datetime import datetime
 import xarray as xr
+import gsw
 import timeit
 import pickle
+import PWP
 
 import warnings
 from IPython.core.debugger import Tracer
@@ -179,10 +179,16 @@ def set_params(param_mods={}, display_params=False):
     params['iceMod'] = 1 #ice model options. 1 to use ice_model_T, 0 to use ice_model_0
     params['alpha'] = -999 #sea ice concentration 
     params['h_i0'] = 0 #initial ice thickness (meters)
+    params['sal_ref'] = 34.0
+    params['dens_ref'] = 1026.0
+    params['temp_fz'] = gsw.t_freezing(gsw.SA_from_SP(params['sal_ref'], 0, 0, params['lat']), 0, 1)
     
     params_meta['iceMod'] = 'ice model options. [1 to use ice_model_T, 0] to use ice_model_0'
     params_meta['alpha'] = 'sea ice concentration (-999 is default) '
-    params_meta['h_i0']= 'initial ice thickness (meters)'
+    params_meta['h_i0'] = 'initial ice thickness (meters)'
+    params_meta['sal_ref'] = 'fixed seawater salinity for ice formation'
+    params_meta['dens_ref'] = 'fixed seawater density for ice formation and heat fluxes'
+    params_meta['temp_fz'] = 'fixed freezing temperature for ice formation, computed at sal_ref and p = 0 dbar'
     
     #process controls
     params['ice_ON'] = True #[True]/False switch to allow ice formation
@@ -199,7 +205,7 @@ def set_params(param_mods={}, display_params=False):
     
     #Miscellany
     params['qnet_offset'] = 0 #arbitrary offset to the net atmospheric heat flux (W/m2).
-    params['dens_option'] = 'dens0' #density option: 'dens', 'dens0' or 'pdens' (see below)
+    params['dens_option'] = 'dens' #density option: 'dens', 'dens0' or 'pdens' (see below)
     params['examine_stabilized_plot'] = True
     params['quiet_mode'] = False
     
@@ -219,7 +225,7 @@ def set_params(param_mods={}, display_params=False):
     #derived quantities (not allowed to change these with param_mods)
     params['dt'] = 3600.0*params['dt_hr'] #time-step increment (seconds)
     params['dt_d'] = params['dt']/86400. #time-step increment (days)
-    params['f'] = sw.f(params['lat']) #coriolis parameter (1/s)
+    params['f'] = gsw.f(params['lat']) #coriolis parameter (1/s)
     params['ucon'] = (0.1*np.abs(params['f'])) #used for for current drag
     
     if params['alpha']>0 and params['alpha']<1:
@@ -435,7 +441,7 @@ def prep_data(met_dset, prof_dset, params):
                 vble = vble[:, np.newaxis]
             
             assert vble.ndim>1, "profile variable should be 2-D"
-            
+
             #first strip nans
             not_nan = np.logical_not(np.isnan(vble[:,0]))
             if vname=='ps' and np.all(np.isnan(vble[:,0])):
@@ -452,6 +458,13 @@ def prep_data(met_dset, prof_dset, params):
     #get profile variables
     temp0 = init_prof['t'] #initial profile temperature
     sal0 = init_prof['s'] #intial profile salinity
+
+    # using conservative versions of record variables (e.g. psal –> absolute salinity, temp –> conservative temp)
+    #    does not seem to make a difference, even though T/S mixing should technically use conservative variables
+    # NOTE: if uncommenting and using conservative variables, adjust PWP.getDensity() accordingly
+    # pres0 = gsw.p_from_z(-1*init_prof['z'], params['lat'])
+    # sal0 = gsw.SA_from_SP(init_prof['s'], pres0, 0, params['lat'])
+    # temp0 = gsw.CT_from_t(sal0, init_prof['t'], pres0)
     
     #get passive scalar if any
     if 'ps' in prof_dset:
@@ -461,7 +474,7 @@ def prep_data(met_dset, prof_dset, params):
     
     print("Using %s density option." %params['dens_option'])
     
-    dens0 = PWP.getDensity(sal0, temp0, init_prof['z'], dopt=params['dens_option'])
+    dens0 = PWP.getDensity(sal0, temp0, init_prof['z'], params, dopt=params['dens_option'])
     #the above variable has nothing to do with params['dens_option']. Sorry.
         
     if any(np.diff(dens0)<0):
@@ -470,7 +483,8 @@ def prep_data(met_dset, prof_dset, params):
         #warnings.warn(message)
         print(message)
         
-        sal0, temp0, dens0, ps0   = PWP.local_stir(z=init_prof['z'], s=sal0, t=temp0, ps=ps0, dopt=params['dens_option'], checkProfile=params['examine_stabilized_plot'])
+        sal0, temp0, dens0, ps0 = PWP.local_stir(init_prof['z'], sal0, temp0, ps0, params, dopt=params['dens_option'],
+                                                 checkProfile=params['examine_stabilized_plot'])
     
     #initialize variables for output
     #Todo: set time resolution of output file
