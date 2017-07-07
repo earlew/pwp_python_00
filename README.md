@@ -27,12 +27,14 @@ To run this code, you'll need Python 3 and the following libraries:
 + Matplotlib
 + [xarray](http://xarray.pydata.org/en/stable/)
 + [GSW-Python](https://teos-10.github.io/GSW-Python/)
++ [Python-Seawater](http://pythonhosted.org/seawater/eos80.html)
 
-The first three modules are available with popular Python distributions such as [Anaconda](https://www.continuum.io/downloads) and [Canopy](https://store.enthought.com/downloads/#default). You can get the other two modules via the `pip install` command from the UNIX command line:
+The first three modules are available with popular Python distributions such as [Anaconda](https://www.continuum.io/downloads) and [Canopy](https://store.enthought.com/downloads/#default). You can get the other three modules via the `pip install` command from the UNIX command line:
 
 ```
 pip install xarray
 pip install gsw
+pip install seawater
 ```
 
 Besides the Python libraries listed here, this repository should have everything you need to do a model run with the provided datasets.
