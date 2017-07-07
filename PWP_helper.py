@@ -205,8 +205,8 @@ def set_params(param_mods={}, display_params=False):
     
     #Miscellany
     params['qnet_offset'] = 0 #arbitrary offset to the net atmospheric heat flux (W/m2).
-    params['dens_option'] = 'dens' #density option: 'dens', 'dens0' or 'pdens' (see below)
-    params['use_TEOS10'] = True  # [True] to use TEOS-10 functions, False to use EOS-80 functions
+    params['dens_option'] = 'pdens' #density option: 'dens', 'dens0' or 'pdens' (see below)
+    params['use_TEOS10'] = False  # [True] to use TEOS-10 functions, False to use EOS-80 functions
     params['examine_stabilized_plot'] = True
     params['quiet_mode'] = False
     
