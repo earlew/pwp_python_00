@@ -950,36 +950,48 @@ def get_atm_ice_HF(surf_temp, forcing, alpha, n):
     
 
 def getDensity(s,t,z,params,dopt):
-    
-    
- 
-    if dopt == 'dens0':
-        # dens = sw.dens0(s, t)
 
-        p = np.zeros(s.shape)
-        absal = gsw.SA_from_SP(s, p, 0, params['lat'])
-        dens = gsw.rho_t_exact(absal,t,p)
+    if dopt == 'dens0':
+        if params['use_TEOS10']:
+            p = np.zeros(s.shape)
+            absal = gsw.SA_from_SP(s, p, 0, params['lat'])
+            dens = gsw.rho_t_exact(absal,t,p)
+        else:
+            dens=sw.dens0(s,t)
         
     elif dopt == 'dens':
-        # dens = sw.dens(s, t, z)
-
-        p = gsw.p_from_z(-1*z, params['lat'])
-        absal = gsw.SA_from_SP(s, p, 0, params['lat'])  # 0°E used as longitude (makes little difference)
-        dens = gsw.rho(s,gsw.CT_from_t(absal,t,p),gsw.p_from_z(-1*z,params['lat']))
+        if params['use_TEOS10']:
+            p=gsw.p_from_z(-1*z,params['lat'])
+            absal=gsw.SA_from_SP(s,p,0,params['lat'])  # 0°E used as longitude (makes little difference)
+            dens=gsw.rho(s,gsw.CT_from_t(absal,t,p),gsw.p_from_z(-1*z,params['lat']))
+        else:
+            dens = sw.dens(s, t, z)
         
     elif dopt == 'pdens':
-        # dens = sw.pden(s, t, z, pr=0)
-
-        p = gsw.p_from_z(-1*z, params['lat'])
-        absal = gsw.SA_from_SP(s, p, 0, params['lat'])  # 0°E used as longitude (makes little difference)
-        dens = 1000 + gsw.sigma0(absal, gsw.CT_from_t(absal, t, p))
+        if params['use_TEOS10']:
+            p=gsw.p_from_z(-1*z,params['lat'])
+            absal=gsw.SA_from_SP(s,p,0,params['lat'])  # 0°E used as longitude (makes little difference)
+            dens=1000+gsw.sigma0(absal,gsw.CT_from_t(absal,t,p))
+        else:
+            dens = sw.pden(s, t, z, pr=0)
 
     else:
         print("Error: set appropriate density option: 'dens0', 'pdens' or 'dens' ")
         debug_here()
     
     return dens
-    
+
+
+def getStaticStability(s,t,z,params):
+    # experimental - not called anywhere in the code
+    p=gsw.p_from_z(-1*z,params['lat'])
+    absal=gsw.SA_from_SP(s,p,0,params['lat'])  # 0°E used as longitude (makes little difference)
+    ctemp=gsw.CT_from_t(absal,t,p)
+    rho=gsw.rho(s,ctemp,gsw.p_from_z(-1*z,params['lat']))
+    drho_dz=np.gradient(rho,params['dz'])
+    static_stability=(-1*drho_dz/rho)-(params['g']/gsw.sound_speed(absal,ctemp,p)**2)  # negative is stable
+    return static_stability
+
 
 def local_stir(z, s, t, ps, params, dopt, checkProfile=True, max_iter=1e4):
     
