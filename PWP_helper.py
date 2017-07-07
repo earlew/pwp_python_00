@@ -356,7 +356,7 @@ def prep_data(met_dset, prof_dset, params):
         forcing['skt'] = np.zeros(len(forcing['sw']))*np.nan
         
         
-    #if icec doesn't exit, add it as dummy variable
+    #if icec doesn't exist, add it as dummy variable
     if 'icec' not in list(forcing.keys()):
         forcing['icec'] = np.zeros(len(forcing['sw']))*np.nan
         

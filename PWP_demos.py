@@ -63,8 +63,7 @@ def demo2(dopt='pdens', winds_ON=True, emp_ON=True):
 
     forcing, pwp_out = phf.run_PWP(met_data=forcing_fname, prof_data=prof_fname, suffix=suffix, save_plots=True, param_mods=p)
     
-    return forcing, pwp_out, suffix
-    
+    return forcing, pwp_out, suffix 
 
 def demo3(iceMod=1):
     
@@ -146,9 +145,6 @@ def demo3(iceMod=1):
     
     return forcing, pwp_out, suffix
     
-    
-
-
 def demo4(period='sum_win_2015'):
     
     """
