@@ -184,15 +184,18 @@ def prep_data(met_dset, prof_dset, params):
         forcing[vname] = p_intp(time_vec)
         
     #interpolate E-P to dt resolution (not sure why this has to be done separately)
-    evap_intp = interp1d(met_dset['time'], met_dset['qlat'], axis=0, kind='nearest', bounds_error=False)
+    evap_intp = interp1d(met_dset['time'], -met_dset['qlat'], axis=0, kind='nearest', bounds_error=False)
     evap = (0.03456/(86400*1000))*evap_intp(np.floor(time_vec)) #(meters per second?)
     emp = evap-forcing['precip']
     emp[np.isnan(emp)] = 0.
-    forcing['emp'] = emp  
+    forcing['emp'] = emp 
+    forcing['evap'] = evap 
     
     if params['emp_ON'] == False:
         print("WARNING: E-P is turned OFF.")
         forcing['emp'][:] = 0.0
+        forcing['precip'][:] = 0.0
+        forcing['evap'][:] = 0.0
         
     if params['heat_ON'] == False:
         print("WARNING: Surface heating is turned OFF.")
@@ -246,10 +249,6 @@ def prep_data(met_dset, prof_dset, params):
         message = "Specified depth increment (%s m), is much smaller than mean profile resolution (%s m)." %(params['dz'], prof_incr)
         warnings.warn(message)
         
-        
-        # inpt = input("Depth increment, dz, is much smaller than profile resolution. Is this okay? (Enter 'y'or 'n')")
-        # if inpt is 'n':
-        #     raise ValueError("Please restart PWP.m with a new dz >= %s Exiting..." %prof_incr/5.)
     
     #debug_here()
     #interpolate profile data to new z-coordinate
@@ -408,13 +407,26 @@ def makeSomePlots(forcing, pwp_out, time_vec=None, save_plots=False, suffix=''):
     
     
     ## plot freshwater forcing
+    # emp_mmpd = forcing['emp']*1000*3600*24 #convert to mm per day
+    # axes[2].plot(tvec, emp_mmpd, label='E-P')
+    # axes[2].hlines(0, tvec[0], pwp_out['time'][-1], linestyle='--', color='0.3')
+    # axes[2].set_ylabel('Freshwater forcing (mm/day)')
+    # axes[2].set_title('Freshwater forcing')
+    # axes[2].grid(True)
+    # axes[2].legend(loc=0, fontsize='medium')
+    # axes[2].set_xlabel('Time (days)')
+    
     emp_mmpd = forcing['emp']*1000*3600*24 #convert to mm per day
+    evap_mmpd = forcing['evap']*1000*3600*24 #convert to mm per day
+    precip_mmpd = forcing['precip']*1000*3600*24 #convert to mm per day
+    axes[2].plot(tvec, precip_mmpd, label='P')
+    axes[2].plot(tvec, evap_mmpd, label='E')
     axes[2].plot(tvec, emp_mmpd, label='E-P')
-    axes[2].hlines(0, tvec[0], pwp_out['time'][-1], linestyle='--', color='0.3')
+    axes[2].hlines(0, tvec[0], tvec[-1], linestyle='--', color='0.3')
     axes[2].set_ylabel('Freshwater forcing (mm/day)')
     axes[2].set_title('Freshwater forcing')
     axes[2].grid(True)
-    axes[2].legend(loc=0, fontsize='medium')
+    axes[2].legend(loc=0, fontsize='small', ncol=2)
     axes[2].set_xlabel('Time (days)')
     
     if save_plots:     
