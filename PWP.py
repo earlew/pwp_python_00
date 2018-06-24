@@ -232,7 +232,10 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
     
         #update layer 1 temp and sal
         temp[0] = temp[0] + (q_in[n-1]*absrb[0]-q_out[n-1])*dt/(dz*dens[0]*cpw)
-        sal[0] = sal[0]/(1-emp[n-1]*dt/dz)
+        #sal[0] = sal[0]/(1-emp[n-1]*dt/dz)
+        sal[0] = sal[0] + sal[0]*emp[n-1]*dt/dz
+        
+        # debug_here()
     
         #check if temp is less than freezing point
         T_fz = sw.fp(sal_old, 1) #why use sal_old? Need to recheck

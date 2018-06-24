@@ -62,7 +62,9 @@ The PWP model requires two input netCDF files: one for the surface forcing and a
 + **ty**: northward wind stress (N/m<sup>2</sup>)
 + **precip**: precipitation rate (m/s)
 
-For the heat fluxes, **positive values should correspond to heat gained by the ocean**. Note that the MATLAB version of this code uses a different sign convention. 
+For fluxes, **positive values should correspond to heat/freshwater gained by the ocean**. Note that the MATLAB version of this code uses a different sign convention. 
+
+Freshwater flux due to evaporation is computed from **qlat**.
 
 The time data field should contain a 1-D array representing fraction of day. For example, for 6 hourly data, this should be a number series that increases in steps of 0.25, such as np.array([1.0, 1.25, 1.75, 2.0, 2.25...]).
 
@@ -77,7 +79,7 @@ Examples of both input files are provided in the input directory.
 
 ## Running the code
 
-For examples of how to run the code, see the `run_demo1()` and `run_demo2()` functions in *PWP_helper.py*. These examples are also demo-ed in the test runs below.
+For examples of how to run the code, see the `run_demo1()` and `run_demo2()` functions in *PWP_helper.py*. `run_demo2()` is illustrated below.
 
 ## Default settings
 
