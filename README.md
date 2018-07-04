@@ -10,10 +10,10 @@ The code presented here is functionally similar to its MATLAB equivalent (see *m
 
 *PWP_helper.py* contains helper functions to facilitate model initialization, output analysis and other miscellaneous tasks. Many of these functions were introduced in this implementation.
 
-**I did this re-write as a personal exercise and I am still experimenting with the code. I would recommend thoroughly examining this code before adopting it for your personal use.** 
+**DISCLAIMER: I did this python translation as a personal exercise and I am still experimenting with the implementation. I would recommend thoroughly examining this code before adopting it for your personal use.** 
 
 ## Required modules/libraries
-To run this code, you'll need Python 2.7 (some earlier versions might work) and the following libraries:
+To run this code, you'll need Python 3 (might work with later versions of Python 2) and the following libraries:
 
 + Numpy
 + Scipy
