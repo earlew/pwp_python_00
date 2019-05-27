@@ -18,13 +18,13 @@ To run this code, you'll need Python 3 (might work with later versions of Python
 + Numpy
 + Scipy
 + Matplotlib
-+ [xray](http://xray.readthedocs.org/en/v0.5/why-xray.html)
++ [xarray](http://xarray.pydata.org/en/stable/)
 + seawater
 
 The first three modules are available with the popular python distributions such as [Anaconda](https://www.continuum.io/downloads) and [Canopy](https://store.enthought.com/downloads/#default). You can get the other two modules via the `pip install` command from the unix command line:
 
 ```
-pip install xray
+pip install xarray
 pip install seawater
 ```
 

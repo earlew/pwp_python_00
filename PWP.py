@@ -17,7 +17,7 @@ import numpy as np
 import seawater as sw
 import matplotlib.pyplot as plt
 from IPython.core.debugger import Tracer
-import xray
+import xarray as xr
 import pickle
 import timeit
 import os
@@ -132,8 +132,8 @@ def run(met_data, prof_data, param_kwds=None, overwrite=True, diagnostics=False,
     ## Get surface forcing and profile data 
     # These are x-ray datasets, but you can treat them as dicts. 
     # Do met_dset.keys() to explore the data fields
-    met_dset = xray.open_dataset('input_data/%s' %met_data) 
-    prof_dset = xray.open_dataset('input_data/%s' %prof_data)
+    met_dset = xr.open_dataset('input_data/%s' %met_data) 
+    prof_dset = xr.open_dataset('input_data/%s' %prof_data)
     
     ## get model parameters and constants (read docs for set_params function)
     lat = prof_dset['lat'] #needed to compute internal wave dissipation
@@ -149,10 +149,6 @@ def run(met_data, prof_data, param_kwds=None, overwrite=True, diagnostics=False,
     ## run the model
     pwp_out = pwpgo(forcing, params, pwp_out, diagnostics)
     
-    #check timer
-    tnow = timeit.default_timer()
-    t_elapsed  = (tnow - t0)  
-    print("Time elapsed: %i minutes and %i seconds" %(np.floor(t_elapsed/60), t_elapsed%60))
          
     ## write output to disk
     if overwrite:
@@ -165,7 +161,7 @@ def run(met_data, prof_data, param_kwds=None, overwrite=True, diagnostics=False,
         suffix = '_%s' %suffix
         
     # save output as netCDF file
-    pwp_out_ds = xray.Dataset({'temp': (['z', 'time'], pwp_out['temp']), 'sal': (['z', 'time'], pwp_out['sal']), 
+    pwp_out_ds = xr.Dataset({'temp': (['z', 'time'], pwp_out['temp']), 'sal': (['z', 'time'], pwp_out['sal']), 
                 'uvel': (['z', 'time'], pwp_out['uvel']), 'vvel': (['z', 'time'], pwp_out['vvel']),
                 'dens': (['z', 'time'],  pwp_out['dens']), 'mld': (['time'],  pwp_out['mld'])}, 
                 coords={'z': pwp_out['z'], 'time': pwp_out['time']})
@@ -175,6 +171,11 @@ def run(met_data, prof_data, param_kwds=None, overwrite=True, diagnostics=False,
     # also output and forcing as pickle file
     pickle.dump(forcing, open( "output/forcing%s%s.p" %(suffix, time_stamp), "wb" ))
     pickle.dump(pwp_out, open( "output/pwp_out%s%s.p" %(suffix, time_stamp), "wb" ))
+    
+    #check timer
+    tnow = timeit.default_timer()
+    t_elapsed  = (tnow - t0)  
+    print("Time elapsed: %i minutes and %i seconds" %(np.floor(t_elapsed/60), t_elapsed%60))
     
     ## do analysis of the results
     phf.makeSomePlots(forcing, pwp_out, suffix=suffix, save_plots=save_plots)
@@ -438,18 +439,19 @@ def grad_mix(t, s, d, u, v, dz, g, rg, nz):
     while 1:
         #TODO: find a better way to do implement this loop
         
-        r = np.zeros(len(j_range),)
+        r = np.zeros(len(j_range))
         
         for j in j_range:
             
             dd = (d[j+1]-d[j])/d[j]
             dv = (u[j+1]-u[j])**2+(v[j+1]-v[j])**2
-            if dv == 0:
+            if dv==0 or dv<1e-10:
                 r[j] = np.inf
             else:
                 #compute grad. rich. number
                 r[j] = g*dz*dd/dv                
-                
+         
+        #debug_here()       
         #find the smallest value of r in the profile
         r_min = np.min(r)
         j_min_idx = np.argmin(r)

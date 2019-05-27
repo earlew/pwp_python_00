@@ -9,8 +9,12 @@ import matplotlib.pyplot as plt
 from IPython.core.debugger import Tracer
 import PWP
 from datetime import datetime
+from IPython.core.debugger import set_trace
+import warnings
 
-debug_here = Tracer()
+#warnings.filterwarnings("error")
+#warnings.simplefilter('error', RuntimeWarning)
+debug_here = set_trace
 
 def run_demo1():
     """
@@ -18,8 +22,10 @@ def run_demo1():
     This run uses summertime data from the Beaufort gyre
     """
     
+    #ds = xr.Dataset({'t': (['z'], prof_dset['t'].values), 's': (['z'], prof_dset['s'].values), 'd': (['z'], prof_dset['d'].values), 'z': (['z'], prof_dset['z'].values), 'lat': 74.0})
+    
     forcing_fname = 'beaufort_met.nc'
-    prof_fname = 'beaufort_profile.nc'
+    prof_fname = 'beaufort_profile_v3.nc'
     print("Running Test Case 1 with data from Beaufort gyre...")
     forcing, pwp_out = PWP.run(met_data=forcing_fname, prof_data=prof_fname, suffix='demo1_nodiff', save_plots=True, diagnostics=False)
     
@@ -38,6 +44,7 @@ def run_demo2(winds_ON=True, emp_ON=True, heat_ON=True, drag_ON=True):
     p['rkz']=1e-6
     p['dz'] = 2.0 
     p['max_depth'] = 500.0 
+    p['rg'] = 0.25 # to turn off gradient richardson number mixing set to 0. (code runs much faster)
     p['winds_ON'] = winds_ON
     p['emp_ON'] = emp_ON
     p['heat_ON'] = heat_ON
@@ -167,8 +174,6 @@ def prep_data(met_dset, prof_dset, params):
     pwp_out: dictionary with initialized variables to collect model output.
     """
     
-    import warnings
-    
     #create new time vector with time step dt_d
     #time_vec = np.arange(met_dset['time'][0], met_dset['time'][-1]+params['dt_d'], params['dt_d']) 
     time_vec = np.arange(met_dset['time'][0], met_dset['time'][-1], params['dt_d']) 
@@ -245,9 +250,9 @@ def prep_data(met_dset, prof_dset, params):
     
     #check depth resolution of profile data
     prof_incr = np.diff(prof_dset['z']).mean()
-    if params['dz'] < prof_incr/5.:
-        message = "Specified depth increment (%s m), is much smaller than mean profile resolution (%s m)." %(params['dz'], prof_incr)
-        warnings.warn(message)
+    # if params['dz'] < prof_incr/5.:
+    #     message = "Specified depth increment (%s m), is much smaller than mean profile resolution (%s m)." %(params['dz'], prof_incr)
+    #     warnings.warn(message)
         
     
     #debug_here()
