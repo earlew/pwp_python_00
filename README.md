@@ -4,13 +4,14 @@ This is a Python implementation of the Price Weller Pinkel (PWP) ocean mixed lay
 
 For a detailed description of the theory behind the model, the best source is the original [Price et al. (1986)](http://onlinelibrary.wiley.com/doi/10.1029/JC091iC07p08411/full) paper that introduced the model. A much shorter review of the algorithm is provided in the [HYCOM documentation for the PWP](https://hycom.org/attachments/067_pwp.pdf); a google search may yield better sources.
 
-The code presented here is functionally similar to its MATLAB equivalent (see *matlab_files/PWP_Byron.m*), but I have made significant changes to the code organization and flow. One big difference is that this code is split into two files: **PWP.py** and **PWP_helper.py**. 
+The code presented here is functionally similar to its MATLAB equivalent (see *matlab\_files/PWP_Byron.m*), but I have made significant changes to the code organization and flow. One big difference is that this code is split into two files: **PWP.py** and **PWP_helper.py**. 
 
 *PWP.py* contains the core numerical algorithms for the PWP model and is mostly a line-by-line translation of the original MATLAB code. 
 
 *PWP_helper.py* contains helper functions to facilitate model initialization, output analysis and other miscellaneous tasks. Many of these functions were introduced in this implementation.
 
-**DISCLAIMER: I did this python translation as a personal exercise and I am still experimenting with the implementation. I would recommend thoroughly examining this code before adopting it for your personal use.** 
+**DISCLAIMER: 
+I did this python translation as a personal exercise, so I would recommend thoroughly examining this code before adopting it for your personal use. Feel free to leave a note under the [issues tab](https://github.com/earlew/pwp_python_00/issues) if you encounter any problems.** 
 
 ## Required modules/libraries
 To run this code, you'll need Python 3 (might work with later versions of Python 2) and the following libraries:
