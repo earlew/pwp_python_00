@@ -22,19 +22,18 @@ To run this code, you'll need Python 3 (might work with later versions of Python
 + [xarray](http://xarray.pydata.org/en/stable/)
 + seawater
 
-The first three modules are available with the popular python distributions such as [Anaconda](https://www.continuum.io/downloads) and [Canopy](https://store.enthought.com/downloads/#default). You can get the other two modules via the `pip install` command from the unix command line:
+The first three modules are available with popular python distributions such as [Anaconda](https://www.continuum.io/downloads) and [Canopy](https://store.enthought.com/downloads/#default). You can get the other two modules via `pip install` from the unix command line:
 
 ```
 pip install xarray
 pip install seawater
 ```
 
-Besides the python libraries listed here, this repository should have everything you need to do a model run with the provided datasets. 
-
+Once these libraries are installed, you should be able to run the demos that are mentioned below. 
 
 ## How the code works
 
-As mentioned earlier, the code is split into two files *PWP.py* and *PWP_helper.py*. Within *PWP.py*, the *run()* function is the main function that controls all the operations. The order of operations is as follows:
+As mentioned above, the code is split across two files *PWP.py* and *PWP_helper.py*. *PWP.py* contains all the numerical algorithms while *PWP_helper.py* has a few auxillary functions. The order of operations is as follows:
 
 1. Set and derive model parameters. (See *set\_params* function in *PWP\_helper.py*). 
 2. Prepare forcing and profile data for model run (see *prep\_data* function in *PWP\_helper.py*).
@@ -45,14 +44,14 @@ As mentioned earlier, the code is split into two files *PWP.py* and *PWP_helper.
     + apply bulk Richardson mixing.
     + apply gradient Richardson mixing. 
     + apply diapycnal diffusion (if ON).
-4. Save results to output file.
+4. Save results to an output file.
 5. Make simple plots to visualize the results.    
 
-To get a feel for how this code/model is organized, the `PWP.run()` function would be a good place to start. 
+If you wish to obtain a deeper understanding of how this code works, the `PWP.run()` function would be a good place to start. 
 
 ## Input data
 
-The PWP model requires two input netCDF files: one for the surface forcing and another for the initial profile. The surface forcing file must have the following data fields:
+The PWP model requires two input netCDF files: one for the surface forcing and another for the initial CTD profile. The surface forcing file must have the following data fields:
 
 + **time**: sample time (days).
 + **sw**: net shortwave radiation (W/m<sup>2</sup>)
@@ -84,7 +83,7 @@ For examples of how to run the code, see the `run_demo1()` and `run_demo2()` fun
 
 ## Default settings
 
-The main model parameters and their defaults are listed below (see the `set_params()` function in *PWP_helper.py*). See test runs below for examples of how to change these settings:
+The main model parameters and their defaults are listed below. See test runs below for examples of how to change these settings:
 
 + **dt**: time-step increment. Input value in units of hours, but this is immediately converted to seconds. [3 hours]
 + **dz**: depth increment (meters). [1m]
@@ -106,7 +105,16 @@ The main model parameters and their defaults are listed below (see the `set_para
 + Incorporate a rudimentary sea-ice model to provide ice induced heat and salt fluxes.
 
 ## Test case 1: Southern Ocean in the summer
-This test case uses data from the default input files, *SO\_met\_30day.nc* and *SO\_profile1.nc*. The *SO\_met\_30day.nc* file contains 6-hourly [NCEP reanalysis surface fluxes](http://www.esrl.noaa.gov/psd/data/gridded/data.ncep.reanalysis.surfaceflux.html) at -53.5 N and 0.02 E, which is situated in the Atlantic sector of the Southern Ocean - just north of the winter ice-edge. The *SO_profile1.nc* file contains temperature and salinity profile data at the above location, collected on December 11, 2014. This data is the the first profile from Argo float [5904469](http://www.ifremer.fr/co-argoFloats/float?detail=false&ptfCode=5904469).
+This example uses data from *SO\_profile1.nc* and *SO\_met\_30day.nc*, which contain the initial profile and surface forcing data respectively. For the initial profile, we use the first profile collected by Argo float [5904469](http://www.ifremer.fr/co-argoFloats/float?detail=false&ptfCode=5904469). This profile was recorded in the Atlantic sector of the Southern Ocean (specifically, -53.5$^{\circ}$ N and 0.02$^{\circ}$ E) on December 11, 2014. For the surface forcing, we use 30 day time series of 6-hourly surface fluxes from [NCEP reanalysis](http://www.esrl.noaa.gov/psd/data/gridded/data.ncep.reanalysis.surfaceflux.html) at the above location. 
+
+To run the demo that uses this data, you can do the following from a Python terminal
+
+```
+>>> import PWP_helper
+>>> PWP_helper.run_demo2()
+```
+
+Doing this will execute the model and generate several plots.
 
 ### Run1: Full simulation
 The surface forcing time series are shown below.
@@ -129,37 +137,36 @@ The results are displayed below.
 
 ![Sample Forcing](example_plots/initial_final_TS_profiles_demo2_1e6diff.png)
 
-You can repeat this test case by running the `run_demo2()` function in *PWP_helper.py*.
-
 ### Run2: Freshwater fluxes off
 
-In this run, everything is the same as the first run except that the E-P forcing is turned off. This is done by setting `emp_ON` switch to False:
+In this run, everything is the same as the previous example except that the E-P forcing is turned off. To execute this run, you can do
 
 ```
-p['emp_ON'] = False 
+>>> PWP_helper.run_demo2(emp_ON=False)
 ```
+
+The resulting surface forcing is shown below:
 
 ![Sample Forcing](example_plots/surface_forcing_demo2_1e6diff_empOFF.png)
 
-The end result is shown below:
+This results in the following upper ocean evolution:
 
 ![Sample Forcing](example_plots/initial_final_TS_profiles_demo2_1e6diff_empOFF.png)
 
-Without the freshening effect of E-P, the resulting mixed layer is slightly deeper, saltier and cooler.
-
-You can repeat this test case by running the `run_demo2(emp_ON=False)` function in *PWP_helper.py*.
+As we can see, setting the freshwater flux to zero results in a final mixed layer is slightly deeper, saltier and cooler.
 
 ### Run3: Wind forcing off
 
-![Sample Forcing](example_plots/surface_forcing_demo2_1e6diff_windsOFF.png)
+In this simulation, the wind forcing is turned off. 
 
-In this simulation, the wind forcing is turned off. Without wind driven mixing the effects heat and freshwater fluxes are trapped near the surface. 
+```
+>>> PWP_helper.run_demo2(winds_ON =False)
+```
+
+![Sample Forcing](example_plots/surface_forcing_demo2_1e6diff_windsOFF.png)
 
 ![Sample Forcing](example_plots/initial_final_TS_profiles_demo2_1e6diff_windsOFF.png)
 
-You can repeat this test case by running the `run_demo2(winds_ON=False)` function in *PWP_helper.py*
-
-
-
+Without wind-driven mixing, the final mixed layer depth is much shallower than the previous cases.
 
 
