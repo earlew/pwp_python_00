@@ -16,7 +16,6 @@ April 18, 2016
 import numpy as np
 import seawater as sw
 import matplotlib.pyplot as plt
-from IPython.core.debugger import Tracer
 import xarray as xr
 import pickle
 import timeit
@@ -27,7 +26,9 @@ import imp
 
 
 imp.reload(phf)
-debug_here = Tracer()
+
+#from IPython.core.debugger import Tracer
+#debug_here = set_trace
 
 def run(met_data, prof_data, param_kwds=None, overwrite=True, diagnostics=False, suffix='', save_plots=False):
     

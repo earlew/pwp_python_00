@@ -29,7 +29,7 @@ pip install xarray
 pip install seawater
 ```
 
-Besides the python libraries listed here, this repository should have everything you need to do a model run with the provided datasets.
+Besides the python libraries listed here, this repository should have everything you need to do a model run with the provided datasets. 
 
 
 ## How the code works

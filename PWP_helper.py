@@ -6,15 +6,15 @@ PWP model.
 import numpy as np
 import seawater as sw
 import matplotlib.pyplot as plt
-from IPython.core.debugger import Tracer
 import PWP
 from datetime import datetime
-from IPython.core.debugger import set_trace
 import warnings
 
 #warnings.filterwarnings("error")
 #warnings.simplefilter('error', RuntimeWarning)
-debug_here = set_trace
+
+#from IPython.core.debugger import set_trace
+#debug_here = set_trace
 
 def run_demo1():
     """
