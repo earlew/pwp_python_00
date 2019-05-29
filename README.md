@@ -100,9 +100,6 @@ The main model parameters and their defaults are listed below. See test runs bel
 + **heat_ON**: True/False flag to turn ON/OFF surface heat flux forcing. [True]
 + **drag_ON**: True/False flag to turn ON/OFF current drag due to internal-inertial wave dispersion. [True]
 
-## Future work
-+ Create an option to add a passive tracer to the model.
-+ Incorporate a rudimentary sea-ice model to provide ice induced heat and salt fluxes.
 
 ## Test case 1: Southern Ocean in the summer
 This example uses data from *SO\_profile1.nc* and *SO\_met\_30day.nc*, which contain the initial profile and surface forcing data respectively. For the initial profile, we use the first profile collected by Argo float [5904469](http://www.ifremer.fr/co-argoFloats/float?detail=false&ptfCode=5904469). This profile was recorded in the Atlantic sector of the Southern Ocean (specifically, -53.5$^{\circ}$ N and 0.02$^{\circ}$ E) on December 11, 2014. For the surface forcing, we use 30 day time series of 6-hourly surface fluxes from [NCEP reanalysis](http://www.esrl.noaa.gov/psd/data/gridded/data.ncep.reanalysis.surfaceflux.html) at the above location. 
@@ -169,4 +166,6 @@ In this simulation, the wind forcing is turned off.
 
 Without wind-driven mixing, the final mixed layer depth is much shallower than the previous cases.
 
-
+## Future work
++ Create an option to add a passive tracer to the model.
++ Incorporate a rudimentary sea-ice model to provide ice induced heat and salt fluxes.
