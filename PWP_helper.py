@@ -25,7 +25,7 @@ def run_demo1():
     #ds = xr.Dataset({'t': (['z'], prof_dset['t'].values), 's': (['z'], prof_dset['s'].values), 'd': (['z'], prof_dset['d'].values), 'z': (['z'], prof_dset['z'].values), 'lat': 74.0})
     
     forcing_fname = 'beaufort_met.nc'
-    prof_fname = 'beaufort_profile.nc'
+    prof_fname = 'beaufort_profile_v3.nc'
     print("Running Test Case 1 with data from Beaufort gyre...")
     forcing, pwp_out = PWP.run(met_data=forcing_fname, prof_data=prof_fname, suffix='demo1_nodiff', save_plots=True, diagnostics=False)
     
