@@ -39,7 +39,6 @@ Thumbs.db
 pwp_output_diff.nc
 output
 plots
-input_data
 pwp_soccom.py
 personal_modules.py
 pwp_argo.py
@@ -47,3 +46,4 @@ pwp_argo.py
 
 ##directories
 plots/*
+old_files/*
