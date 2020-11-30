@@ -259,7 +259,7 @@ def pwpgo(forcing, params, pwp_out, diagnostics):
         mld_idx = np.flatnonzero(dens-dens[0]>ml_thresh)[0] #finds the first index that exceed ML threshold
     
         #check to ensure that ML is defined
-        assert mld_idx.size is not 0, "Error: Mixed layer depth is undefined."
+        assert mld_idx.size != 0, "Error: Mixed layer depth is undefined."
     
         #get surf MLD
         mld = z[mld_idx]    

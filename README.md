@@ -10,8 +10,9 @@ The code presented here is functionally similar to its MATLAB equivalent (see *m
 
 *PWP_helper.py* contains helper functions to facilitate model initialization, output analysis and other miscellaneous tasks. Many of these functions were introduced in this implementation.
 
-**DISCLAIMER: 
-I did this python translation as a personal exercise, so I would recommend thoroughly examining this code before adopting it for your personal use. Feel free to leave a note under the [issues tab](https://github.com/earlew/pwp_python_00/issues) if you encounter any problems.** 
+DISCLAIMER: 
+I did this python translation as a personal exercise, so I would recommend thoroughly examining this code before adopting it for your personal use. Feel free to leave a note under the [issues tab](https://github.com/earlew/pwp_python_00/issues) if you encounter any problems.
+
 
 ## Required modules/libraries
 To run this code, you'll need Python 3 (might work with later versions of Python 2) and the following libraries:
@@ -53,7 +54,7 @@ If you wish to obtain a deeper understanding of how this code works, the `PWP.ru
 
 The PWP model requires two input netCDF files: one for the surface forcing and another for the initial CTD profile. The surface forcing file must have the following data fields:
 
-+ **time**: sample time (days).
++ **time**: time (days).
 + **sw**: net shortwave radiation (W/m<sup>2</sup>)
 + **lw**: net longwave radiation (W/m<sup>2</sup>)
 + **qlat**: latent heat flux (W/m<sup>2</sup>)
@@ -85,7 +86,7 @@ For examples of how to run the code, see the `run_demo1()` and `run_demo2()` fun
 
 The main model parameters and their defaults are listed below. See test runs below for examples of how to change these settings:
 
-+ **dt**: time-step increment. Input value in units of hours, but this is immediately converted to seconds. [3 hours]
++ **dt**: time-step increment in units of hours [3 hours]
 + **dz**: depth increment (meters). [1m]
 + **max_depth**: Max depth of vertical coordinate (meters). [100]
 + **mld_thresh**: Density criterion for MLD (kg/m3). [1e-4]

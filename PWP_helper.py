@@ -242,7 +242,7 @@ def prep_data(met_dset, prof_dset, params):
         print("WARNING: unstable CFL condition for diffusion! dt*rkz/dz**2 > 0.5.")
         print("To fix this, try to reduce the time step or increase the depth increment.")
         inpt = eval(input("Proceed with simulation? Enter 'y'or 'n'. "))
-        if inpt is 'n':
+        if inpt == 'n':
             raise ValueError("Please restart PWP.m with a larger dz and/or smaller dt. Exiting...")
         
     forcing['absrb'] = absrb
